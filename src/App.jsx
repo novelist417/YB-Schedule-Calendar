@@ -680,21 +680,21 @@ function App() {
     setShowRequestForm(true)
   }
 
- function openEditRequestForm(request) {
-  setEditingRequest(request)
+  function openEditRequestForm(request) {
+    setEditingRequest(request)
 
-  setRequestForm({
-    title: request.title || '',
-    request_type:
-      request.request_type === '기타'
-        ? '개선사항'
-        : request.request_type || '일정 추가',
-    details: request.details || '',
-  })
+    setRequestForm({
+      title: request.title || '',
+      request_type:
+        request.request_type === '기타'
+          ? '개선사항'
+          : request.request_type || '일정 추가',
+      details: request.details || '',
+    })
 
-  setRequestError('')
-  setShowRequestForm(true)
-}
+    setRequestError('')
+    setShowRequestForm(true)
+  }
 
   function closeRequestForm() {
     setShowRequestForm(false)
@@ -743,6 +743,17 @@ function App() {
     let result
 
     if (editingRequest) {
+      if (
+        editingRequest.submitter_email?.toLowerCase() !==
+        session.user.email?.toLowerCase()
+      ) {
+        setRequestError(
+          '본인이 작성한 요청사항만 수정할 수 있습니다.'
+        )
+        setRequestSaving(false)
+        return
+      }
+
       result = await supabase
         .from('schedule_requests')
         .update({
@@ -810,8 +821,8 @@ function App() {
     if (!session?.user) return
 
     if (
-      request.submitter_email !==
-      session.user.email
+      request.submitter_email?.toLowerCase() !==
+      session.user.email?.toLowerCase()
     ) {
       return
     }
@@ -1922,9 +1933,10 @@ function App() {
                           <div className="request-admin-top">
                             <div className="request-admin-title-area">
                               <span className="request-type-badge">
-                                {
-                                  request.request_type
-                                }
+                                {request.request_type ===
+                                '기타'
+                                  ? '개선사항'
+                                  : request.request_type}
                               </span>
 
                               <h3>
@@ -1987,6 +1999,76 @@ function App() {
                                 ? '반영 전으로 변경'
                                 : '반영 완료'}
                             </button>
+
+                            {session?.user?.email?.toLowerCase() ===
+                              request.submitter_email?.toLowerCase() && (
+                              <div
+                                className="request-owner-actions"
+                                style={{
+                                  display:
+                                    'flex',
+                                  gap: '8px',
+                                  alignItems:
+                                    'center',
+                                  marginTop:
+                                    '8px',
+                                }}
+                              >
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    openEditRequestForm(
+                                      request
+                                    )
+                                  }
+                                  style={{
+                                    color:
+                                      '#333',
+                                    backgroundColor:
+                                      '#fff',
+                                    border:
+                                      '1px solid #d5d5d5',
+                                    padding:
+                                      '7px 12px',
+                                    borderRadius:
+                                      '8px',
+                                    fontWeight:
+                                      600,
+                                    cursor:
+                                      'pointer',
+                                  }}
+                                >
+                                  수정
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    handleDeleteRequest(
+                                      request
+                                    )
+                                  }
+                                  style={{
+                                    color:
+                                      '#c0392b',
+                                    backgroundColor:
+                                      '#fff',
+                                    border:
+                                      '1px solid #e2b4ae',
+                                    padding:
+                                      '7px 12px',
+                                    borderRadius:
+                                      '8px',
+                                    fontWeight:
+                                      600,
+                                    cursor:
+                                      'pointer',
+                                  }}
+                                >
+                                  삭제
+                                </button>
+                              </div>
+                            )}
                           </div>
                         </div>
                       )
@@ -2010,9 +2092,10 @@ function App() {
                     >
                       <div className="my-request-main">
                         <div className="my-request-type">
-                          {
-                            request.request_type
-                          }
+                          {request.request_type ===
+                          '기타'
+                            ? '개선사항'
+                            : request.request_type}
                         </div>
 
                         <h3>
@@ -2048,7 +2131,16 @@ function App() {
                           }
                         </div>
 
-                        <div className="request-owner-actions">
+                        <div
+                          className="request-owner-actions"
+                          style={{
+                            display:
+                              'flex',
+                            gap: '8px',
+                            alignItems:
+                              'center',
+                          }}
+                        >
                           <button
                             type="button"
                             onClick={() =>
@@ -2056,18 +2148,49 @@ function App() {
                                 request
                               )
                             }
+                            style={{
+                              color:
+                                '#333',
+                              backgroundColor:
+                                '#fff',
+                              border:
+                                '1px solid #d5d5d5',
+                              padding:
+                                '7px 12px',
+                              borderRadius:
+                                '8px',
+                              fontWeight:
+                                600,
+                              cursor:
+                                'pointer',
+                            }}
                           >
                             수정
                           </button>
 
                           <button
                             type="button"
-                            className="delete-button"
                             onClick={() =>
                               handleDeleteRequest(
                                 request
                               )
                             }
+                            style={{
+                              color:
+                                '#c0392b',
+                              backgroundColor:
+                                '#fff',
+                              border:
+                                '1px solid #e2b4ae',
+                              padding:
+                                '7px 12px',
+                              borderRadius:
+                                '8px',
+                              fontWeight:
+                                600,
+                              cursor:
+                                'pointer',
+                            }}
                           >
                             삭제
                           </button>
@@ -3235,8 +3358,8 @@ function App() {
                       일정 수정
                     </option>
 
-                    <option value="기타">
-                      기타
+                    <option value="개선사항">
+                      개선사항
                     </option>
                   </select>
                 </label>
@@ -3289,9 +3412,7 @@ function App() {
                   }
                 >
                   {requestSaving
-                    ? editingRequest
-                      ? '수정 중...'
-                      : '등록 중...'
+                    ? '저장 중...'
                     : editingRequest
                       ? '수정 저장'
                       : '요청사항 등록'}
