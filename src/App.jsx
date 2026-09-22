@@ -48,22 +48,24 @@ function App() {
     setSession(session)
 
     if (session) {
-      loadProfile(session.user.id)
+      await loadProfile(session.user.id)
     }
   }
 
   async function loadProfile(userId) {
     const { data, error } = await supabase
       .from('profiles')
-      .select('*')
+      .select('id, email, role')
       .eq('id', userId)
-      .single()
+      .maybeSingle()
 
     if (error) {
       console.error('프로필 조회 실패:', error)
+      setProfile(null)
       return
     }
 
+    console.log('현재 사용자 프로필:', data)
     setProfile(data)
   }
 
@@ -97,6 +99,7 @@ function App() {
 
   async function handleLogout() {
     await supabase.auth.signOut()
+    setProfile(null)
   }
 
   const today = new Date()
@@ -167,7 +170,7 @@ function App() {
                 <span
                   style={{
                     fontSize: '12px',
-                    fontWeight: '600',
+                    fontWeight: '700',
                     color: '#10B981',
                   }}
                 >
@@ -191,10 +194,11 @@ function App() {
             </div>
           ) : (
             <button
-              onClick={() => {
-                const login = document.getElementById('login')
-                login?.scrollIntoView({ behavior: 'smooth' })
-              }}
+              onClick={() =>
+                document
+                  .getElementById('login')
+                  ?.scrollIntoView({ behavior: 'smooth' })
+              }
               style={{
                 border: '1px solid #ddd',
                 background: '#fff',
@@ -337,13 +341,7 @@ function App() {
               </button>
 
               {loginError && (
-                <p
-                  style={{
-                    margin: '4px 0 0',
-                    color: '#d33',
-                    fontSize: '13px',
-                  }}
-                >
+                <p style={{ margin: '4px 0 0', color: '#d33', fontSize: '13px' }}>
                   로그인에 실패했습니다. 이메일과 비밀번호를 확인해주세요.
                 </p>
               )}
@@ -376,8 +374,7 @@ function App() {
                 <div
                   className="detail-type"
                   style={{
-                    color:
-                      TYPE_COLORS[schedule.schedule_type] || '#666',
+                    color: TYPE_COLORS[schedule.schedule_type] || '#666',
                   }}
                 >
                   {schedule.schedule_type}
