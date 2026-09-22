@@ -1686,17 +1686,6 @@ function App() {
                   aria-label="일정 검색"
                 />
 
-                {searchText && (
-                  <button
-                    type="button"
-                    className="search-clear"
-                    onClick={() =>
-                      setSearchText('')
-                    }
-                  >
-                    ×
-                  </button>
-                )}
               </div>
 
               <select
