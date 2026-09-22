@@ -1092,17 +1092,10 @@ function App() {
       : hour
   }
 
-  const timedHours =
-    timedWeekSchedules
-      .map((schedule) =>
-        getHourFromTime(
-          schedule.event_time
-        )
-      )
-      .filter(
-        (hour) => hour !== null
-      )
-
+  /*
+   * 주간 시간표는 일정이 있든 없든
+   * 항상 오전 6시부터 오후 11시까지 표시한다.
+   */
   const weekStartHour = 6
   const weekEndHour = 23
 
@@ -1663,6 +1656,18 @@ function App() {
                   aria-label="일정 검색"
                 />
 
+                {searchText && (
+                  <button
+                    type="button"
+                    className="search-clear"
+                    onClick={() =>
+                      setSearchText('')
+                    }
+                    aria-label="검색어 지우기"
+                  >
+                    ×
+                  </button>
+                )}
               </div>
 
               <select
@@ -1904,11 +1909,6 @@ function App() {
                             dateString ===
                             toDateString(
                               today
-                            )
-
-                          const daySchedules =
-                            getWeekSchedules(
-                              dateString
                             )
 
                           return (
