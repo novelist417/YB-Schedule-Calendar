@@ -63,12 +63,10 @@ function App() {
   const [page, setPage] = useState('calendar')
   const [calendarView, setCalendarView] = useState('month')
 
-  // 달력 이동 기준 날짜
   const [calendarCursor, setCalendarCursor] = useState(
     new Date()
   )
 
-  // 검색 / 필터
   const [searchText, setSearchText] = useState('')
   const [filterType, setFilterType] = useState('all')
 
@@ -86,6 +84,7 @@ function App() {
 
   // 요청사항
   const [showRequestForm, setShowRequestForm] = useState(false)
+  const [editingRequest, setEditingRequest] = useState(null)
   const [requestForm, setRequestForm] = useState(
     EMPTY_REQUEST_FORM
   )
@@ -119,6 +118,7 @@ function App() {
           setEditingMemoId(null)
           setMyRequests([])
           setAllRequests([])
+          setEditingRequest(null)
         }
       }
     )
@@ -260,6 +260,8 @@ function App() {
     setEditingMemoId(null)
     setMyRequests([])
     setAllRequests([])
+    setEditingRequest(null)
+    setShowRequestForm(false)
   }
 
   function openNewScheduleForm() {
@@ -668,6 +670,8 @@ function App() {
   // =========================
 
   function openRequestForm() {
+    setEditingRequest(null)
+
     setRequestForm(
       EMPTY_REQUEST_FORM
     )
@@ -676,8 +680,23 @@ function App() {
     setShowRequestForm(true)
   }
 
+  function openEditRequestForm(request) {
+    setEditingRequest(request)
+
+    setRequestForm({
+      title: request.title || '',
+      request_type:
+        request.request_type || '일정 추가',
+      details: request.details || '',
+    })
+
+    setRequestError('')
+    setShowRequestForm(true)
+  }
+
   function closeRequestForm() {
     setShowRequestForm(false)
+    setEditingRequest(null)
     setRequestForm(
       EMPTY_REQUEST_FORM
     )
@@ -719,8 +738,26 @@ function App() {
     setRequestSaving(true)
     setRequestError('')
 
-    const { error } =
-      await supabase
+    let result
+
+    if (editingRequest) {
+      result = await supabase
+        .from('schedule_requests')
+        .update({
+          title:
+            requestForm.title.trim(),
+          request_type:
+            requestForm.request_type,
+          details:
+            requestForm.details.trim(),
+        })
+        .eq('id', editingRequest.id)
+        .eq(
+          'submitter_email',
+          session.user.email
+        )
+    } else {
+      result = await supabase
         .from('schedule_requests')
         .insert({
           title:
@@ -732,26 +769,84 @@ function App() {
           submitter_email:
             session.user.email,
         })
+    }
 
-    if (error) {
+    if (result.error) {
       console.error(
-        '요청사항 등록 실패:',
-        error
+        editingRequest
+          ? '요청사항 수정 실패:'
+          : '요청사항 등록 실패:',
+        result.error
       )
 
-      setRequestError(error.message)
+      setRequestError(
+        result.error.message
+      )
       setRequestSaving(false)
       return
     }
 
     await loadMyRequests()
 
+    if (isAdmin) {
+      await loadAllRequests()
+    }
+
     setRequestSaving(false)
     closeRequestForm()
 
     alert(
-      '요청사항이 등록되었습니다.'
+      editingRequest
+        ? '요청사항이 수정되었습니다.'
+        : '요청사항이 등록되었습니다.'
     )
+  }
+
+  async function handleDeleteRequest(
+    request
+  ) {
+    if (!session?.user) return
+
+    if (
+      request.submitter_email !==
+      session.user.email
+    ) {
+      return
+    }
+
+    const confirmed = window.confirm(
+      `"${request.title}" 요청사항을 삭제할까요?`
+    )
+
+    if (!confirmed) return
+
+    const { error } = await supabase
+      .from('schedule_requests')
+      .delete()
+      .eq('id', request.id)
+      .eq(
+        'submitter_email',
+        session.user.email
+      )
+
+    if (error) {
+      console.error(
+        '요청사항 삭제 실패:',
+        error
+      )
+
+      alert(
+        `삭제에 실패했습니다.\n${error.message}`
+      )
+
+      return
+    }
+
+    await loadMyRequests()
+
+    if (isAdmin) {
+      await loadAllRequests()
+    }
   }
 
   async function loadMyRequests() {
@@ -1244,7 +1339,6 @@ function App() {
       normalizedSearch,
     ])
 
-  // 현재 어젠다 달에 걸쳐 있는 일정
   const agendaMonthStart = `${currentYear}-${String(
     currentMonth + 1
   ).padStart(2, '0')}-01`
@@ -1386,7 +1480,6 @@ function App() {
       : hour
   }
 
-  // 주간 시간표는 항상 06:00 ~ 23:00
   const weekStartHour = 6
   const weekEndHour = 23
 
@@ -1939,17 +2032,44 @@ function App() {
                         </span>
                       </div>
 
-                      <div
-                        className={
-                          request.status ===
-                          '반영 완료'
-                            ? 'my-request-status completed'
-                            : 'my-request-status'
-                        }
-                      >
-                        {
-                          request.status
-                        }
+                      <div className="my-request-actions">
+                        <div
+                          className={
+                            request.status ===
+                            '반영 완료'
+                              ? 'my-request-status completed'
+                              : 'my-request-status'
+                          }
+                        >
+                          {
+                            request.status
+                          }
+                        </div>
+
+                        <div className="request-owner-actions">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              openEditRequestForm(
+                                request
+                              )
+                            }
+                          >
+                            수정
+                          </button>
+
+                          <button
+                            type="button"
+                            className="delete-button"
+                            onClick={() =>
+                              handleDeleteRequest(
+                                request
+                              )
+                            }
+                          >
+                            삭제
+                          </button>
+                        </div>
                       </div>
                     </div>
                   )
@@ -2042,9 +2162,6 @@ function App() {
               )}
             </div>
 
-            {/* =========================
-                검색 / 필터
-               ========================= */}
             <div className="calendar-tools">
               <div className="calendar-search">
                 <span className="search-icon">
@@ -2125,9 +2242,6 @@ function App() {
               </div>
             )}
 
-            {/* =========================
-                MONTH
-               ========================= */}
             {calendarView ===
               'month' && (
               <div className="calendar-card">
@@ -2234,9 +2348,6 @@ function App() {
               </div>
             )}
 
-            {/* =========================
-                WEEK - 시간표
-               ========================= */}
             {calendarView ===
               'week' && (
               <div className="week-timetable-card">
@@ -2453,9 +2564,6 @@ function App() {
               </div>
             )}
 
-            {/* =========================
-                AGENDA
-               ========================= */}
             {calendarView ===
               'agenda' && (
               <div className="agenda-view-card">
@@ -3065,7 +3173,7 @@ function App() {
         )}
 
       {/* =========================
-          요청사항 작성
+          요청사항 작성 / 수정
          ========================= */}
       {showRequestForm &&
         session && (
@@ -3085,7 +3193,9 @@ function App() {
 
               <div className="sheet-header">
                 <h2>
-                  요청사항
+                  {editingRequest
+                    ? '요청사항 수정'
+                    : '요청사항'}
                 </h2>
 
                 <button
@@ -3177,8 +3287,12 @@ function App() {
                   }
                 >
                   {requestSaving
-                    ? '등록 중...'
-                    : '요청사항 등록'}
+                    ? editingRequest
+                      ? '수정 중...'
+                      : '등록 중...'
+                    : editingRequest
+                      ? '수정 저장'
+                      : '요청사항 등록'}
                 </button>
               </form>
             </div>
