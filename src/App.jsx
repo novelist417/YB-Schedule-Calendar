@@ -28,7 +28,7 @@ async function loadSchedules() {
   console.log('조회 오류:', error)
 
   if (error) {
-    console.error('일정 불러오기 실패:', error)
+    console.error('일정 불러오기 실패:', error.message, error.details, error.hint, error.code)
     return
   }
 
