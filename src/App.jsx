@@ -680,19 +680,21 @@ function App() {
     setShowRequestForm(true)
   }
 
-  function openEditRequestForm(request) {
-    setEditingRequest(request)
+ function openEditRequestForm(request) {
+  setEditingRequest(request)
 
-    setRequestForm({
-      title: request.title || '',
-      request_type:
-        request.request_type || '일정 추가',
-      details: request.details || '',
-    })
+  setRequestForm({
+    title: request.title || '',
+    request_type:
+      request.request_type === '기타'
+        ? '개선사항'
+        : request.request_type || '일정 추가',
+    details: request.details || '',
+  })
 
-    setRequestError('')
-    setShowRequestForm(true)
-  }
+  setRequestError('')
+  setShowRequestForm(true)
+}
 
   function closeRequestForm() {
     setShowRequestForm(false)
