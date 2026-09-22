@@ -28,8 +28,11 @@ function App() {
   const [loginError, setLoginError] = useState('')
 
   const [schedules, setSchedules] = useState([])
+
   const [selectedDate, setSelectedDate] = useState(null)
   const [selectedSchedules, setSelectedSchedules] = useState([])
+
+  const [page, setPage] = useState('calendar')
 
   const [showForm, setShowForm] = useState(false)
   const [editingSchedule, setEditingSchedule] = useState(null)
@@ -122,6 +125,7 @@ function App() {
     await supabase.auth.signOut()
     setSession(null)
     setProfile(null)
+    setPage('calendar')
   }
 
   function openNewScheduleForm() {
@@ -255,6 +259,19 @@ function App() {
     setSelectedSchedules([])
   }
 
+  function handleDateClick(day) {
+    if (!day) return
+
+    const date = formatDate(day)
+
+    const daySchedules = schedules.filter(
+      (schedule) => schedule.event_date === date
+    )
+
+    setSelectedDate(date)
+    setSelectedSchedules(daySchedules)
+  }
+
   function getDaysInMonth(year, month) {
     return new Date(year, month + 1, 0).getDate()
   }
@@ -263,50 +280,11 @@ function App() {
     return new Date(year, month, 1).getDay()
   }
 
-  const today = new Date()
-  const currentYear = today.getFullYear()
-  const currentMonth = today.getMonth()
-
-  const daysInMonth = getDaysInMonth(currentYear, currentMonth)
-  const firstDay = getFirstDayOfMonth(currentYear, currentMonth)
-
-  const calendarDays = []
-
-  for (let i = 0; i < firstDay; i++) {
-    calendarDays.push(null)
-  }
-
-  for (let day = 1; day <= daysInMonth; day++) {
-    calendarDays.push(day)
-  }
-
   function formatDate(day) {
     return `${currentYear}-${String(currentMonth + 1).padStart(
       2,
       '0'
     )}-${String(day).padStart(2, '0')}`
-  }
-
-  function getSchedulesForDate(day) {
-    if (!day) return []
-
-    const date = formatDate(day)
-
-    return schedules.filter(
-      (schedule) => schedule.event_date === date
-    )
-  }
-
-  function handleDateClick(day) {
-    if (!day) return
-
-    const date = formatDate(day)
-    const daySchedules = schedules.filter(
-      (schedule) => schedule.event_date === date
-    )
-
-    setSelectedDate(date)
-    setSelectedSchedules(daySchedules)
   }
 
   function formatTime(time) {
@@ -330,7 +308,7 @@ function App() {
     return `오후 ${hour - 12}:${minute}`
   }
 
-  function formatSelectedDate(dateString) {
+  function formatDateText(dateString) {
     if (!dateString) return ''
 
     const [year, month, day] = dateString.split('-')
@@ -338,29 +316,101 @@ function App() {
     return `${year}. ${Number(month)}. ${Number(day)}.`
   }
 
+  function formatListDate(dateString) {
+    if (!dateString) return ''
+
+    const [year, month, day] = dateString.split('-')
+
+    return `${year}.${month}.${day}`
+  }
+
+  const today = new Date()
+  const currentYear = today.getFullYear()
+  const currentMonth = today.getMonth()
+
+  const daysInMonth = getDaysInMonth(
+    currentYear,
+    currentMonth
+  )
+
+  const firstDay = getFirstDayOfMonth(
+    currentYear,
+    currentMonth
+  )
+
+  const calendarDays = []
+
+  for (let i = 0; i < firstDay; i++) {
+    calendarDays.push(null)
+  }
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    calendarDays.push(day)
+  }
+
+  function getSchedulesForDate(day) {
+    if (!day) return []
+
+    const date = formatDate(day)
+
+    return schedules.filter(
+      (schedule) => schedule.event_date === date
+    )
+  }
+
   return (
     <div className="app">
       <header className="header">
-        <div className="logo">
+        <div
+          className="logo"
+          onClick={() => setPage('calendar')}
+          style={{ cursor: 'pointer' }}
+        >
           <span className="logo-mark">YB</span>
           <span>YB Schedule Calendar</span>
         </div>
 
         <div className="header-right">
           {isAdmin && (
+            <nav className="admin-nav">
+              <button
+                className={
+                  page === 'calendar'
+                    ? 'nav-button active'
+                    : 'nav-button'
+                }
+                onClick={() => setPage('calendar')}
+              >
+                달력
+              </button>
+
+              <button
+                className={
+                  page === 'list'
+                    ? 'nav-button active'
+                    : 'nav-button'
+                }
+                onClick={() => setPage('list')}
+              >
+                일정목록
+              </button>
+            </nav>
+          )}
+
+          {isAdmin && (
             <span className="admin-badge">
               ADMIN
             </span>
           )}
 
-          {session ? (
+          {session && (
             <button
               className="header-button"
               onClick={handleLogout}
             >
               로그아웃
             </button>
-          ) : null}
+          )}
         </div>
       </header>
 
@@ -374,14 +424,18 @@ function App() {
                 type="email"
                 placeholder="이메일"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) =>
+                  setEmail(e.target.value)
+                }
               />
 
               <input
                 type="password"
                 placeholder="비밀번호"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) =>
+                  setPassword(e.target.value)
+                }
               />
 
               <button type="submit">
@@ -397,88 +451,191 @@ function App() {
           </section>
         )}
 
-        <section className="calendar-section">
-          <div className="calendar-header">
-            <div>
-              <h1>
-                {currentYear}. {String(currentMonth + 1).padStart(2, '0')}
-              </h1>
-            </div>
+        {page === 'list' && isAdmin ? (
+          <section className="schedule-list-page">
+            <div className="list-page-header">
+              <div>
+                <p className="page-eyebrow">
+                  ADMIN
+                </p>
+                <h1>일정목록</h1>
+                <p className="page-description">
+                  등록된 모든 일정을 관리합니다.
+                </p>
+              </div>
 
-            {isAdmin && (
               <button
                 className="add-schedule-button"
                 onClick={openNewScheduleForm}
               >
                 + 일정 추가
               </button>
-            )}
-          </div>
-
-          <div className="calendar-card">
-            <div className="weekdays">
-              <div>일</div>
-              <div>월</div>
-              <div>화</div>
-              <div>수</div>
-              <div>목</div>
-              <div>금</div>
-              <div>토</div>
             </div>
 
-            <div className="calendar-grid">
-              {calendarDays.map((day, index) => {
-                const daySchedules = getSchedulesForDate(day)
-                const isToday =
-                  day === today.getDate() &&
-                  currentMonth === today.getMonth() &&
-                  currentYear === today.getFullYear()
-
-                return (
-                  <button
-                    key={index}
-                    className={`calendar-day ${
-                      isToday ? 'today' : ''
-                    }`}
-                    onClick={() => handleDateClick(day)}
-                    disabled={!day}
+            <div className="schedule-list">
+              {schedules.length === 0 ? (
+                <div className="empty-list">
+                  등록된 일정이 없습니다.
+                </div>
+              ) : (
+                schedules.map((schedule) => (
+                  <div
+                    className="schedule-list-item"
+                    key={schedule.id}
                   >
-                    {day && (
-                      <>
-                        <span className="date-number">
-                          {day}
-                        </span>
+                    <div className="list-item-date">
+                      {formatListDate(
+                        schedule.event_date
+                      )}
+                    </div>
 
-                        <div className="events">
-                          {daySchedules.map((schedule) => (
-                            <div
-                              className="event"
-                              key={schedule.id}
-                            >
-                              <span
-                                className="event-dot"
-                                style={{
-                                  backgroundColor:
-                                    TYPE_COLORS[
-                                      schedule.schedule_type
-                                    ] || '#999',
-                                }}
-                              />
+                    <div className="list-item-main">
+                      <div
+                        className="list-item-type"
+                        style={{
+                          color:
+                            TYPE_COLORS[
+                              schedule.schedule_type
+                            ] || '#777',
+                        }}
+                      >
+                        {schedule.schedule_type}
+                      </div>
 
-                              <span className="event-title">
-                                {schedule.title}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </>
-                    )}
-                  </button>
-                )
-              })}
+                      <h3>{schedule.title}</h3>
+
+                      <div className="list-item-info">
+                        {schedule.event_time && (
+                          <span>
+                            {formatTime(
+                              schedule.event_time
+                            )}
+                          </span>
+                        )}
+
+                        {schedule.place && (
+                          <span>
+                            {schedule.place}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="list-item-actions">
+                      <button
+                        onClick={() =>
+                          openEditForm(schedule)
+                        }
+                      >
+                        수정
+                      </button>
+
+                      <button
+                        className="delete-button"
+                        onClick={() =>
+                          handleDeleteSchedule(schedule)
+                        }
+                      >
+                        삭제
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
-          </div>
-        </section>
+          </section>
+        ) : (
+          <section className="calendar-section">
+            <div className="calendar-header">
+              <h1>
+                {currentYear}.{' '}
+                {String(currentMonth + 1).padStart(
+                  2,
+                  '0'
+                )}
+              </h1>
+
+              {isAdmin && (
+                <button
+                  className="add-schedule-button"
+                  onClick={openNewScheduleForm}
+                >
+                  + 일정 추가
+                </button>
+              )}
+            </div>
+
+            <div className="calendar-card">
+              <div className="weekdays">
+                <div>일</div>
+                <div>월</div>
+                <div>화</div>
+                <div>수</div>
+                <div>목</div>
+                <div>금</div>
+                <div>토</div>
+              </div>
+
+              <div className="calendar-grid">
+                {calendarDays.map((day, index) => {
+                  const daySchedules =
+                    getSchedulesForDate(day)
+
+                  const isToday =
+                    day === today.getDate() &&
+                    currentMonth === today.getMonth() &&
+                    currentYear === today.getFullYear()
+
+                  return (
+                    <button
+                      key={index}
+                      className={`calendar-day ${
+                        isToday ? 'today' : ''
+                      }`}
+                      onClick={() =>
+                        handleDateClick(day)
+                      }
+                      disabled={!day}
+                    >
+                      {day && (
+                        <>
+                          <span className="date-number">
+                            {day}
+                          </span>
+
+                          <div className="events">
+                            {daySchedules.map(
+                              (schedule) => (
+                                <div
+                                  className="event"
+                                  key={schedule.id}
+                                >
+                                  <span
+                                    className="event-dot"
+                                    style={{
+                                      backgroundColor:
+                                        TYPE_COLORS[
+                                          schedule.schedule_type
+                                        ] || '#999',
+                                    }}
+                                  />
+
+                                  <span className="event-title">
+                                    {schedule.title}
+                                  </span>
+                                </div>
+                              )
+                            )}
+                          </div>
+                        </>
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          </section>
+        )}
       </main>
 
       {selectedDate && (
@@ -496,11 +653,9 @@ function App() {
             <div className="sheet-handle" />
 
             <div className="sheet-header">
-              <div>
-                <h2>
-                  {formatSelectedDate(selectedDate)}
-                </h2>
-              </div>
+              <h2>
+                {formatDateText(selectedDate)}
+              </h2>
 
               <button
                 className="close-button"
@@ -536,28 +691,18 @@ function App() {
 
                     <h3>{schedule.title}</h3>
 
-                    {schedule.event_time && (
-                      <div className="detail-row">
-                        <strong>일시</strong>
-                        <span>
-                          {formatSelectedDate(
-                            schedule.event_date
-                          )}{' '}
-                          {formatTime(schedule.event_time)}
-                        </span>
-                      </div>
-                    )}
-
-                    {!schedule.event_time && (
-                      <div className="detail-row">
-                        <strong>일시</strong>
-                        <span>
-                          {formatSelectedDate(
-                            schedule.event_date
-                          )}
-                        </span>
-                      </div>
-                    )}
+                    <div className="detail-row">
+                      <strong>일시</strong>
+                      <span>
+                        {formatDateText(
+                          schedule.event_date
+                        )}
+                        {schedule.event_time &&
+                          ` ${formatTime(
+                            schedule.event_time
+                          )}`}
+                      </span>
+                    </div>
 
                     {schedule.place && (
                       <div className="detail-row">
@@ -585,7 +730,9 @@ function App() {
                         <strong>참고 링크</strong>
                         <a
                           className="reference-link"
-                          href={schedule.related_link}
+                          href={
+                            schedule.related_link
+                          }
                           target="_blank"
                           rel="noreferrer"
                         >
@@ -607,7 +754,9 @@ function App() {
                         <button
                           className="delete-button"
                           onClick={() =>
-                            handleDeleteSchedule(schedule)
+                            handleDeleteSchedule(
+                              schedule
+                            )
                           }
                         >
                           삭제
