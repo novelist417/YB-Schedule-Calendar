@@ -40,6 +40,12 @@ function App() {
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState('')
 
+  // 개인 메모
+  const [memos, setMemos] = useState({})
+  const [memoText, setMemoText] = useState({})
+  const [editingMemoId, setEditingMemoId] = useState(null)
+  const [memoSaving, setMemoSaving] = useState(null)
+
   const isAdmin = profile?.role === 'admin'
 
   useEffect(() => {
@@ -54,6 +60,8 @@ function App() {
         loadProfile(newSession.user.id)
       } else {
         setProfile(null)
+        setMemos({})
+        setMemoText({})
       }
     })
 
@@ -123,9 +131,14 @@ function App() {
 
   async function handleLogout() {
     await supabase.auth.signOut()
+
     setSession(null)
     setProfile(null)
     setPage('calendar')
+    setSelectedDate(null)
+    setSelectedSchedules([])
+    setMemos({})
+    setMemoText({})
   }
 
   function openNewScheduleForm() {
@@ -259,7 +272,122 @@ function App() {
     setSelectedSchedules([])
   }
 
-  function handleDateClick(day) {
+  // =========================
+  // 개인 메모
+  // =========================
+
+  async function loadMemos(scheduleIds) {
+    if (!session?.user || !scheduleIds?.length) {
+      setMemos({})
+      setMemoText({})
+      setEditingMemoId(null)
+      return
+    }
+
+    const { data, error } = await supabase
+      .from('memos')
+      .select('*')
+      .eq('user_id', session.user.id)
+      .in('schedule_id', scheduleIds)
+
+    if (error) {
+      console.error('메모 조회 실패:', error)
+      return
+    }
+
+    const memoMap = {}
+    const textMap = {}
+
+    ;(data || []).forEach((memo) => {
+      memoMap[memo.schedule_id] = memo
+      textMap[memo.schedule_id] = memo.content
+    })
+
+    setMemos(memoMap)
+    setMemoText(textMap)
+    setEditingMemoId(null)
+  }
+
+  async function handleSaveMemo(scheduleId) {
+    if (!session?.user) return
+
+    const content = (memoText[scheduleId] || '').trim()
+
+    if (!content) {
+      return
+    }
+
+    setMemoSaving(scheduleId)
+
+    const existingMemo = memos[scheduleId]
+
+    let result
+
+    if (existingMemo) {
+      result = await supabase
+        .from('memos')
+        .update({
+          content,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', existingMemo.id)
+        .eq('user_id', session.user.id)
+    } else {
+      result = await supabase
+        .from('memos')
+        .insert({
+          user_id: session.user.id,
+          schedule_id: scheduleId,
+          content,
+        })
+    }
+
+    if (result.error) {
+      console.error('메모 저장 실패:', result.error)
+      alert(`메모 저장에 실패했습니다.\n${result.error.message}`)
+      setMemoSaving(null)
+      return
+    }
+
+    await loadMemos(
+      selectedSchedules.map((schedule) => schedule.id)
+    )
+
+    setEditingMemoId(null)
+    setMemoSaving(null)
+  }
+
+  async function handleDeleteMemo(scheduleId) {
+    if (!session?.user) return
+
+    const memo = memos[scheduleId]
+
+    if (!memo) return
+
+    const confirmed = window.confirm(
+      '이 메모를 삭제할까요?'
+    )
+
+    if (!confirmed) return
+
+    const { error } = await supabase
+      .from('memos')
+      .delete()
+      .eq('id', memo.id)
+      .eq('user_id', session.user.id)
+
+    if (error) {
+      console.error('메모 삭제 실패:', error)
+      alert(`메모 삭제에 실패했습니다.\n${error.message}`)
+      return
+    }
+
+    await loadMemos(
+      selectedSchedules.map((schedule) => schedule.id)
+    )
+  }
+
+  async function handleDateClick(day) {
     if (!day) return
 
     const date = formatDate(day)
@@ -270,6 +398,10 @@ function App() {
 
     setSelectedDate(date)
     setSelectedSchedules(daySchedules)
+
+    await loadMemos(
+      daySchedules.map((schedule) => schedule.id)
+    )
   }
 
   function getDaysInMonth(year, month) {
@@ -458,7 +590,9 @@ function App() {
                 <p className="page-eyebrow">
                   ADMIN
                 </p>
+
                 <h1>일정목록</h1>
+
                 <p className="page-description">
                   등록된 모든 일정을 관리합니다.
                 </p>
@@ -697,6 +831,7 @@ function App() {
                         {formatDateText(
                           schedule.event_date
                         )}
+
                         {schedule.event_time &&
                           ` ${formatTime(
                             schedule.event_time
@@ -728,6 +863,7 @@ function App() {
                     {schedule.related_link && (
                       <div className="detail-section">
                         <strong>참고 링크</strong>
+
                         <a
                           className="reference-link"
                           href={
@@ -738,6 +874,109 @@ function App() {
                         >
                           링크 열기
                         </a>
+                      </div>
+                    )}
+
+                    {/* 개인 메모 */}
+                    {session?.user && (
+                      <div className="memo-section">
+                        <div className="memo-heading">
+                          <div>
+                            <strong>내 메모</strong>
+
+                            <span>
+                              로그인한 계정에서만 볼 수 있어요.
+                            </span>
+                          </div>
+
+                          {memos[schedule.id] && (
+                            <div className="memo-actions">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEditingMemoId(
+                                    schedule.id
+                                  )
+
+                                  setMemoText(
+                                    (prev) => ({
+                                      ...prev,
+                                      [schedule.id]:
+                                        memos[schedule.id]
+                                          .content,
+                                    })
+                                  )
+                                }
+                                aria-label="메모 수정"
+                              >
+                                ✏️
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleDeleteMemo(
+                                    schedule.id
+                                  )
+                                }
+                                aria-label="메모 삭제"
+                              >
+                                🗑️
+                              </button>
+                            </div>
+                          )}
+                        </div>
+
+                        {memos[schedule.id] &&
+                        editingMemoId !==
+                          schedule.id ? (
+                          <div className="memo-view">
+                            {
+                              memos[schedule.id]
+                                .content
+                            }
+                          </div>
+                        ) : (
+                          <div className="memo-editor">
+                            <textarea
+                              value={
+                                memoText[
+                                  schedule.id
+                                ] || ''
+                              }
+                              onChange={(e) =>
+                                setMemoText(
+                                  (prev) => ({
+                                    ...prev,
+                                    [schedule.id]:
+                                      e.target.value,
+                                  })
+                                )
+                              }
+                              placeholder="이 일정에 대한 메모를 남겨보세요."
+                              rows="2"
+                            />
+
+                            <button
+                              type="button"
+                              className="memo-save-button"
+                              onClick={() =>
+                                handleSaveMemo(
+                                  schedule.id
+                                )
+                              }
+                              disabled={
+                                memoSaving ===
+                                schedule.id
+                              }
+                            >
+                              {memoSaving ===
+                              schedule.id
+                                ? '저장 중...'
+                                : '저장'}
+                            </button>
+                          </div>
+                        )}
                       </div>
                     )}
 
@@ -815,12 +1054,21 @@ function App() {
                   value={form.schedule_type}
                   onChange={handleFormChange}
                 >
-                  <option value="방송">방송</option>
+                  <option value="방송">
+                    방송
+                  </option>
+
                   <option value="지역축제/행사">
                     지역축제/행사
                   </option>
-                  <option value="기념일">기념일</option>
-                  <option value="대학축제">대학축제</option>
+
+                  <option value="기념일">
+                    기념일
+                  </option>
+
+                  <option value="대학축제">
+                    대학축제
+                  </option>
                 </select>
               </label>
 
