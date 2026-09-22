@@ -3110,81 +3110,59 @@ body {
   }
 }
 /* =========================================================
-   2026-09-22 최종 UI 보정
+   2026-09-22 UI 보정
    - 월 달력 날짜 왼쪽 상단
-   - 요청사항 필터 / 상태 버튼
-   - 전체 폰트 확대
-   - PC 가독성 개선
+   - 일정은 날짜 바로 아래
+   - 요청사항 필터 / 상태 버튼 유지
+   - 작은 글자만 최소한으로 보정
+   - 전체적인 폰트 크기는 기존 유지
    ========================================================= */
 
-/* 전체 기본 글자 크기 */
-body {
-  font-size: 16px !important;
-}
+/* =========================================================
+   월 달력
+   ========================================================= */
 
-/* 일반 페이지 설명 */
-.page-description {
-  font-size: 15px !important;
-  line-height: 1.6 !important;
-}
-
-/* 월별 달력 */
+/* 날짜 숫자 위치만 변경 — 크기는 기존 CSS 그대로 사용 */
 .calendar-day {
   position: relative !important;
-  align-items: flex-start !important;
-  justify-content: flex-start !important;
   text-align: left !important;
 }
 
-/* 날짜 숫자를 왼쪽 위로 */
 .calendar-day .date-number {
   position: absolute !important;
   top: 10px !important;
   left: 10px !important;
-  font-size: 17px !important;
-  line-height: 1 !important;
-  font-weight: 600 !important;
   z-index: 2 !important;
 }
 
-/* 오늘 날짜도 숫자 위치 유지 */
+/* 오늘 날짜도 같은 위치 */
 .calendar-day.today .date-number {
   top: 10px !important;
   left: 10px !important;
 }
 
-/* 월 달력 일정 */
+/* 일정은 날짜 숫자 바로 아래 */
 .calendar-day .events {
   width: 100% !important;
-  margin-top: 34px !important;
+  margin-top: 32px !important;
   text-align: left !important;
 }
 
+/* 일정 글자는 기존 크기 유지 */
 .calendar-day .event-title {
-  font-size: 14px !important;
-  line-height: 1.4 !important;
+  font-size: 11px !important;
+  line-height: 1.3 !important;
 }
 
-.calendar-day .event {
-  min-height: 22px !important;
-}
+/* =========================================================
+   검색창
+   ========================================================= */
 
-/* 달력 요일 */
-.weekdays {
-  font-size: 15px !important;
-  font-weight: 600 !important;
-}
-
-/* 검색창 */
 .calendar-search {
   position: relative !important;
 }
 
-.calendar-search input {
-  font-size: 16px !important;
-}
-
-/* 검색창 기본 X 제거 */
+/* 브라우저 기본 X 제거 */
 .calendar-search input::-webkit-search-cancel-button,
 .calendar-search input::-webkit-search-decoration {
   -webkit-appearance: none !important;
@@ -3196,7 +3174,7 @@ body {
   display: none !important;
 }
 
-/* 검색창 오른쪽 X */
+/* 우리가 만든 X만 표시 */
 .search-clear {
   display: flex !important;
   align-items: center;
@@ -3210,16 +3188,16 @@ body {
   padding: 0;
   border: 0;
   border-radius: 50%;
-  background: #f0f0f2;
-  color: #777;
+  background: #2a2a2a !important;
+  color: #aaa !important;
   font-size: 18px !important;
   line-height: 1 !important;
   cursor: pointer;
-  z-index: 2;
+  z-index: 5;
 }
 
 /* =========================================================
-   요청사항 관리자 화면
+   요청사항 관리자 필터
    ========================================================= */
 
 .request-filter-bar {
@@ -3231,7 +3209,7 @@ body {
   width: fit-content;
   border: 1px solid #292929;
   border-radius: 10px;
-  background: #111111;
+  background: #111;
 }
 
 .request-filter-button {
@@ -3240,7 +3218,7 @@ body {
   padding: 9px 16px;
   background: transparent;
   color: #999;
-  font-size: 14px !important;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
 }
@@ -3250,37 +3228,35 @@ body {
 }
 
 .request-filter-button.active {
-  background: #7b202d;
+  background: var(--yb-red);
   color: #fff;
 }
 
-/* 관리자 요청 카드 */
+/* =========================================================
+   요청사항 카드
+   ========================================================= */
+
 .request-admin-item {
   position: relative;
-  padding: 22px !important;
+  padding: 20px !important;
 }
 
-/* 요청 제목 */
+/* 제목 — 기존 크기 유지 */
 .request-admin-title-area h3 {
   margin: 9px 0 0 !important;
-  font-size: 18px !important;
-  line-height: 1.4 !important;
 }
 
-/* 요청 내용 */
+/* 내용 — 기존 크기 유지 */
 .request-details {
-  margin: 16px 0 !important;
-  font-size: 15px !important;
-  line-height: 1.65 !important;
+  margin: 12px 0 !important;
 }
 
-/* 요청 메타 */
+/* 메타 정보 — 너무 작아서 1px만 보정 */
 .request-meta {
-  font-size: 13px !important;
-  line-height: 1.5 !important;
+  font-size: 11px !important;
 }
 
-/* 상태 영역을 카드 하단 오른쪽으로 */
+/* 상태 영역은 카드 아래 오른쪽 */
 .request-status-area {
   display: flex;
   align-items: center;
@@ -3292,7 +3268,7 @@ body {
 }
 
 .request-current-status {
-  font-size: 13px !important;
+  font-size: 12px !important;
   color: #999;
 }
 
@@ -3302,19 +3278,19 @@ body {
 
 .request-status-button {
   min-width: 108px;
-  padding: 9px 13px;
-  border: 1px solid #7b202d;
+  padding: 8px 13px;
+  border: 1px solid var(--yb-red);
   border-radius: 8px;
-  background: #7b202d;
+  background: var(--yb-red);
   color: #fff;
-  font-size: 13px !important;
+  font-size: 12px !important;
   font-weight: 600;
   cursor: pointer;
 }
 
 .request-status-button:hover {
-  background: #922735;
-  border-color: #922735;
+  background: var(--yb-red-hover);
+  border-color: var(--yb-red-hover);
 }
 
 .request-status-button.completed {
@@ -3328,57 +3304,73 @@ body {
   color: #fff;
 }
 
-/* 요청 유형 */
+/* 요청 유형 — 너무 작아서 1px만 보정 */
 .request-type-badge {
-  font-size: 13px !important;
+  font-size: 11px !important;
 }
 
 /* =========================================================
    어젠다
    ========================================================= */
 
-.agenda-item {
-  min-height: 86px !important;
-}
-
+/* 원래 크기 유지.
+   단, 너무 작은 날짜/보조정보만 1px 정도 보정 */
 .agenda-date strong {
-  font-size: 16px !important;
+  font-size: 13px !important;
 }
 
 .agenda-date span {
-  font-size: 14px !important;
+  font-size: 11px !important;
 }
 
 .agenda-main strong {
-  font-size: 17px !important;
+  font-size: 13px !important;
 }
 
 .agenda-main span {
-  font-size: 14px !important;
+  font-size: 11px !important;
 }
 
 /* =========================================================
    주간 시간표
    ========================================================= */
 
+/* 요일/날짜는 기존 크기 유지 */
 .timetable-day-head span {
-  font-size: 14px !important;
-}
-
-.timetable-day-head strong {
-  font-size: 17px !important;
-}
-
-.time-label {
-  font-size: 13px !important;
-}
-
-.timetable-event-time {
   font-size: 12px !important;
 }
 
+.timetable-day-head strong {
+  font-size: 15px !important;
+}
+
+/* 시간만 너무 작아서 1px 보정 */
+.time-label {
+  font-size: 12px !important;
+}
+
+.timetable-event-time {
+  font-size: 11px !important;
+}
+
 .timetable-event-title {
-  font-size: 14px !important;
+  font-size: 12px !important;
+}
+
+/* 오늘 날짜 강조만 강화 */
+.timetable-day-head.today {
+  background: rgba(123, 32, 45, 0.42) !important;
+  color: #fff !important;
+  border-right-color: var(--yb-red) !important;
+  border-bottom-color: var(--yb-red) !important;
+}
+
+.timetable-day-head.today span {
+  color: #fff !important;
+}
+
+.timetable-day-head.today strong {
+  color: #fff !important;
 }
 
 /* =========================================================
@@ -3386,77 +3378,44 @@ body {
    ========================================================= */
 
 .list-item-date {
-  font-size: 14px !important;
+  font-size: 11px !important;
 }
 
 .list-item-type {
-  font-size: 13px !important;
+  font-size: 10px !important;
 }
 
 .list-item-main h3 {
-  font-size: 18px !important;
+  font-size: 14px !important;
 }
 
 .list-item-info {
-  font-size: 14px !important;
+  font-size: 11px !important;
 }
 
 /* =========================================================
    상세 팝업
    ========================================================= */
 
+/* 제목은 기존 18px 유지 */
 .schedule-item h3 {
-  font-size: 21px !important;
-  line-height: 1.4 !important;
+  font-size: 18px !important;
 }
 
 .detail-row {
-  font-size: 15px !important;
-  line-height: 1.6 !important;
+  font-size: 13px !important;
 }
 
 .detail-section {
-  font-size: 15px !important;
-  line-height: 1.65 !important;
+  font-size: 13px !important;
 }
 
 .detail-section p {
-  font-size: 15px !important;
+  font-size: 13px !important;
 }
 
 .memo-view {
-  font-size: 15px !important;
-  line-height: 1.6 !important;
-}
-
-/* =========================================================
-   PC에서 특히 작아 보이는 글씨 보정
-   ========================================================= */
-
-@media (min-width: 701px) {
-  .calendar-day .date-number {
-    font-size: 18px !important;
-  }
-
-  .calendar-day .event-title {
-    font-size: 14px !important;
-  }
-
-  .agenda-main strong {
-    font-size: 17px !important;
-  }
-
-  .agenda-main span {
-    font-size: 14px !important;
-  }
-
-  .request-admin-item {
-    padding: 24px !important;
-  }
-
-  .request-details {
-    font-size: 15px !important;
-  }
+  font-size: 13px !important;
 }
 
 /* =========================================================
@@ -3464,24 +3423,25 @@ body {
    ========================================================= */
 
 @media (max-width: 700px) {
-  body {
-    font-size: 15px !important;
-  }
 
+  /* 월 달력 */
   .calendar-day .date-number {
     top: 8px !important;
     left: 8px !important;
-    font-size: 16px !important;
+    /* 크기는 기존 모바일 11px 유지 */
+    font-size: 11px !important;
   }
 
   .calendar-day .events {
-    margin-top: 30px !important;
+    margin-top: 28px !important;
   }
 
   .calendar-day .event-title {
-    font-size: 13px !important;
+    /* 모바일에서는 원래 숨김 */
+    font-size: 11px !important;
   }
 
+  /* 요청사항 */
   .request-filter-bar {
     width: 100%;
     overflow-x: auto;
@@ -3494,15 +3454,7 @@ body {
   }
 
   .request-admin-item {
-    padding: 18px !important;
-  }
-
-  .request-admin-title-area h3 {
-    font-size: 17px !important;
-  }
-
-  .request-details {
-    font-size: 14px !important;
+    padding: 16px !important;
   }
 
   .request-status-area {
@@ -3513,15 +3465,41 @@ body {
     min-width: auto;
   }
 
-  .agenda-item {
-    min-height: 80px !important;
+  /* 어젠다 */
+  .agenda-date strong {
+    font-size: 11px !important;
+  }
+
+  .agenda-date span {
+    font-size: 10px !important;
   }
 
   .agenda-main strong {
-    font-size: 16px !important;
+    font-size: 12px !important;
   }
 
   .agenda-main span {
+    font-size: 10px !important;
+  }
+
+  /* 주간 시간표 */
+  .timetable-day-head span {
+    font-size: 11px !important;
+  }
+
+  .timetable-day-head strong {
     font-size: 13px !important;
+  }
+
+  .time-label {
+    font-size: 10px !important;
+  }
+
+  .timetable-event-time {
+    font-size: 9px !important;
+  }
+
+  .timetable-event-title {
+    font-size: 11px !important;
   }
 }
