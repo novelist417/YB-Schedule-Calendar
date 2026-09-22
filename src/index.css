@@ -3659,3 +3659,40 @@ body {
     font-size: 10px !important;
   }
 }
+.my-request-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.request-owner-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.request-owner-actions button {
+  border: 1px solid #ddd;
+  background: #fff;
+  border-radius: 8px;
+  padding: 7px 11px;
+  cursor: pointer;
+}
+
+.request-owner-actions .delete-button {
+  color: #d9534f;
+  border-color: #f0c8c6;
+}
+
+@media (max-width: 700px) {
+  .my-request-actions {
+    align-items: flex-end;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .request-owner-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
