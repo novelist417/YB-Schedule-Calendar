@@ -1738,3 +1738,609 @@ button {
     font-size: 11px;
   }
 }
+/* =========================================================
+   YB DARK / BURGUNDY THEME
+   ========================================================= */
+
+:root {
+  --yb-bg: #0b090a;
+  --yb-panel: #151112;
+  --yb-panel-2: #1b1517;
+  --yb-panel-3: #21191b;
+  --yb-line: #302326;
+  --yb-line-strong: #493238;
+  --yb-text: #f2ecee;
+  --yb-text-soft: #c8bec1;
+  --yb-muted: #94878b;
+  --yb-burgundy: #7d2434;
+  --yb-burgundy-strong: #962b3e;
+  --yb-burgundy-soft: rgba(125, 36, 52, 0.18);
+  --yb-burgundy-border: rgba(150, 43, 62, 0.5);
+}
+
+/* 전체 배경 */
+html,
+body {
+  background: var(--yb-bg) !important;
+  color: var(--yb-text);
+}
+
+body {
+  color-scheme: dark;
+}
+
+/* 헤더 */
+.header {
+  background: rgba(11, 9, 10, 0.94) !important;
+  border-bottom-color: var(--yb-line) !important;
+}
+
+.logo-mark {
+  background: var(--yb-burgundy) !important;
+  color: #fff;
+}
+
+.logo {
+  color: var(--yb-text);
+}
+
+.header-button {
+  color: var(--yb-muted) !important;
+}
+
+.header-button:hover {
+  color: #fff !important;
+}
+
+.nav-button {
+  color: var(--yb-muted) !important;
+}
+
+.nav-button:hover {
+  color: #fff !important;
+  background: var(--yb-panel-2) !important;
+}
+
+.nav-button.active {
+  color: #fff !important;
+  background: var(--yb-burgundy-soft) !important;
+}
+
+.admin-badge {
+  background: var(--yb-burgundy-soft) !important;
+  color: #d98b99 !important;
+}
+
+/* 메인 */
+.main {
+  color: var(--yb-text);
+}
+
+/* 제목 */
+.calendar-header h1,
+.list-page-header h1,
+.sheet-header h2,
+.login-section h2 {
+  color: var(--yb-text) !important;
+}
+
+/* 주요 버건디 버튼 */
+.add-schedule-button,
+.save-schedule-button,
+.login-section button {
+  background: var(--yb-burgundy) !important;
+  color: #fff !important;
+  box-shadow: 0 5px 18px rgba(0, 0, 0, 0.35);
+}
+
+.add-schedule-button:hover,
+.save-schedule-button:hover,
+.login-section button:hover {
+  background: var(--yb-burgundy-strong) !important;
+}
+
+/* 카드 */
+.calendar-card,
+.week-view-card,
+.agenda-view-card,
+.week-timetable-card,
+.login-section,
+.schedule-list,
+.request-admin-list,
+.my-request-list {
+  background: var(--yb-panel) !important;
+  border-color: var(--yb-line) !important;
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.3);
+}
+
+/* 달력 */
+.weekdays,
+.week-view-head,
+.timetable-header {
+  background: var(--yb-panel-2) !important;
+  border-bottom-color: var(--yb-line) !important;
+}
+
+.weekdays div,
+.week-day-head,
+.timetable-day-head {
+  color: var(--yb-muted) !important;
+}
+
+.calendar-day,
+.week-day-head,
+.week-day-column,
+.agenda-item {
+  background: var(--yb-panel) !important;
+  color: var(--yb-text);
+}
+
+.calendar-day {
+  border-right-color: var(--yb-line) !important;
+  border-bottom-color: var(--yb-line) !important;
+}
+
+.calendar-day:hover:not(:disabled),
+.agenda-item:hover {
+  background: var(--yb-panel-2) !important;
+}
+
+.date-number,
+.week-day-head strong,
+.timetable-day-head strong,
+.agenda-date strong,
+.agenda-main strong,
+.event-title,
+.week-event-title,
+.timetable-event-title,
+.list-item-main h3,
+.detail-row span,
+.detail-section p,
+.memo-heading strong,
+.memo-view,
+.request-details,
+.my-request-main h3,
+.my-request-main p {
+  color: var(--yb-text) !important;
+}
+
+/* 오늘 날짜 */
+.today .date-number,
+.week-day-head.today strong {
+  background: var(--yb-burgundy) !important;
+  color: #fff !important;
+}
+
+/* 검색 / 필터 */
+.calendar-search input,
+.calendar-view-select,
+.schedule-filter {
+  border-color: var(--yb-line-strong) !important;
+  background: var(--yb-panel-2) !important;
+  color: var(--yb-text) !important;
+}
+
+.calendar-search input:focus,
+.calendar-view-select:focus,
+.schedule-filter:focus {
+  border-color: var(--yb-burgundy) !important;
+  background: var(--yb-panel-3) !important;
+}
+
+.calendar-search input::placeholder {
+  color: #75696d;
+}
+
+.search-icon {
+  color: #9b8d91 !important;
+}
+
+/* 브라우저가 붙이는 검색창 X 완전 제거 */
+.calendar-search input::-webkit-search-cancel-button,
+.calendar-search input::-webkit-search-decoration {
+  -webkit-appearance: none;
+  appearance: none;
+  display: none;
+}
+
+.calendar-search input::-ms-clear {
+  display: none;
+}
+
+/* 기존 커스텀 X도 완전 제거 */
+.search-clear {
+  display: none !important;
+}
+
+/* 검색 결과 */
+.filter-result-info {
+  color: var(--yb-muted) !important;
+}
+
+/* 상세 / 바텀시트 */
+.overlay {
+  background: rgba(0, 0, 0, 0.72) !important;
+  backdrop-filter: blur(5px);
+}
+
+.bottom-sheet {
+  background: #120e10 !important;
+  box-shadow: 0 -15px 50px rgba(0, 0, 0, 0.55);
+}
+
+.sheet-handle {
+  background: #4a393d !important;
+}
+
+.close-button {
+  background: var(--yb-panel-2) !important;
+  color: var(--yb-text-soft) !important;
+}
+
+.close-button:hover {
+  background: var(--yb-panel-3) !important;
+  color: #fff !important;
+}
+
+.schedule-item {
+  background: var(--yb-panel-2) !important;
+  border-color: var(--yb-line) !important;
+}
+
+.detail-row strong,
+.detail-section strong {
+  color: var(--yb-muted) !important;
+}
+
+.reference-link {
+  color: #b65b6b !important;
+}
+
+.reference-link:hover {
+  color: #e09aa7 !important;
+}
+
+/* 관리자 버튼 */
+.admin-actions {
+  border-top-color: var(--yb-line) !important;
+}
+
+.admin-actions button {
+  background: var(--yb-panel-2) !important;
+  border-color: var(--yb-line-strong) !important;
+  color: var(--yb-text-soft) !important;
+}
+
+.admin-actions button:hover {
+  background: var(--yb-panel-3) !important;
+  color: #fff !important;
+}
+
+.admin-actions .delete-button {
+  color: #d17b89 !important;
+  border-color: var(--yb-burgundy-border) !important;
+}
+
+/* 일정 입력 폼 */
+.schedule-form label {
+  color: var(--yb-muted) !important;
+}
+
+.schedule-form input,
+.schedule-form select,
+.schedule-form textarea {
+  border-color: var(--yb-line-strong) !important;
+  background: var(--yb-panel-2) !important;
+  color: var(--yb-text) !important;
+}
+
+.schedule-form input:focus,
+.schedule-form select:focus,
+.schedule-form textarea:focus {
+  border-color: var(--yb-burgundy) !important;
+  background: var(--yb-panel-3) !important;
+}
+
+.schedule-form input::placeholder,
+.schedule-form textarea::placeholder {
+  color: #75696d;
+}
+
+/* =========================================================
+   요청사항
+   ========================================================= */
+
+.request-page .page-eyebrow {
+  color: #b65b6b !important;
+}
+
+.request-page .page-description {
+  color: var(--yb-muted) !important;
+}
+
+/* 요청사항 전체 카드 */
+.request-admin-list,
+.my-request-list {
+  overflow: hidden;
+  background: var(--yb-panel) !important;
+  border: 1px solid var(--yb-line) !important;
+  border-radius: 16px;
+}
+
+/* 관리자 요청 카드 */
+.request-admin-item,
+.my-request-item {
+  background: var(--yb-panel) !important;
+  border-bottom: 1px solid var(--yb-line) !important;
+}
+
+.request-admin-item:last-child,
+.my-request-item:last-child {
+  border-bottom: 0;
+}
+
+.request-admin-item:hover,
+.my-request-item:hover {
+  background: var(--yb-panel-2) !important;
+}
+
+/* 요청 유형 */
+.request-type-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 8px;
+  margin-bottom: 7px;
+  border: 1px solid var(--yb-burgundy-border);
+  border-radius: 6px;
+  background: var(--yb-burgundy-soft) !important;
+  color: #d28a97 !important;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+/* 요청 제목 */
+.request-admin-item h3,
+.my-request-item h3 {
+  color: var(--yb-text) !important;
+}
+
+/* 요청 내용 */
+.request-details,
+.my-request-main p {
+  color: var(--yb-text-soft) !important;
+}
+
+/* 요청 날짜 / 이메일 */
+.request-meta,
+.my-request-main > span {
+  color: var(--yb-muted) !important;
+}
+
+/* 반영 상태 */
+.request-status-button,
+.my-request-status {
+  border: 1px solid var(--yb-line-strong) !important;
+  background: var(--yb-panel-2) !important;
+  color: var(--yb-text-soft) !important;
+}
+
+.request-status-button:hover {
+  background: var(--yb-panel-3) !important;
+}
+
+.request-status-button.completed,
+.my-request-status.completed {
+  background: var(--yb-burgundy-soft) !important;
+  border-color: var(--yb-burgundy-border) !important;
+  color: #e19aa7 !important;
+}
+
+/* 요청사항 작성자 */
+.request-user-info {
+  color: var(--yb-muted) !important;
+}
+
+/* 빈 상태 */
+.empty-list,
+.agenda-empty,
+.week-no-results {
+  color: var(--yb-muted) !important;
+}
+
+/* =========================================================
+   메모
+   ========================================================= */
+
+.memo-section {
+  border-top-color: var(--yb-line) !important;
+}
+
+.memo-heading strong {
+  color: var(--yb-text) !important;
+}
+
+.memo-heading span {
+  color: var(--yb-muted) !important;
+}
+
+.memo-view {
+  background: var(--yb-panel-3) !important;
+  border: 1px solid var(--yb-line) !important;
+}
+
+.memo-editor textarea {
+  border-color: var(--yb-line-strong) !important;
+  background: var(--yb-panel-2) !important;
+  color: var(--yb-text) !important;
+}
+
+.memo-editor textarea::placeholder {
+  color: #75696d;
+}
+
+.memo-save-button {
+  background: var(--yb-burgundy) !important;
+}
+
+.memo-save-button:hover {
+  background: var(--yb-burgundy-strong) !important;
+}
+
+/* =========================================================
+   주간 시간표
+   ========================================================= */
+
+/* 시간표 자체에서 가로 + 세로 스크롤 */
+.timetable-scroll {
+  width: 100%;
+  max-height: min(68vh, 620px);
+  overflow: auto !important;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* 위쪽 요일 헤더 고정 */
+.timetable-header {
+  position: sticky !important;
+  top: 0;
+  z-index: 20;
+  background: var(--yb-panel-2) !important;
+}
+
+/* 왼쪽 위 모서리 */
+.time-column-head {
+  position: sticky !important;
+  left: 0;
+  top: 0;
+  z-index: 30;
+  background: var(--yb-panel-2) !important;
+  border-right: 1px solid var(--yb-line-strong) !important;
+}
+
+/* 요일 */
+.timetable-day-head {
+  background: var(--yb-panel-2) !important;
+  color: var(--yb-muted) !important;
+  border-right: 1px solid var(--yb-line-strong) !important;
+}
+
+.timetable-day-head:hover {
+  background: var(--yb-panel-3) !important;
+}
+
+.timetable-day-head.today {
+  background: var(--yb-burgundy-soft) !important;
+}
+
+/* 시간표 본문 */
+.timetable-body {
+  background: var(--yb-panel) !important;
+}
+
+/* 왼쪽 시간 표시 고정 */
+.time-label {
+  position: sticky !important;
+  left: 0;
+  z-index: 10;
+  background: var(--yb-panel) !important;
+  color: var(--yb-muted) !important;
+  border-right: 2px solid var(--yb-line-strong) !important;
+  border-bottom: 1px solid var(--yb-line) !important;
+}
+
+/* 요일 사이 세로선 강하게 */
+.timetable-cell {
+  background: var(--yb-panel) !important;
+  border-right: 1px solid #493238 !important;
+  border-bottom: 1px solid #34272a !important;
+}
+
+.timetable-cell:last-child {
+  border-right: 0;
+}
+
+/* 시간표 일정 */
+.timetable-event {
+  background: var(--yb-panel-3) !important;
+  border-left-color: var(--yb-burgundy) !important;
+  color: var(--yb-text);
+}
+
+.timetable-event:hover {
+  background: #2a1d20 !important;
+}
+
+.timetable-event-time {
+  color: #a9989d !important;
+}
+
+.timetable-event-title {
+  color: var(--yb-text) !important;
+}
+
+/* 시간 미정 */
+.untimed-section {
+  background: var(--yb-panel-2) !important;
+  border-bottom-color: var(--yb-line) !important;
+}
+
+.untimed-title {
+  color: var(--yb-text-soft) !important;
+}
+
+.untimed-event {
+  background: var(--yb-panel-3) !important;
+  border-color: var(--yb-line-strong) !important;
+  color: var(--yb-text) !important;
+}
+
+.untimed-date {
+  color: var(--yb-muted) !important;
+}
+
+/* =========================================================
+   모바일
+   ========================================================= */
+
+@media (max-width: 700px) {
+  .timetable-scroll {
+    max-height: calc(100vh - 210px);
+  }
+
+  .timetable {
+    min-width: 700px;
+  }
+
+  .timetable-header {
+    position: sticky !important;
+    top: 0;
+    z-index: 20;
+  }
+
+  .time-column-head {
+    position: sticky !important;
+    left: 0;
+    top: 0;
+    z-index: 30;
+  }
+
+  .time-label {
+    position: sticky !important;
+    left: 0;
+    z-index: 10;
+  }
+
+  .timetable-cell {
+    border-right: 1px solid #493238 !important;
+    border-bottom: 1px solid #34272a !important;
+  }
+
+  .request-page .list-page-header {
+    margin-bottom: 16px;
+  }
+
+  .request-admin-list,
+  .my-request-list {
+    border-radius: 13px;
+  }
+}
