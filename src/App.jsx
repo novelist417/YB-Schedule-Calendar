@@ -19,6 +19,12 @@ const EMPTY_FORM = {
   related_link: '',
 }
 
+const EMPTY_REQUEST_FORM = {
+  title: '',
+  request_type: '일정 추가',
+  details: '',
+}
+
 function App() {
   const [session, setSession] = useState(null)
   const [profile, setProfile] = useState(null)
@@ -48,6 +54,17 @@ function App() {
   const [editingMemoId, setEditingMemoId] = useState(null)
   const [memoSaving, setMemoSaving] = useState(null)
 
+  // 요청사항
+  const [showRequestForm, setShowRequestForm] = useState(false)
+  const [requestForm, setRequestForm] = useState(
+    EMPTY_REQUEST_FORM
+  )
+  const [requestSaving, setRequestSaving] = useState(false)
+  const [requestError, setRequestError] = useState('')
+  const [myRequests, setMyRequests] = useState([])
+  const [allRequests, setAllRequests] = useState([])
+  const [requestLoading, setRequestLoading] = useState(false)
+
   const isAdmin = profile?.role === 'admin'
 
   useEffect(() => {
@@ -55,18 +72,22 @@ function App() {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, newSession) => {
-      setSession(newSession)
+    } = supabase.auth.onAuthStateChange(
+      (_event, newSession) => {
+        setSession(newSession)
 
-      if (newSession?.user) {
-        loadProfile(newSession.user.id)
-      } else {
-        setProfile(null)
-        setMemos({})
-        setMemoText({})
-        setEditingMemoId(null)
+        if (newSession?.user) {
+          loadProfile(newSession.user.id)
+        } else {
+          setProfile(null)
+          setMemos({})
+          setMemoText({})
+          setEditingMemoId(null)
+          setMyRequests([])
+          setAllRequests([])
+        }
       }
-    })
+    )
 
     return () => subscription.unsubscribe()
   }, [])
@@ -74,6 +95,22 @@ function App() {
   useEffect(() => {
     loadSchedules()
   }, [])
+
+  useEffect(() => {
+    if (session?.user) {
+      loadMyRequests()
+    } else {
+      setMyRequests([])
+    }
+  }, [session?.user?.id])
+
+  useEffect(() => {
+    if (isAdmin) {
+      loadAllRequests()
+    } else {
+      setAllRequests([])
+    }
+  }, [isAdmin])
 
   async function checkSession() {
     const { data } = await supabase.auth.getSession()
@@ -99,7 +136,6 @@ function App() {
       return
     }
 
-    console.log('현재 사용자 프로필:', data)
     setProfile(data)
   }
 
@@ -163,9 +199,7 @@ function App() {
     if (data.session) {
       setSignupMessage('회원가입이 완료되었습니다.')
     } else {
-      setSignupMessage(
-        '회원가입이 완료되었습니다. 이메일 인증이 필요한 경우 받은 메일에서 인증을 완료해주세요.'
-      )
+      setSignupMessage('회원가입이 완료되었습니다.')
     }
   }
 
@@ -180,6 +214,8 @@ function App() {
     setMemos({})
     setMemoText({})
     setEditingMemoId(null)
+    setMyRequests([])
+    setAllRequests([])
   }
 
   function openNewScheduleForm() {
@@ -445,6 +481,142 @@ function App() {
     )
   }
 
+  // =========================
+  // 요청사항
+  // =========================
+
+  function openRequestForm() {
+    setRequestForm(EMPTY_REQUEST_FORM)
+    setRequestError('')
+    setShowRequestForm(true)
+  }
+
+  function closeRequestForm() {
+    setShowRequestForm(false)
+    setRequestForm(EMPTY_REQUEST_FORM)
+    setRequestError('')
+  }
+
+  function handleRequestFormChange(e) {
+    const { name, value } = e.target
+
+    setRequestForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }))
+  }
+
+  async function handleSubmitRequest(e) {
+    e.preventDefault()
+
+    if (!session?.user) return
+
+    if (!requestForm.title.trim()) {
+      setRequestError('제목을 입력해주세요.')
+      return
+    }
+
+    if (!requestForm.details.trim()) {
+      setRequestError('요청 내용을 입력해주세요.')
+      return
+    }
+
+    setRequestSaving(true)
+    setRequestError('')
+
+    const { error } = await supabase
+      .from('schedule_requests')
+      .insert({
+        title: requestForm.title.trim(),
+        request_type: requestForm.request_type,
+        details: requestForm.details.trim(),
+        submitter_email: session.user.email,
+      })
+
+    if (error) {
+      console.error('요청사항 등록 실패:', error)
+      setRequestError(error.message)
+      setRequestSaving(false)
+      return
+    }
+
+    await loadMyRequests()
+
+    setRequestSaving(false)
+    closeRequestForm()
+
+    alert('요청사항이 등록되었습니다.')
+  }
+
+  async function loadMyRequests() {
+    if (!session?.user?.email) {
+      setMyRequests([])
+      return
+    }
+
+    const { data, error } = await supabase
+      .from('schedule_requests')
+      .select('*')
+      .eq('submitter_email', session.user.email)
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      console.error('내 요청사항 조회 실패:', error)
+      return
+    }
+
+    setMyRequests(data || [])
+  }
+
+  async function loadAllRequests() {
+    if (!isAdmin) {
+      setAllRequests([])
+      return
+    }
+
+    setRequestLoading(true)
+
+    const { data, error } = await supabase
+      .from('schedule_requests')
+      .select('*')
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      console.error('요청사항 전체 조회 실패:', error)
+      setRequestLoading(false)
+      return
+    }
+
+    setAllRequests(data || [])
+    setRequestLoading(false)
+  }
+
+  async function handleToggleRequestStatus(request) {
+    if (!isAdmin) return
+
+    const nextStatus =
+      request.status === '반영 완료'
+        ? '반영 전'
+        : '반영 완료'
+
+    const { error } = await supabase
+      .from('schedule_requests')
+      .update({
+        status: nextStatus,
+      })
+      .eq('id', request.id)
+
+    if (error) {
+      console.error('요청사항 상태 변경 실패:', error)
+      alert(
+        `상태 변경에 실패했습니다.\n${error.message}`
+      )
+      return
+    }
+
+    await loadAllRequests()
+  }
+
   function getDaysInMonth(year, month) {
     return new Date(year, month + 1, 0).getDate()
   }
@@ -495,6 +667,22 @@ function App() {
     const [year, month, day] = dateString.split('-')
 
     return `${year}.${month}.${day}`
+  }
+
+  function formatRequestDate(dateString) {
+    if (!dateString) return ''
+
+    const date = new Date(dateString)
+
+    if (Number.isNaN(date.getTime())) {
+      return ''
+    }
+
+    return `${date.getFullYear()}.${String(
+      date.getMonth() + 1
+    ).padStart(2, '0')}.${String(
+      date.getDate()
+    ).padStart(2, '0')}`
   }
 
   const today = new Date()
@@ -563,11 +751,23 @@ function App() {
                     ? 'nav-button active'
                     : 'nav-button'
                 }
-                onClick={() => setPage('list')}
+                onClick={() => {
+                  setPage('list')
+                  loadAllRequests()
+                }}
               >
                 일정목록
               </button>
             </nav>
+          )}
+
+          {session && !isAdmin && (
+            <button
+              className="header-button"
+              onClick={openRequestForm}
+            >
+              요청사항
+            </button>
           )}
 
           {isAdmin && (
@@ -754,6 +954,89 @@ function App() {
                 ))
               )}
             </div>
+
+            {/* =========================
+                관리자 요청사항 관리
+               ========================= */}
+            <div className="request-admin-section">
+              <div className="list-page-header request-admin-header">
+                <div>
+                  <p className="page-eyebrow">
+                    FEEDBACK
+                  </p>
+
+                  <h2>요청사항</h2>
+
+                  <p className="page-description">
+                    이용자가 보낸 요청사항을 확인하고
+                    반영 상태를 관리합니다.
+                  </p>
+                </div>
+              </div>
+
+              {requestLoading ? (
+                <div className="empty-list">
+                  요청사항을 불러오는 중입니다.
+                </div>
+              ) : allRequests.length === 0 ? (
+                <div className="empty-list">
+                  등록된 요청사항이 없습니다.
+                </div>
+              ) : (
+                <div className="request-admin-list">
+                  {allRequests.map((request) => (
+                    <div
+                      className="request-admin-item"
+                      key={request.id}
+                    >
+                      <div className="request-admin-top">
+                        <div>
+                          <span className="request-type-badge">
+                            {request.request_type}
+                          </span>
+
+                          <h3>
+                            {request.title}
+                          </h3>
+                        </div>
+
+                        <button
+                          className={
+                            request.status ===
+                            '반영 완료'
+                              ? 'request-status-button completed'
+                              : 'request-status-button'
+                          }
+                          onClick={() =>
+                            handleToggleRequestStatus(
+                              request
+                            )
+                          }
+                        >
+                          {request.status}
+                        </button>
+                      </div>
+
+                      <p className="request-details">
+                        {request.details}
+                      </p>
+
+                      <div className="request-meta">
+                        <span>
+                          {request.submitter_email}
+                        </span>
+
+                        <span>
+                          {formatRequestDate(
+                            request.created_at
+                          )}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </section>
         ) : (
           <section className="calendar-section">
@@ -849,10 +1132,81 @@ function App() {
                 })}
               </div>
             </div>
+
+            {/* 일반 사용자용 내 요청사항 */}
+            {session && !isAdmin && (
+              <section className="my-request-section">
+                <div className="my-request-header">
+                  <div>
+                    <p className="page-eyebrow">
+                      MY REQUESTS
+                    </p>
+
+                    <h2>내 요청사항</h2>
+                  </div>
+
+                  <button
+                    className="add-schedule-button"
+                    onClick={openRequestForm}
+                  >
+                    + 요청사항
+                  </button>
+                </div>
+
+                {myRequests.length === 0 ? (
+                  <div className="empty-list">
+                    아직 등록한 요청사항이 없습니다.
+                  </div>
+                ) : (
+                  <div className="my-request-list">
+                    {myRequests.map((request) => (
+                      <div
+                        className="my-request-item"
+                        key={request.id}
+                      >
+                        <div className="my-request-main">
+                          <div className="my-request-type">
+                            {request.request_type}
+                          </div>
+
+                          <h3>
+                            {request.title}
+                          </h3>
+
+                          <p>
+                            {request.details}
+                          </p>
+
+                          <span>
+                            {formatRequestDate(
+                              request.created_at
+                            )}
+                          </span>
+                        </div>
+
+                        <div
+                          className={
+                            request.status ===
+                            '반영 완료'
+                              ? 'my-request-status completed'
+                              : 'my-request-status'
+                          }
+                        >
+                          {request.status}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
+            )}
           </section>
         )}
       </main>
 
+      {/* =========================
+          일정 상세 bottom sheet
+         ========================= */}
       {selectedDate && (
         <div
           className="overlay"
@@ -926,6 +1280,7 @@ function App() {
                     {schedule.place && (
                       <div className="detail-row">
                         <strong>장소</strong>
+
                         <span>
                           {schedule.place}
                         </span>
@@ -935,6 +1290,7 @@ function App() {
                     {schedule.address && (
                       <div className="detail-row">
                         <strong>주소</strong>
+
                         <span>
                           {schedule.address}
                         </span>
@@ -972,6 +1328,7 @@ function App() {
                       </div>
                     )}
 
+                    {/* 개인 메모 */}
                     {session?.user && (
                       <div className="memo-section">
                         <div className="memo-heading">
@@ -1108,6 +1465,9 @@ function App() {
         </div>
       )}
 
+      {/* =========================
+          일정 추가 / 수정
+         ========================= */}
       {showForm && isAdmin && (
         <div className="overlay">
           <div
@@ -1250,6 +1610,153 @@ function App() {
                     ? '수정 저장'
                     : '일정 저장'}
               </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* =========================
+          요청사항 작성 / 내 요청 확인
+         ========================= */}
+      {showRequestForm && session && (
+        <div
+          className="overlay"
+          onClick={closeRequestForm}
+        >
+          <div
+            className="bottom-sheet request-form-sheet"
+            onClick={(e) =>
+              e.stopPropagation()
+            }
+          >
+            <div className="sheet-handle" />
+
+            <div className="sheet-header">
+              <div>
+                <h2>요청사항</h2>
+              </div>
+
+              <button
+                className="close-button"
+                onClick={closeRequestForm}
+              >
+                ×
+              </button>
+            </div>
+
+            <form
+              className="schedule-form"
+              onSubmit={handleSubmitRequest}
+            >
+              <label>
+                요청 유형 *
+                <select
+                  name="request_type"
+                  value={
+                    requestForm.request_type
+                  }
+                  onChange={
+                    handleRequestFormChange
+                  }
+                >
+                  <option value="일정 추가">
+                    일정 추가
+                  </option>
+
+                  <option value="일정 수정">
+                    일정 수정
+                  </option>
+
+                  <option value="기타">
+                    기타
+                  </option>
+                </select>
+              </label>
+
+              <label>
+                제목 *
+                <input
+                  name="title"
+                  value={requestForm.title}
+                  onChange={
+                    handleRequestFormChange
+                  }
+                  placeholder="예: 10월 일정 추가 요청"
+                />
+              </label>
+
+              <label>
+                요청 내용 *
+                <textarea
+                  name="details"
+                  value={requestForm.details}
+                  onChange={
+                    handleRequestFormChange
+                  }
+                  placeholder="추가하거나 수정했으면 하는 내용을 적어주세요."
+                  rows="5"
+                />
+              </label>
+
+              <p className="request-user-info">
+                요청자: {session.user.email}
+              </p>
+
+              {requestError && (
+                <p className="error-message">
+                  {requestError}
+                </p>
+              )}
+
+              <button
+                className="save-schedule-button"
+                type="submit"
+                disabled={requestSaving}
+              >
+                {requestSaving
+                  ? '등록 중...'
+                  : '요청사항 등록'}
+              </button>
+
+              {myRequests.length > 0 && (
+                <div className="request-form-history">
+                  <strong>내 요청사항</strong>
+
+                  <div className="request-history-list">
+                    {myRequests
+                      .slice(0, 5)
+                      .map((request) => (
+                        <div
+                          className="request-history-item"
+                          key={request.id}
+                        >
+                          <div>
+                            <span>
+                              {
+                                request.request_type
+                              }
+                            </span>
+
+                            <strong>
+                              {request.title}
+                            </strong>
+                          </div>
+
+                          <span
+                            className={
+                              request.status ===
+                              '반영 완료'
+                                ? 'history-status completed'
+                                : 'history-status'
+                            }
+                          >
+                            {request.status}
+                          </span>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
             </form>
           </div>
         </div>
