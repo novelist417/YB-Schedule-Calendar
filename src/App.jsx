@@ -120,15 +120,52 @@ function App() {
 
   async function handleLogin(e) {
     e.preventDefault()
+
     setLoginError('')
+    setSignupMessage('')
 
     const { error } = await supabase.auth.signInWithPassword({
-      email,
+      email: email.trim(),
       password,
     })
 
     if (error) {
       setLoginError(error.message)
+    }
+  }
+
+  async function handleSignup(e) {
+    e.preventDefault()
+
+    setLoginError('')
+    setSignupMessage('')
+
+    if (!email.trim() || !password) {
+      setLoginError('이메일과 비밀번호를 입력해주세요.')
+      return
+    }
+
+    if (password.length < 6) {
+      setLoginError('비밀번호는 6자 이상 입력해주세요.')
+      return
+    }
+
+    const { data, error } = await supabase.auth.signUp({
+      email: email.trim(),
+      password,
+    })
+
+    if (error) {
+      setLoginError(error.message)
+      return
+    }
+
+    if (data.session) {
+      setSignupMessage('회원가입이 완료되었습니다.')
+    } else {
+      setSignupMessage(
+        '회원가입이 완료되었습니다. 이메일 인증이 필요한 경우 받은 메일에서 인증을 완료해주세요.'
+      )
     }
   }
 
@@ -553,9 +590,19 @@ function App() {
       <main className="main">
         {!session && (
           <section className="login-section">
-            <h2>로그인</h2>
+            <h2>
+              {isSignupMode
+                ? '회원가입'
+                : '로그인'}
+            </h2>
 
-            <form onSubmit={handleLogin}>
+            <form
+              onSubmit={
+                isSignupMode
+                  ? handleSignup
+                  : handleLogin
+              }
+            >
               <input
                 type="email"
                 placeholder="이메일"
@@ -575,7 +622,9 @@ function App() {
               />
 
               <button type="submit">
-                로그인
+                {isSignupMode
+                  ? '회원가입'
+                  : '로그인'}
               </button>
 
               {loginError && (
@@ -583,6 +632,28 @@ function App() {
                   {loginError}
                 </p>
               )}
+
+              {signupMessage && (
+                <p className="success-message">
+                  {signupMessage}
+                </p>
+              )}
+
+              <button
+                type="button"
+                className="auth-switch-button"
+                onClick={() => {
+                  setIsSignupMode(
+                    (prev) => !prev
+                  )
+                  setLoginError('')
+                  setSignupMessage('')
+                }}
+              >
+                {isSignupMode
+                  ? '이미 계정이 있어요 → 로그인'
+                  : '처음 오셨나요? → 회원가입'}
+              </button>
             </form>
           </section>
         )}
@@ -671,7 +742,9 @@ function App() {
                       <button
                         className="delete-button"
                         onClick={() =>
-                          handleDeleteSchedule(schedule)
+                          handleDeleteSchedule(
+                            schedule
+                          )
                         }
                       >
                         삭제
@@ -721,8 +794,10 @@ function App() {
 
                   const isToday =
                     day === today.getDate() &&
-                    currentMonth === today.getMonth() &&
-                    currentYear === today.getFullYear()
+                    currentMonth ===
+                      today.getMonth() &&
+                    currentYear ===
+                      today.getFullYear()
 
                   return (
                     <button
@@ -753,8 +828,10 @@ function App() {
                                     style={{
                                       backgroundColor:
                                         TYPE_COLORS[
-                                          schedule.schedule_type
-                                        ] || '#999',
+                                          schedule
+                                            .schedule_type
+                                        ] ||
+                                        '#999',
                                     }}
                                   />
 
@@ -786,7 +863,9 @@ function App() {
         >
           <div
             className="bottom-sheet"
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e) =>
+              e.stopPropagation()
+            }
           >
             <div className="sheet-handle" />
 
@@ -847,27 +926,38 @@ function App() {
                     {schedule.place && (
                       <div className="detail-row">
                         <strong>장소</strong>
-                        <span>{schedule.place}</span>
+                        <span>
+                          {schedule.place}
+                        </span>
                       </div>
                     )}
 
                     {schedule.address && (
                       <div className="detail-row">
                         <strong>주소</strong>
-                        <span>{schedule.address}</span>
+                        <span>
+                          {schedule.address}
+                        </span>
                       </div>
                     )}
 
                     {schedule.details && (
                       <div className="detail-section">
-                        <strong>참고 사항</strong>
-                        <p>{schedule.details}</p>
+                        <strong>
+                          참고 사항
+                        </strong>
+
+                        <p>
+                          {schedule.details}
+                        </p>
                       </div>
                     )}
 
                     {schedule.related_link && (
                       <div className="detail-section">
-                        <strong>참고 링크</strong>
+                        <strong>
+                          참고 링크
+                        </strong>
 
                         <a
                           className="reference-link"
@@ -886,7 +976,9 @@ function App() {
                       <div className="memo-section">
                         <div className="memo-heading">
                           <div>
-                            <strong>내 메모</strong>
+                            <strong>
+                              내 메모
+                            </strong>
 
                             <span>
                               로그인한 계정에서만 볼 수 있어요.
@@ -906,8 +998,9 @@ function App() {
                                     (prev) => ({
                                       ...prev,
                                       [schedule.id]:
-                                        memos[schedule.id]
-                                          .content,
+                                        memos[
+                                          schedule.id
+                                        ].content,
                                     })
                                   )
                                 }}
@@ -935,7 +1028,11 @@ function App() {
                         editingMemoId !==
                           schedule.id ? (
                           <div className="memo-view">
-                            {memos[schedule.id].content}
+                            {
+                              memos[
+                                schedule.id
+                              ].content
+                            }
                           </div>
                         ) : (
                           <div className="memo-editor">
@@ -1015,7 +1112,9 @@ function App() {
         <div className="overlay">
           <div
             className="bottom-sheet schedule-form-sheet"
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e) =>
+              e.stopPropagation()
+            }
           >
             <div className="sheet-handle" />
 
