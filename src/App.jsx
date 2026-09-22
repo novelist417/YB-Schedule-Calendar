@@ -1941,15 +1941,6 @@ function App() {
                                 .
                                 {date.getDate()}
                               </strong>
-
-                              {daySchedules.length >
-                                0 && (
-                                <small>
-                                  {
-                                    daySchedules.length
-                                  }
-                                </small>
-                              )}
                             </button>
                           )
                         }
