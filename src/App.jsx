@@ -9,31 +9,95 @@ const TYPE_COLORS = {
 }
 
 function App() {
+  const [session, setSession] = useState(null)
+  const [profile, setProfile] = useState(null)
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [loginError, setLoginError] = useState('')
   const [schedules, setSchedules] = useState([])
   const [selectedDate, setSelectedDate] = useState(null)
   const [selectedSchedules, setSelectedSchedules] = useState([])
 
-useEffect(() => {
-  loadSchedules()
-}, [])
+  useEffect(() => {
+    checkSession()
 
-async function loadSchedules() {
-  console.log('Supabase 조회 시작')
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      setSession(newSession)
 
-  const { data, error } = await supabase
-    .from('schedules')
-    .select('*')
+      if (newSession) {
+        loadProfile(newSession.user.id)
+      } else {
+        setProfile(null)
+      }
+    })
 
-  console.log('일정 데이터:', data)
-  console.log('조회 오류:', error)
+    return () => subscription.unsubscribe()
+  }, [])
 
-  if (error) {
-    console.error('일정 불러오기 실패:', error.message, error.details, error.hint, error.code)
-    return
+  useEffect(() => {
+    loadSchedules()
+  }, [])
+
+  async function checkSession() {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
+
+    setSession(session)
+
+    if (session) {
+      loadProfile(session.user.id)
+    }
   }
 
-  setSchedules(data || [])
-}
+  async function loadProfile(userId) {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single()
+
+    if (error) {
+      console.error('프로필 조회 실패:', error)
+      return
+    }
+
+    setProfile(data)
+  }
+
+  async function loadSchedules() {
+    const { data, error } = await supabase
+      .from('schedules')
+      .select('*')
+      .order('event_date', { ascending: true })
+
+    if (error) {
+      console.error('일정 불러오기 실패:', error)
+      return
+    }
+
+    setSchedules(data || [])
+  }
+
+  async function handleLogin(e) {
+    e.preventDefault()
+    setLoginError('')
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    })
+
+    if (error) {
+      setLoginError(error.message)
+    }
+  }
+
+  async function handleLogout() {
+    await supabase.auth.signOut()
+  }
 
   const today = new Date()
   const year = today.getFullYear()
@@ -59,7 +123,9 @@ async function loadSchedules() {
   }
 
   if (week.length > 0) {
-    while (week.length < 7) week.push(null)
+    while (week.length < 7) {
+      week.push(null)
+    }
     weeks.push(week)
   }
 
@@ -91,23 +157,77 @@ async function loadSchedules() {
     <div className="app">
       <header className="header">
         <div className="logo">YB</div>
+
         <h1>YB Schedule Calendar</h1>
+
+        <div style={{ marginLeft: 'auto' }}>
+          {session ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              {profile?.role === 'admin' && (
+                <span
+                  style={{
+                    fontSize: '12px',
+                    fontWeight: '600',
+                    color: '#10B981',
+                  }}
+                >
+                  ADMIN
+                </span>
+              )}
+
+              <button
+                onClick={handleLogout}
+                style={{
+                  border: '1px solid #ddd',
+                  background: '#fff',
+                  borderRadius: '8px',
+                  padding: '7px 12px',
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                }}
+              >
+                로그아웃
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => {
+                const login = document.getElementById('login')
+                login?.scrollIntoView({ behavior: 'smooth' })
+              }}
+              style={{
+                border: '1px solid #ddd',
+                background: '#fff',
+                borderRadius: '8px',
+                padding: '7px 12px',
+                cursor: 'pointer',
+                fontSize: '12px',
+              }}
+            >
+              로그인
+            </button>
+          )}
+        </div>
       </header>
 
       <main className="main">
         <div className="calendar-header">
           <button>‹</button>
+
           <h2>
             {year}. {String(month + 1).padStart(2, '0')}
           </h2>
+
           <button>›</button>
         </div>
 
         <div className="calendar-card">
           <div className="weekdays">
-            {['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'].map((day) => (
-              <div key={day}>{day}</div>
-            ))}
+            {['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'].map(
+              (day) => (
+                <div key={day}>{day}</div>
+              )
+            )}
           </div>
 
           <div className="calendar-grid">
@@ -151,11 +271,93 @@ async function loadSchedules() {
             })}
           </div>
         </div>
+
+        {!session && (
+          <section
+            id="login"
+            style={{
+              maxWidth: '420px',
+              margin: '30px auto 0',
+              padding: '24px',
+              background: '#fff',
+              border: '1px solid #e8e8ee',
+              borderRadius: '16px',
+            }}
+          >
+            <h2 style={{ margin: '0 0 18px', fontSize: '18px' }}>
+              로그인
+            </h2>
+
+            <form
+              onSubmit={handleLogin}
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '10px',
+              }}
+            >
+              <input
+                type="email"
+                placeholder="이메일"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                style={{
+                  padding: '12px',
+                  border: '1px solid #ddd',
+                  borderRadius: '8px',
+                }}
+              />
+
+              <input
+                type="password"
+                placeholder="비밀번호"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                style={{
+                  padding: '12px',
+                  border: '1px solid #ddd',
+                  borderRadius: '8px',
+                }}
+              />
+
+              <button
+                type="submit"
+                style={{
+                  padding: '12px',
+                  border: 0,
+                  borderRadius: '8px',
+                  background: '#222',
+                  color: '#fff',
+                  cursor: 'pointer',
+                }}
+              >
+                로그인
+              </button>
+
+              {loginError && (
+                <p
+                  style={{
+                    margin: '4px 0 0',
+                    color: '#d33',
+                    fontSize: '13px',
+                  }}
+                >
+                  로그인에 실패했습니다. 이메일과 비밀번호를 확인해주세요.
+                </p>
+              )}
+            </form>
+          </section>
+        )}
       </main>
 
       {selectedDate && (
         <div className="overlay" onClick={closeDetail}>
-          <div className="bottom-sheet" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="bottom-sheet"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="sheet-handle" />
 
             <div className="sheet-header">
