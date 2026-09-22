@@ -3109,3 +3109,419 @@ body {
     flex: 0 0 auto;
   }
 }
+/* =========================================================
+   2026-09-22 최종 UI 보정
+   - 월 달력 날짜 왼쪽 상단
+   - 요청사항 필터 / 상태 버튼
+   - 전체 폰트 확대
+   - PC 가독성 개선
+   ========================================================= */
+
+/* 전체 기본 글자 크기 */
+body {
+  font-size: 16px !important;
+}
+
+/* 일반 페이지 설명 */
+.page-description {
+  font-size: 15px !important;
+  line-height: 1.6 !important;
+}
+
+/* 월별 달력 */
+.calendar-day {
+  position: relative !important;
+  align-items: flex-start !important;
+  justify-content: flex-start !important;
+  text-align: left !important;
+}
+
+/* 날짜 숫자를 왼쪽 위로 */
+.calendar-day .date-number {
+  position: absolute !important;
+  top: 10px !important;
+  left: 10px !important;
+  font-size: 17px !important;
+  line-height: 1 !important;
+  font-weight: 600 !important;
+  z-index: 2 !important;
+}
+
+/* 오늘 날짜도 숫자 위치 유지 */
+.calendar-day.today .date-number {
+  top: 10px !important;
+  left: 10px !important;
+}
+
+/* 월 달력 일정 */
+.calendar-day .events {
+  width: 100% !important;
+  margin-top: 34px !important;
+  text-align: left !important;
+}
+
+.calendar-day .event-title {
+  font-size: 14px !important;
+  line-height: 1.4 !important;
+}
+
+.calendar-day .event {
+  min-height: 22px !important;
+}
+
+/* 달력 요일 */
+.weekdays {
+  font-size: 15px !important;
+  font-weight: 600 !important;
+}
+
+/* 검색창 */
+.calendar-search {
+  position: relative !important;
+}
+
+.calendar-search input {
+  font-size: 16px !important;
+}
+
+/* 검색창 기본 X 제거 */
+.calendar-search input::-webkit-search-cancel-button,
+.calendar-search input::-webkit-search-decoration {
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  display: none !important;
+}
+
+.calendar-search input::-ms-clear {
+  display: none !important;
+}
+
+/* 검색창 오른쪽 X */
+.search-clear {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  right: 9px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #f0f0f2;
+  color: #777;
+  font-size: 18px !important;
+  line-height: 1 !important;
+  cursor: pointer;
+  z-index: 2;
+}
+
+/* =========================================================
+   요청사항 관리자 화면
+   ========================================================= */
+
+.request-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 20px;
+  padding: 4px;
+  width: fit-content;
+  border: 1px solid #292929;
+  border-radius: 10px;
+  background: #111111;
+}
+
+.request-filter-button {
+  border: 0;
+  border-radius: 7px;
+  padding: 9px 16px;
+  background: transparent;
+  color: #999;
+  font-size: 14px !important;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.request-filter-button:hover {
+  color: #fff;
+}
+
+.request-filter-button.active {
+  background: #7b202d;
+  color: #fff;
+}
+
+/* 관리자 요청 카드 */
+.request-admin-item {
+  position: relative;
+  padding: 22px !important;
+}
+
+/* 요청 제목 */
+.request-admin-title-area h3 {
+  margin: 9px 0 0 !important;
+  font-size: 18px !important;
+  line-height: 1.4 !important;
+}
+
+/* 요청 내용 */
+.request-details {
+  margin: 16px 0 !important;
+  font-size: 15px !important;
+  line-height: 1.65 !important;
+}
+
+/* 요청 메타 */
+.request-meta {
+  font-size: 13px !important;
+  line-height: 1.5 !important;
+}
+
+/* 상태 영역을 카드 하단 오른쪽으로 */
+.request-status-area {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid #292929;
+}
+
+.request-current-status {
+  font-size: 13px !important;
+  color: #999;
+}
+
+.request-current-status.completed {
+  color: #fff;
+}
+
+.request-status-button {
+  min-width: 108px;
+  padding: 9px 13px;
+  border: 1px solid #7b202d;
+  border-radius: 8px;
+  background: #7b202d;
+  color: #fff;
+  font-size: 13px !important;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.request-status-button:hover {
+  background: #922735;
+  border-color: #922735;
+}
+
+.request-status-button.completed {
+  background: transparent;
+  border-color: #444;
+  color: #aaa;
+}
+
+.request-status-button.completed:hover {
+  background: #1a1a1a;
+  color: #fff;
+}
+
+/* 요청 유형 */
+.request-type-badge {
+  font-size: 13px !important;
+}
+
+/* =========================================================
+   어젠다
+   ========================================================= */
+
+.agenda-item {
+  min-height: 86px !important;
+}
+
+.agenda-date strong {
+  font-size: 16px !important;
+}
+
+.agenda-date span {
+  font-size: 14px !important;
+}
+
+.agenda-main strong {
+  font-size: 17px !important;
+}
+
+.agenda-main span {
+  font-size: 14px !important;
+}
+
+/* =========================================================
+   주간 시간표
+   ========================================================= */
+
+.timetable-day-head span {
+  font-size: 14px !important;
+}
+
+.timetable-day-head strong {
+  font-size: 17px !important;
+}
+
+.time-label {
+  font-size: 13px !important;
+}
+
+.timetable-event-time {
+  font-size: 12px !important;
+}
+
+.timetable-event-title {
+  font-size: 14px !important;
+}
+
+/* =========================================================
+   일정 목록
+   ========================================================= */
+
+.list-item-date {
+  font-size: 14px !important;
+}
+
+.list-item-type {
+  font-size: 13px !important;
+}
+
+.list-item-main h3 {
+  font-size: 18px !important;
+}
+
+.list-item-info {
+  font-size: 14px !important;
+}
+
+/* =========================================================
+   상세 팝업
+   ========================================================= */
+
+.schedule-item h3 {
+  font-size: 21px !important;
+  line-height: 1.4 !important;
+}
+
+.detail-row {
+  font-size: 15px !important;
+  line-height: 1.6 !important;
+}
+
+.detail-section {
+  font-size: 15px !important;
+  line-height: 1.65 !important;
+}
+
+.detail-section p {
+  font-size: 15px !important;
+}
+
+.memo-view {
+  font-size: 15px !important;
+  line-height: 1.6 !important;
+}
+
+/* =========================================================
+   PC에서 특히 작아 보이는 글씨 보정
+   ========================================================= */
+
+@media (min-width: 701px) {
+  .calendar-day .date-number {
+    font-size: 18px !important;
+  }
+
+  .calendar-day .event-title {
+    font-size: 14px !important;
+  }
+
+  .agenda-main strong {
+    font-size: 17px !important;
+  }
+
+  .agenda-main span {
+    font-size: 14px !important;
+  }
+
+  .request-admin-item {
+    padding: 24px !important;
+  }
+
+  .request-details {
+    font-size: 15px !important;
+  }
+}
+
+/* =========================================================
+   모바일
+   ========================================================= */
+
+@media (max-width: 700px) {
+  body {
+    font-size: 15px !important;
+  }
+
+  .calendar-day .date-number {
+    top: 8px !important;
+    left: 8px !important;
+    font-size: 16px !important;
+  }
+
+  .calendar-day .events {
+    margin-top: 30px !important;
+  }
+
+  .calendar-day .event-title {
+    font-size: 13px !important;
+  }
+
+  .request-filter-bar {
+    width: 100%;
+    overflow-x: auto;
+  }
+
+  .request-filter-button {
+    flex: 1;
+    white-space: nowrap;
+    padding: 9px 12px;
+  }
+
+  .request-admin-item {
+    padding: 18px !important;
+  }
+
+  .request-admin-title-area h3 {
+    font-size: 17px !important;
+  }
+
+  .request-details {
+    font-size: 14px !important;
+  }
+
+  .request-status-area {
+    justify-content: space-between;
+  }
+
+  .request-status-button {
+    min-width: auto;
+  }
+
+  .agenda-item {
+    min-height: 80px !important;
+  }
+
+  .agenda-main strong {
+    font-size: 16px !important;
+  }
+
+  .agenda-main span {
+    font-size: 13px !important;
+  }
+}
