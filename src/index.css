@@ -1384,18 +1384,30 @@ button {
 }
 
 .search-clear {
-  position: absolute;
-  right: 9px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 26px;
-  height: 26px;
-  padding: 0;
-  border: 0;
-  border-radius: 50%;
-  background: #f0f0f2;
-  color: #777;
-  cursor: pointer;
+  position: absolute !important;
+  right: 9px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  width: 26px !important;
+  height: 26px !important;
+  padding: 0 !important;
+
+  border: 0 !important;
+  border-radius: 50% !important;
+
+  background: #2a2a2a !important;
+  color: #aaaaaa !important;
+
+  font-size: 18px !important;
+  line-height: 1 !important;
+
+  cursor: pointer !important;
+  z-index: 5 !important;
 }
 
 .schedule-filter {
