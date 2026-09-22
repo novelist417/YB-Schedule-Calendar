@@ -1,19 +1,229 @@
+import { useEffect, useState } from 'react'
+import { supabase } from './lib/supabase'
+
+const TYPE_COLORS = {
+  방송: '#8B5CF6',
+  '지역축제/행사': '#F59E0B',
+  기념일: '#EC4899',
+  대학축제: '#10B981',
+}
+
 function App() {
+  const [schedules, setSchedules] = useState([])
+  const [selectedDate, setSelectedDate] = useState(null)
+  const [selectedSchedules, setSelectedSchedules] = useState([])
+
+  useEffect(() => {
+    loadSchedules()
+  }, [])
+
+  async function loadSchedules() {
+    const { data, error } = await supabase
+      .from('schedules')
+      .select('*')
+      .order('event_date', { ascending: true })
+
+    if (error) {
+      console.error('일정 불러오기 실패:', error)
+      return
+    }
+
+    setSchedules(data || [])
+  }
+
+  const today = new Date()
+  const year = today.getFullYear()
+  const month = today.getMonth()
+
+  const firstDay = new Date(year, month, 1).getDay()
+  const daysInMonth = new Date(year, month + 1, 0).getDate()
+
+  const weeks = []
+  let week = []
+
+  for (let i = 0; i < firstDay; i++) {
+    week.push(null)
+  }
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    week.push(day)
+
+    if (week.length === 7) {
+      weeks.push(week)
+      week = []
+    }
+  }
+
+  if (week.length > 0) {
+    while (week.length < 7) week.push(null)
+    weeks.push(week)
+  }
+
+  function getSchedules(day) {
+    if (!day) return []
+
+    const date = `${year}-${String(month + 1).padStart(2, '0')}-${String(
+      day
+    ).padStart(2, '0')}`
+
+    return schedules.filter((schedule) => schedule.event_date === date)
+  }
+
+  function openDay(day) {
+    const items = getSchedules(day)
+
+    if (items.length === 0) return
+
+    setSelectedDate(day)
+    setSelectedSchedules(items)
+  }
+
+  function closeDetail() {
+    setSelectedDate(null)
+    setSelectedSchedules([])
+  }
+
   return (
     <div className="app">
       <header className="header">
+        <div className="logo">YB</div>
         <h1>YB Schedule Calendar</h1>
       </header>
 
       <main className="main">
-        <section className="calendar-card">
-          <h2>일정</h2>
-          <p>YB Schedule Calendar</p>
-          <p className="status">
-            앱 기본 화면이 정상적으로 연결되었습니다.
-          </p>
-        </section>
+        <div className="calendar-header">
+          <button>‹</button>
+          <h2>
+            {year}. {String(month + 1).padStart(2, '0')}
+          </h2>
+          <button>›</button>
+        </div>
+
+        <div className="calendar-card">
+          <div className="weekdays">
+            {['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'].map((day) => (
+              <div key={day}>{day}</div>
+            ))}
+          </div>
+
+          <div className="calendar-grid">
+            {weeks.flat().map((day, index) => {
+              const items = getSchedules(day)
+
+              return (
+                <div
+                  key={index}
+                  className={`calendar-day ${
+                    day === today.getDate() ? 'today' : ''
+                  } ${day ? '' : 'empty'}`}
+                  onClick={() => openDay(day)}
+                >
+                  {day && <div className="date-number">{day}</div>}
+
+                  <div className="events">
+                    {items.map((item) => (
+                      <div
+                        key={item.id}
+                        className="event"
+                        style={{
+                          borderLeftColor:
+                            TYPE_COLORS[item.schedule_type] || '#999',
+                        }}
+                      >
+                        <span
+                          className="event-dot"
+                          style={{
+                            backgroundColor:
+                              TYPE_COLORS[item.schedule_type] || '#999',
+                          }}
+                        />
+
+                        <span className="event-title">{item.title}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
       </main>
+
+      {selectedDate && (
+        <div className="overlay" onClick={closeDetail}>
+          <div className="bottom-sheet" onClick={(e) => e.stopPropagation()}>
+            <div className="sheet-handle" />
+
+            <div className="sheet-header">
+              <h2>
+                {year}. {String(month + 1).padStart(2, '0')}.{' '}
+                {String(selectedDate).padStart(2, '0')}
+              </h2>
+
+              <button className="close-button" onClick={closeDetail}>
+                ×
+              </button>
+            </div>
+
+            {selectedSchedules.map((schedule) => (
+              <article className="schedule-detail" key={schedule.id}>
+                <div
+                  className="detail-type"
+                  style={{
+                    color:
+                      TYPE_COLORS[schedule.schedule_type] || '#666',
+                  }}
+                >
+                  {schedule.schedule_type}
+                </div>
+
+                <h3>{schedule.title}</h3>
+
+                {schedule.event_time && (
+                  <div className="detail-row">
+                    <span>일시</span>
+                    <strong>
+                      {schedule.event_date} {schedule.event_time}
+                    </strong>
+                  </div>
+                )}
+
+                {schedule.place && (
+                  <div className="detail-row">
+                    <span>장소</span>
+                    <strong>{schedule.place}</strong>
+                  </div>
+                )}
+
+                {schedule.address && (
+                  <div className="detail-row">
+                    <span>주소</span>
+                    <strong>{schedule.address}</strong>
+                  </div>
+                )}
+
+                {schedule.details && (
+                  <div className="detail-section">
+                    <span>참고 사항</span>
+                    <p>{schedule.details}</p>
+                  </div>
+                )}
+
+                {schedule.related_link && (
+                  <a
+                    className="reference-link"
+                    href={schedule.related_link}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    참고 링크 →
+                  </a>
+                )}
+              </article>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
