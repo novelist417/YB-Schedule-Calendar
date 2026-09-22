@@ -1339,3 +1339,402 @@ button {
     font-size: 17px;
   }
 }
+/* =========================
+   검색 / 필터
+   ========================= */
+
+.calendar-tools {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 14px 0 8px;
+}
+
+.calendar-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1;
+  max-width: 420px;
+}
+
+.calendar-search input {
+  width: 100%;
+  height: 42px;
+  box-sizing: border-box;
+  padding: 0 38px 0 38px;
+  border: 1px solid #e5e5e8;
+  border-radius: 12px;
+  background: #fff;
+  outline: none;
+  font-size: 14px;
+}
+
+.calendar-search input:focus {
+  border-color: #c8c8d0;
+}
+
+.search-icon {
+  position: absolute;
+  left: 14px;
+  z-index: 1;
+  color: #777;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.search-clear {
+  position: absolute;
+  right: 9px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #f0f0f2;
+  color: #777;
+  cursor: pointer;
+}
+
+.schedule-filter {
+  height: 42px;
+  padding: 0 34px 0 13px;
+  border: 1px solid #e5e5e8;
+  border-radius: 12px;
+  background: #fff;
+  color: #333;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.filter-result-info {
+  margin: 4px 0 12px;
+  color: #888;
+  font-size: 12px;
+}
+
+
+/* =========================
+   주간 시간표
+   ========================= */
+
+.week-timetable-card {
+  overflow: hidden;
+  border: 1px solid #ececf0;
+  border-radius: 16px;
+  background: #fff;
+}
+
+.timetable-scroll {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.timetable {
+  min-width: 760px;
+}
+
+.timetable-header {
+  display: grid;
+  grid-template-columns: 82px repeat(7, minmax(95px, 1fr));
+  border-bottom: 1px solid #ececf0;
+  background: #fafafa;
+}
+
+.time-column-head {
+  border-right: 1px solid #ececf0;
+}
+
+.timetable-day-head {
+  position: relative;
+  min-height: 62px;
+  padding: 9px 5px;
+  border: 0;
+  border-right: 1px solid #ececf0;
+  background: transparent;
+  color: #666;
+  cursor: pointer;
+}
+
+.timetable-day-head:last-child {
+  border-right: 0;
+}
+
+.timetable-day-head span {
+  display: block;
+  margin-bottom: 3px;
+  font-size: 12px;
+}
+
+.timetable-day-head strong {
+  display: block;
+  color: #222;
+  font-size: 15px;
+}
+
+.timetable-day-head small {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 10px;
+  background: #eeeef2;
+  color: #777;
+  font-size: 10px;
+}
+
+.timetable-day-head.today {
+  background: #f3f3f7;
+}
+
+.timetable-day-head.today strong {
+  color: #111;
+}
+
+.timetable-body {
+  background: #fff;
+}
+
+.timetable-row {
+  display: grid;
+  grid-template-columns: 82px repeat(7, minmax(95px, 1fr));
+  min-height: 74px;
+}
+
+.time-label {
+  display: flex;
+  justify-content: flex-end;
+  align-items: flex-start;
+  padding: 8px 9px 0 4px;
+  border-right: 1px solid #ececf0;
+  border-bottom: 1px solid #f0f0f2;
+  color: #999;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.timetable-cell {
+  min-width: 0;
+  padding: 5px;
+  border-right: 1px solid #f0f0f2;
+  border-bottom: 1px solid #f0f0f2;
+}
+
+.timetable-cell:last-child {
+  border-right: 0;
+}
+
+.timetable-event {
+  display: block;
+  width: 100%;
+  margin: 0 0 4px;
+  padding: 7px 7px 7px 8px;
+  border: 0;
+  border-left: 3px solid #999;
+  border-radius: 7px;
+  background: #f7f7f9;
+  text-align: left;
+  cursor: pointer;
+}
+
+.timetable-event:hover {
+  background: #f0f0f3;
+}
+
+.timetable-event-time {
+  display: block;
+  margin-bottom: 2px;
+  color: #777;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.timetable-event-title {
+  display: -webkit-box;
+  overflow: hidden;
+  color: #222;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.35;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.week-event-dot {
+  display: inline-block;
+  flex: 0 0 auto;
+  width: 7px;
+  height: 7px;
+  margin-right: 5px;
+  border-radius: 50%;
+}
+
+
+/* =========================
+   시간 미정 일정
+   ========================= */
+
+.untimed-section {
+  padding: 13px 14px 12px;
+  border-bottom: 1px solid #ececf0;
+  background: #fafafa;
+}
+
+.untimed-title {
+  margin-bottom: 8px;
+  color: #777;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.untimed-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.untimed-event {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 6px 9px;
+  border: 1px solid #e7e7eb;
+  border-radius: 8px;
+  background: #fff;
+  color: #333;
+  cursor: pointer;
+}
+
+.untimed-date {
+  margin-right: 5px;
+  color: #999;
+  font-size: 11px;
+}
+
+.untimed-name {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.week-no-results {
+  padding: 45px 20px;
+  text-align: center;
+  color: #999;
+  font-size: 13px;
+}
+
+
+/* =========================
+   모바일
+   ========================= */
+
+@media (max-width: 700px) {
+  .calendar-tools {
+    gap: 7px;
+    margin-top: 10px;
+  }
+
+  .calendar-search {
+    min-width: 0;
+  }
+
+  .calendar-search input {
+    height: 38px;
+    padding-left: 34px;
+    font-size: 13px;
+  }
+
+  .schedule-filter {
+    flex: 0 0 auto;
+    height: 38px;
+    max-width: 115px;
+    padding-left: 9px;
+    padding-right: 24px;
+    font-size: 12px;
+  }
+
+  .filter-result-info {
+    margin-bottom: 8px;
+    font-size: 11px;
+  }
+
+  .week-timetable-card {
+    border-radius: 12px;
+  }
+
+  .timetable {
+    min-width: 700px;
+  }
+
+  .timetable-header,
+  .timetable-row {
+    grid-template-columns:
+      58px repeat(7, minmax(92px, 1fr));
+  }
+
+  .timetable-day-head {
+    min-height: 54px;
+    padding: 7px 4px;
+  }
+
+  .timetable-day-head span {
+    font-size: 11px;
+  }
+
+  .timetable-day-head strong {
+    font-size: 13px;
+  }
+
+  .timetable-day-head small {
+    display: none;
+  }
+
+  .timetable-row {
+    min-height: 68px;
+  }
+
+  .time-label {
+    padding-right: 6px;
+    font-size: 10px;
+  }
+
+  .timetable-cell {
+    padding: 4px;
+  }
+
+  .timetable-event {
+    padding: 6px;
+  }
+
+  .timetable-event-time {
+    font-size: 9px;
+  }
+
+  .timetable-event-title {
+    font-size: 11px;
+  }
+
+  .untimed-section {
+    padding: 10px;
+  }
+
+  .untimed-list {
+    gap: 5px;
+  }
+
+  .untimed-event {
+    padding: 5px 7px;
+  }
+
+  .untimed-name {
+    font-size: 11px;
+  }
+}
