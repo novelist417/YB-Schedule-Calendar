@@ -2569,7 +2569,7 @@ body {
 }
 
 .search-clear {
-  display: none !important;
+  display: flex !important;
 }
 
 /* =========================================================
