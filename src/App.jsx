@@ -62,6 +62,7 @@ function App() {
         setProfile(null)
         setMemos({})
         setMemoText({})
+        setEditingMemoId(null)
       }
     })
 
@@ -139,6 +140,7 @@ function App() {
     setSelectedSchedules([])
     setMemos({})
     setMemoText({})
+    setEditingMemoId(null)
   }
 
   function openNewScheduleForm() {
@@ -827,6 +829,7 @@ function App() {
 
                     <div className="detail-row">
                       <strong>일시</strong>
+
                       <span>
                         {formatDateText(
                           schedule.event_date
@@ -877,7 +880,6 @@ function App() {
                       </div>
                     )}
 
-                    {/* 개인 메모 */}
                     {session?.user && (
                       <div className="memo-section">
                         <div className="memo-heading">
@@ -906,7 +908,7 @@ function App() {
                                           .content,
                                     })
                                   )
-                                }
+                                }}
                                 aria-label="메모 수정"
                               >
                                 ✏️
@@ -931,10 +933,7 @@ function App() {
                         editingMemoId !==
                           schedule.id ? (
                           <div className="memo-view">
-                            {
-                              memos[schedule.id]
-                                .content
-                            }
+                            {memos[schedule.id].content}
                           </div>
                         ) : (
                           <div className="memo-editor">
