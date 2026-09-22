@@ -32,7 +32,15 @@ const EMPTY_REQUEST_FORM = {
   details: '',
 }
 
-const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
+const WEEKDAYS = [
+  '일요일',
+  '월요일',
+  '화요일',
+  '수요일',
+  '목요일',
+  '금요일',
+  '토요일',
+]
 
 function App() {
   const [session, setSession] = useState(null)
@@ -62,11 +70,13 @@ function App() {
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState('')
 
+  // 개인 메모
   const [memos, setMemos] = useState({})
   const [memoText, setMemoText] = useState({})
   const [editingMemoId, setEditingMemoId] = useState(null)
   const [memoSaving, setMemoSaving] = useState(null)
 
+  // 요청사항
   const [showRequestForm, setShowRequestForm] = useState(false)
   const [requestForm, setRequestForm] = useState(
     EMPTY_REQUEST_FORM
@@ -76,6 +86,10 @@ function App() {
   const [myRequests, setMyRequests] = useState([])
   const [allRequests, setAllRequests] = useState([])
   const [requestLoading, setRequestLoading] = useState(false)
+
+  // 관리자 요청사항 필터
+  const [requestStatusFilter, setRequestStatusFilter] =
+    useState('pending')
 
   const isAdmin = profile?.role === 'admin'
 
@@ -341,6 +355,7 @@ function App() {
         '일정 저장 실패:',
         error
       )
+
       setFormError(error.message)
       setSaving(false)
       return
@@ -375,9 +390,11 @@ function App() {
         '일정 삭제 실패:',
         error
       )
+
       alert(
         `삭제에 실패했습니다.\n${error.message}`
       )
+
       return
     }
 
@@ -414,6 +431,7 @@ function App() {
         '메모 조회 실패:',
         error
       )
+
       return
     }
 
@@ -579,6 +597,7 @@ function App() {
     setRequestForm(
       EMPTY_REQUEST_FORM
     )
+
     setRequestError('')
     setShowRequestForm(true)
   }
@@ -609,6 +628,7 @@ function App() {
       setRequestError(
         '제목을 입력해주세요.'
       )
+
       return
     }
 
@@ -618,6 +638,7 @@ function App() {
       setRequestError(
         '요청 내용을 입력해주세요.'
       )
+
       return
     }
 
@@ -682,6 +703,7 @@ function App() {
         '내 요청사항 조회 실패:',
         error
       )
+
       return
     }
 
@@ -1092,10 +1114,7 @@ function App() {
       : hour
   }
 
-  /*
-   * 주간 시간표는 일정이 있든 없든
-   * 항상 오전 6시부터 오후 11시까지 표시한다.
-   */
+  // 주간 시간표는 항상 06:00 ~ 23:00
   const weekStartHour = 6
   const weekEndHour = 23
 
@@ -1132,6 +1151,40 @@ function App() {
       }
     )
   }
+
+  // =========================
+  // 관리자 요청사항 필터
+  // =========================
+
+  const filteredAdminRequests =
+    useMemo(() => {
+      if (
+        requestStatusFilter ===
+        'all'
+      ) {
+        return allRequests
+      }
+
+      if (
+        requestStatusFilter ===
+        'completed'
+      ) {
+        return allRequests.filter(
+          (request) =>
+            request.status ===
+            '반영 완료'
+        )
+      }
+
+      return allRequests.filter(
+        (request) =>
+          request.status !==
+          '반영 완료'
+      )
+    }, [
+      allRequests,
+      requestStatusFilter,
+    ])
 
   // =========================
   // 화면
@@ -1290,6 +1343,7 @@ function App() {
                   setIsSignupMode(
                     (prev) => !prev
                   )
+
                   setLoginError('')
                   setSignupMessage('')
                 }}
@@ -1453,83 +1507,159 @@ function App() {
             </div>
 
             {isAdmin ? (
-              requestLoading ? (
-                <div className="empty-list">
-                  요청사항을
-                  불러오는 중입니다.
+              <>
+                <div className="request-filter-bar">
+                  <button
+                    type="button"
+                    className={
+                      requestStatusFilter ===
+                      'pending'
+                        ? 'request-filter-button active'
+                        : 'request-filter-button'
+                    }
+                    onClick={() =>
+                      setRequestStatusFilter(
+                        'pending'
+                      )
+                    }
+                  >
+                    반영 전
+                  </button>
+
+                  <button
+                    type="button"
+                    className={
+                      requestStatusFilter ===
+                      'completed'
+                        ? 'request-filter-button active'
+                        : 'request-filter-button'
+                    }
+                    onClick={() =>
+                      setRequestStatusFilter(
+                        'completed'
+                      )
+                    }
+                  >
+                    반영 완료
+                  </button>
+
+                  <button
+                    type="button"
+                    className={
+                      requestStatusFilter ===
+                      'all'
+                        ? 'request-filter-button active'
+                        : 'request-filter-button'
+                    }
+                    onClick={() =>
+                      setRequestStatusFilter(
+                        'all'
+                      )
+                    }
+                  >
+                    전체
+                  </button>
                 </div>
-              ) : allRequests.length ===
-                0 ? (
-                <div className="empty-list">
-                  등록된 요청사항이
-                  없습니다.
-                </div>
-              ) : (
-                <div className="request-admin-list">
-                  {allRequests.map(
-                    (request) => (
-                      <div
-                        className="request-admin-item"
-                        key={request.id}
-                      >
-                        <div className="request-admin-top">
-                          <div>
-                            <span className="request-type-badge">
+
+                {requestLoading ? (
+                  <div className="empty-list">
+                    요청사항을
+                    불러오는 중입니다.
+                  </div>
+                ) : filteredAdminRequests.length ===
+                  0 ? (
+                  <div className="empty-list">
+                    {requestStatusFilter ===
+                    'completed'
+                      ? '반영 완료된 요청사항이 없습니다.'
+                      : requestStatusFilter ===
+                        'pending'
+                        ? '반영 전 요청사항이 없습니다.'
+                        : '등록된 요청사항이 없습니다.'}
+                  </div>
+                ) : (
+                  <div className="request-admin-list">
+                    {filteredAdminRequests.map(
+                      (request) => (
+                        <div
+                          className="request-admin-item"
+                          key={request.id}
+                        >
+                          <div className="request-admin-top">
+                            <div className="request-admin-title-area">
+                              <span className="request-type-badge">
+                                {
+                                  request.request_type
+                                }
+                              </span>
+
+                              <h3>
+                                {
+                                  request.title
+                                }
+                              </h3>
+                            </div>
+                          </div>
+
+                          <p className="request-details">
+                            {
+                              request.details
+                            }
+                          </p>
+
+                          <div className="request-meta">
+                            <span>
                               {
-                                request.request_type
+                                request.submitter_email
                               }
                             </span>
 
-                            <h3>
-                              {
-                                request.title
-                              }
-                            </h3>
+                            <span>
+                              {formatRequestDate(
+                                request.created_at
+                              )}
+                            </span>
                           </div>
 
-                          <button
-                            className={
-                              request.status ===
+                          <div className="request-status-area">
+                            <span
+                              className={
+                                request.status ===
+                                '반영 완료'
+                                  ? 'request-current-status completed'
+                                  : 'request-current-status'
+                              }
+                            >
+                              {
+                                request.status
+                              }
+                            </span>
+
+                            <button
+                              className={
+                                request.status ===
+                                '반영 완료'
+                                  ? 'request-status-button completed'
+                                  : 'request-status-button'
+                              }
+                              onClick={() =>
+                                handleToggleRequestStatus(
+                                  request
+                                )
+                              }
+                            >
+                              {request.status ===
                               '반영 완료'
-                                ? 'request-status-button completed'
-                                : 'request-status-button'
-                            }
-                            onClick={() =>
-                              handleToggleRequestStatus(
-                                request
-                              )
-                            }
-                          >
-                            {
-                              request.status
-                            }
-                          </button>
+                                ? '반영 전으로 변경'
+                                : '반영 완료'}
+                            </button>
+                          </div>
                         </div>
-
-                        <p className="request-details">
-                          {
-                            request.details
-                          }
-                        </p>
-
-                        <div className="request-meta">
-                          <span>
-                            {
-                              request.submitter_email
-                            }
-                          </span>
-
-                          <span>
-                            {formatRequestDate(
-                              request.created_at
-                            )}
-                          </span>
-                        </div>
-                      </div>
-                    )
-                  )}
-                </div>
-              )
+                      )
+                    )}
+                  </div>
+                )}
+              </>
             ) : myRequests.length ===
               0 ? (
               <div className="empty-list">
@@ -1728,7 +1858,7 @@ function App() {
                   {WEEKDAYS.map(
                     (day) => (
                       <div key={day}>
-                        {day}
+                        {day.charAt(0)}
                       </div>
                     )
                   )}
@@ -1867,11 +1997,13 @@ function App() {
                             />
 
                             <span className="untimed-date">
-                              {WEEKDAYS[
-                                new Date(
-                                  `${schedule.event_date}T00:00:00`
-                                ).getDay()
-                              ]}{' '}
+                              {
+                                WEEKDAYS[
+                                  new Date(
+                                    `${schedule.event_date}T00:00:00`
+                                  ).getDay()
+                                ]
+                              }{' '}
                               {Number(
                                 schedule.event_date.slice(
                                   8,
@@ -2085,7 +2217,6 @@ function App() {
                                 ).getDay()
                               ]
                             }
-                            요
                           </span>
                         </div>
 
