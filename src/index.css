@@ -2344,3 +2344,756 @@ body {
     border-radius: 13px;
   }
 }
+/* =========================================================
+   FINAL YB THEME
+   BLACK / WHITE / ONE BURGUNDY
+   ========================================================= */
+
+:root {
+  --yb-black: #090909;
+  --yb-black-2: #111111;
+  --yb-black-3: #181818;
+  --yb-white: #ffffff;
+  --yb-white-soft: #f5f5f5;
+  --yb-gray: #999999;
+  --yb-gray-dark: #555555;
+  --yb-line: #292929;
+  --yb-line-light: #363636;
+
+  /* 유일한 강조색 */
+  --yb-red: #7b202d;
+  --yb-red-hover: #922735;
+}
+
+/* =========================================================
+   전체
+   ========================================================= */
+
+html,
+body {
+  background: var(--yb-black) !important;
+  color: var(--yb-white) !important;
+}
+
+body {
+  color-scheme: dark;
+}
+
+.app {
+  background: var(--yb-black);
+  color: var(--yb-white);
+  min-height: 100vh;
+}
+
+/* =========================================================
+   HEADER
+   ========================================================= */
+
+.header {
+  background: rgba(9, 9, 9, 0.96) !important;
+  border-bottom: 1px solid #202020 !important;
+}
+
+.logo {
+  color: #fff !important;
+}
+
+.logo-mark {
+  background: var(--yb-red) !important;
+  color: #fff !important;
+}
+
+.header-button {
+  color: #888 !important;
+}
+
+.header-button:hover {
+  color: #fff !important;
+}
+
+.nav-button {
+  color: #888 !important;
+  background: transparent !important;
+}
+
+.nav-button:hover {
+  color: #fff !important;
+  background: #171717 !important;
+}
+
+.nav-button.active {
+  color: #fff !important;
+  background: #1b1b1b !important;
+}
+
+.admin-badge {
+  background: transparent !important;
+  color: #aaa !important;
+  border: 1px solid #333 !important;
+}
+
+/* =========================================================
+   MAIN / TITLES
+   ========================================================= */
+
+.calendar-header h1,
+.list-page-header h1,
+.sheet-header h2,
+.login-section h2 {
+  color: #fff !important;
+}
+
+.page-eyebrow {
+  color: #999 !important;
+}
+
+.page-description {
+  color: #777 !important;
+}
+
+/* =========================================================
+   버튼
+   ========================================================= */
+
+.add-schedule-button,
+.save-schedule-button,
+.login-section button {
+  background: var(--yb-red) !important;
+  color: #fff !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.add-schedule-button:hover,
+.save-schedule-button:hover,
+.login-section button:hover {
+  background: var(--yb-red-hover) !important;
+  transform: none !important;
+}
+
+/* =========================================================
+   달력
+   ========================================================= */
+
+.calendar-card,
+.week-view-card,
+.agenda-view-card,
+.week-timetable-card,
+.login-section,
+.schedule-list {
+  background: #101010 !important;
+  border: 1px solid #292929 !important;
+  box-shadow: none !important;
+}
+
+.weekdays,
+.week-view-head,
+.timetable-header {
+  background: #151515 !important;
+  border-bottom: 1px solid #303030 !important;
+}
+
+.weekdays div,
+.week-day-head,
+.timetable-day-head {
+  color: #888 !important;
+}
+
+.calendar-day,
+.week-day-column,
+.agenda-item {
+  background: #101010 !important;
+  color: #fff !important;
+}
+
+.calendar-day {
+  border-right-color: #292929 !important;
+  border-bottom-color: #292929 !important;
+}
+
+.calendar-day:hover:not(:disabled),
+.agenda-item:hover {
+  background: #171717 !important;
+}
+
+.date-number {
+  color: #fff !important;
+}
+
+.today .date-number {
+  background: var(--yb-red) !important;
+  color: #fff !important;
+}
+
+.event-title {
+  color: #ddd !important;
+}
+
+/* =========================================================
+   검색
+   ========================================================= */
+
+.calendar-search input,
+.calendar-view-select,
+.schedule-filter {
+  background: #111 !important;
+  border: 1px solid #333 !important;
+  color: #fff !important;
+}
+
+.calendar-search input::placeholder {
+  color: #666 !important;
+}
+
+.calendar-search input:focus,
+.calendar-view-select:focus,
+.schedule-filter:focus {
+  border-color: var(--yb-red) !important;
+  background: #141414 !important;
+}
+
+.search-icon {
+  color: #777 !important;
+}
+
+/* 검색창 X는 하나도 표시하지 않음 */
+.calendar-search input::-webkit-search-cancel-button,
+.calendar-search input::-webkit-search-decoration {
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  display: none !important;
+}
+
+.calendar-search input::-ms-clear {
+  display: none !important;
+}
+
+.search-clear {
+  display: none !important;
+}
+
+/* =========================================================
+   일정 상세 바텀시트
+   ========================================================= */
+
+.overlay {
+  background: rgba(0, 0, 0, 0.78) !important;
+  backdrop-filter: blur(4px);
+}
+
+.bottom-sheet {
+  background: #101010 !important;
+  border-top: 1px solid #292929;
+  box-shadow: 0 -15px 50px rgba(0, 0, 0, 0.65) !important;
+}
+
+.sheet-handle {
+  background: #444 !important;
+}
+
+.close-button {
+  background: #1c1c1c !important;
+  color: #aaa !important;
+}
+
+.close-button:hover {
+  background: #292929 !important;
+  color: #fff !important;
+}
+
+.schedule-item {
+  background: #151515 !important;
+  border: 1px solid #292929 !important;
+}
+
+.schedule-item h3 {
+  color: #fff !important;
+}
+
+.detail-row strong,
+.detail-section strong {
+  color: #777 !important;
+}
+
+.detail-row span,
+.detail-section p {
+  color: #eee !important;
+}
+
+.reference-link {
+  color: #fff !important;
+  text-decoration: underline;
+  text-decoration-color: #666;
+}
+
+.reference-link:hover {
+  color: #fff !important;
+}
+
+/* 일정 유형 색깔은 기존 유형별 색상을 유지 */
+.detail-type {
+  color: #fff !important;
+}
+
+/* =========================================================
+   관리자 수정 / 삭제
+   ========================================================= */
+
+.admin-actions {
+  border-top: 1px solid #292929 !important;
+}
+
+.admin-actions button {
+  background: #191919 !important;
+  border: 1px solid #333 !important;
+  color: #ddd !important;
+}
+
+.admin-actions button:hover {
+  background: #222 !important;
+  color: #fff !important;
+}
+
+.admin-actions .delete-button {
+  color: #fff !important;
+  border-color: #444 !important;
+}
+
+.admin-actions .delete-button:hover {
+  background: var(--yb-red) !important;
+  border-color: var(--yb-red) !important;
+}
+
+/* =========================================================
+   입력 폼
+   ========================================================= */
+
+.schedule-form label {
+  color: #888 !important;
+}
+
+.schedule-form input,
+.schedule-form select,
+.schedule-form textarea {
+  background: #161616 !important;
+  border: 1px solid #333 !important;
+  color: #fff !important;
+}
+
+.schedule-form input::placeholder,
+.schedule-form textarea::placeholder {
+  color: #666 !important;
+}
+
+.schedule-form input:focus,
+.schedule-form select:focus,
+.schedule-form textarea:focus {
+  background: #1b1b1b !important;
+  border-color: var(--yb-red) !important;
+}
+
+.error-message {
+  color: #fff !important;
+}
+
+/* =========================================================
+   메모
+   ========================================================= */
+
+.memo-section {
+  border-top: 1px solid #292929 !important;
+}
+
+.memo-heading strong {
+  color: #fff !important;
+}
+
+.memo-heading span {
+  color: #666 !important;
+}
+
+.memo-view {
+  background: #191919 !important;
+  border: 1px solid #303030 !important;
+  color: #fff !important;
+}
+
+.memo-editor textarea {
+  background: #161616 !important;
+  border: 1px solid #333 !important;
+  color: #fff !important;
+}
+
+.memo-editor textarea:focus {
+  border-color: var(--yb-red) !important;
+}
+
+.memo-save-button {
+  background: var(--yb-red) !important;
+  color: #fff !important;
+}
+
+.memo-save-button:hover {
+  background: var(--yb-red-hover) !important;
+}
+
+/* =========================================================
+   요청사항
+   ========================================================= */
+
+/* 페이지 자체 */
+.request-page {
+  color: #fff;
+}
+
+/* 요청사항 카드 */
+.request-admin-list,
+.my-request-list {
+  background: #101010 !important;
+  border: 1px solid #292929 !important;
+  border-radius: 14px !important;
+  box-shadow: none !important;
+  overflow: hidden;
+}
+
+/* 각각의 요청 */
+.request-admin-item,
+.my-request-item {
+  background: #101010 !important;
+  border-bottom: 1px solid #292929 !important;
+  padding: 20px !important;
+}
+
+.request-admin-item:last-child,
+.my-request-item:last-child {
+  border-bottom: 0 !important;
+}
+
+.request-admin-item:hover,
+.my-request-item:hover {
+  background: #151515 !important;
+}
+
+/* 요청 유형은 아주 작게 */
+.request-type-badge,
+.my-request-type {
+  display: inline-block !important;
+  padding: 0 !important;
+  margin-bottom: 7px !important;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  color: #888 !important;
+  font-size: 10px !important;
+  font-weight: 600 !important;
+}
+
+/* 제목 */
+.request-admin-item h3,
+.my-request-item h3 {
+  margin: 0 !important;
+  color: #fff !important;
+  font-size: 15px !important;
+  font-weight: 700 !important;
+}
+
+/* 내용 */
+.request-details,
+.my-request-main p {
+  margin-top: 10px !important;
+  color: #bbb !important;
+  font-size: 13px !important;
+  line-height: 1.65 !important;
+}
+
+/* 이메일 / 날짜 */
+.request-meta,
+.my-request-main > span {
+  color: #666 !important;
+  font-size: 10px !important;
+}
+
+/* 관리자 상태 버튼 */
+.request-status-button {
+  min-width: 72px;
+  height: 32px;
+  padding: 0 11px;
+  border: 1px solid #333 !important;
+  border-radius: 7px !important;
+  background: #181818 !important;
+  color: #aaa !important;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.request-status-button:hover {
+  background: #222 !important;
+  color: #fff !important;
+}
+
+.request-status-button.completed {
+  background: var(--yb-red) !important;
+  border-color: var(--yb-red) !important;
+  color: #fff !important;
+}
+
+/* 사용자 요청 상태 */
+.my-request-status {
+  min-width: 72px;
+  padding: 7px 9px;
+  border: 1px solid #333 !important;
+  border-radius: 7px !important;
+  background: #181818 !important;
+  color: #aaa !important;
+  font-size: 10px !important;
+  text-align: center;
+}
+
+.my-request-status.completed {
+  background: var(--yb-red) !important;
+  border-color: var(--yb-red) !important;
+  color: #fff !important;
+}
+
+/* 요청 작성 버튼은 깔끔한 버건디 */
+.request-page .add-schedule-button {
+  background: var(--yb-red) !important;
+}
+
+/* 요청 폼 */
+.request-form-sheet {
+  background: #101010 !important;
+}
+
+.request-user-info {
+  color: #666 !important;
+}
+
+/* =========================================================
+   주간 시간표
+   ========================================================= */
+
+/*
+  핵심:
+  - 시간표 전체가 별도의 스크롤 영역
+  - 요일 헤더는 위에 고정
+  - 시간 열은 왼쪽에 고정
+  - 둘이 만나는 좌측 상단은 가장 높은 z-index
+*/
+
+.week-timetable-card {
+  background: #101010 !important;
+  border: 1px solid #292929 !important;
+  border-radius: 14px !important;
+  overflow: hidden !important;
+}
+
+.timetable-scroll {
+  position: relative !important;
+  width: 100%;
+  height: min(680px, calc(100vh - 190px)) !important;
+  max-height: none !important;
+  overflow: auto !important;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* 시간표 폭 */
+.timetable {
+  min-width: 760px;
+}
+
+/* 요일 헤더 */
+.timetable-header {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 50 !important;
+
+  display: grid;
+  grid-template-columns: 70px repeat(7, minmax(98px, 1fr));
+
+  background: #151515 !important;
+  border-bottom: 2px solid #3a3a3a !important;
+}
+
+/* 왼쪽 상단 시간 칸 */
+.time-column-head {
+  position: sticky !important;
+  left: 0 !important;
+  top: 0 !important;
+  z-index: 70 !important;
+
+  background: #151515 !important;
+  border-right: 2px solid #3a3a3a !important;
+}
+
+/* 요일 */
+.timetable-day-head {
+  min-height: 60px;
+  background: #151515 !important;
+  border: 0 !important;
+  border-right: 1px solid #3a3a3a !important;
+  color: #888 !important;
+}
+
+.timetable-day-head:last-child {
+  border-right: 0 !important;
+}
+
+.timetable-day-head span {
+  color: #777 !important;
+}
+
+.timetable-day-head strong {
+  color: #fff !important;
+}
+
+.timetable-day-head.today {
+  background: #1a1214 !important;
+}
+
+.timetable-day-head.today strong {
+  color: #fff !important;
+}
+
+/* 시간표 본문 */
+.timetable-body {
+  background: #101010 !important;
+}
+
+.timetable-row {
+  display: grid;
+  grid-template-columns: 70px repeat(7, minmax(98px, 1fr));
+  min-height: 72px;
+}
+
+/* 왼쪽 시간 */
+.time-label {
+  position: sticky !important;
+  left: 0 !important;
+  z-index: 30 !important;
+
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+
+  padding: 9px 9px 0 4px;
+
+  background: #111 !important;
+  color: #777 !important;
+
+  border-right: 2px solid #3a3a3a !important;
+  border-bottom: 1px solid #292929 !important;
+}
+
+/* 요일별 셀 */
+.timetable-cell {
+  min-width: 0;
+  padding: 5px;
+
+  background: #101010 !important;
+
+  border-right: 1px solid #3a3a3a !important;
+  border-bottom: 1px solid #292929 !important;
+}
+
+.timetable-cell:last-child {
+  border-right: 0 !important;
+}
+
+/* 시간표 일정 */
+.timetable-event {
+  background: #191919 !important;
+  border-left: 3px solid var(--yb-red) !important;
+  color: #fff !important;
+}
+
+.timetable-event:hover {
+  background: #222 !important;
+}
+
+.timetable-event-time {
+  color: #888 !important;
+}
+
+.timetable-event-title {
+  color: #fff !important;
+}
+
+/* 시간 미정 */
+.untimed-section {
+  background: #111 !important;
+  border-bottom: 1px solid #292929 !important;
+}
+
+.untimed-title {
+  color: #888 !important;
+}
+
+.untimed-event {
+  background: #191919 !important;
+  border: 1px solid #333 !important;
+  color: #fff !important;
+}
+
+.untimed-date {
+  color: #777 !important;
+}
+
+.untimed-name {
+  color: #fff !important;
+}
+
+/* =========================================================
+   모바일 시간표
+   ========================================================= */
+
+@media (max-width: 700px) {
+  .timetable-scroll {
+    height: calc(100vh - 180px) !important;
+    max-height: none !important;
+  }
+
+  .timetable {
+    min-width: 700px !important;
+  }
+
+  .timetable-header {
+    grid-template-columns: 58px repeat(7, minmax(92px, 1fr));
+  }
+
+  .timetable-row {
+    grid-template-columns: 58px repeat(7, minmax(92px, 1fr));
+    min-height: 68px;
+  }
+
+  .time-column-head {
+    z-index: 70 !important;
+  }
+
+  .time-label {
+    z-index: 30 !important;
+  }
+
+  .timetable-day-head {
+    min-height: 54px;
+  }
+
+  .timetable-cell {
+    padding: 4px;
+  }
+
+  /* 요청사항 모바일 */
+  .request-admin-item,
+  .my-request-item {
+    padding: 16px !important;
+  }
+
+  .request-admin-top {
+    gap: 12px;
+  }
+
+  .request-status-button {
+    flex: 0 0 auto;
+  }
+}
