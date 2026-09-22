@@ -1020,3 +1020,322 @@ button {
     padding: 8px 11px;
   }
 }
+/* =========================
+   CALENDAR VIEW SELECTOR
+========================= */
+
+.calendar-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.calendar-view-select {
+  height: 32px;
+  padding: 0 28px 0 10px;
+  border: 1px solid #e3e3e5;
+  border-radius: 8px;
+  background: white;
+  color: #555;
+  font-size: 11px;
+  font-weight: 650;
+  cursor: pointer;
+  outline: none;
+}
+
+.calendar-view-select:focus {
+  border-color: #aaa;
+}
+
+/* =========================
+   WEEK VIEW
+========================= */
+
+.week-view-card {
+  overflow: hidden;
+  background: white;
+  border: 1px solid #ededee;
+  border-radius: 18px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.035);
+}
+
+.week-view-head,
+.week-view-body {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+}
+
+.week-view-head {
+  border-bottom: 1px solid #eeeeef;
+}
+
+.week-day-head {
+  min-width: 0;
+  padding: 12px 5px;
+  border: 0;
+  border-right: 1px solid #f0f0f1;
+  background: white;
+  color: #999;
+}
+
+.week-day-head:last-child {
+  border-right: 0;
+}
+
+.week-day-head span {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 10px;
+}
+
+.week-day-head strong {
+  display: block;
+  color: #444;
+  font-size: 12px;
+}
+
+.week-day-head.today strong {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #222;
+  color: white;
+}
+
+.week-day-column {
+  min-width: 0;
+  min-height: 130px;
+  padding: 8px;
+  border-right: 1px solid #f0f0f1;
+  background: #fff;
+}
+
+.week-day-column:last-child {
+  border-right: 0;
+}
+
+.week-event,
+.week-empty-day {
+  width: 100%;
+  margin-bottom: 6px;
+  padding: 7px;
+  border: 0;
+  border-radius: 8px;
+  background: #f7f7f8;
+  text-align: left;
+}
+
+.week-event {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.week-event-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.week-event-time {
+  color: #999;
+  font-size: 9px;
+}
+
+.week-event-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #333;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.week-empty-day {
+  color: #ccc;
+  text-align: center;
+  font-size: 11px;
+}
+
+/* =========================
+   AGENDA VIEW
+========================= */
+
+.agenda-view-card {
+  overflow: hidden;
+  background: white;
+  border: 1px solid #ededee;
+  border-radius: 18px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.035);
+}
+
+.agenda-item {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 82px 8px minmax(0, 1fr) 20px;
+  align-items: center;
+  gap: 12px;
+  padding: 15px 18px;
+  border: 0;
+  border-bottom: 1px solid #f0f0f1;
+  background: white;
+  text-align: left;
+}
+
+.agenda-item:last-child {
+  border-bottom: 0;
+}
+
+.agenda-item:hover {
+  background: #fafafa;
+}
+
+.agenda-date {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.agenda-date strong {
+  color: #333;
+  font-size: 12px;
+}
+
+.agenda-date span {
+  color: #aaa;
+  font-size: 10px;
+}
+
+.agenda-type-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.agenda-main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.agenda-main strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #333;
+  font-size: 13px;
+}
+
+.agenda-main span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #999;
+  font-size: 10px;
+}
+
+.agenda-arrow {
+  color: #bbb;
+  font-size: 20px;
+}
+
+.agenda-empty {
+  padding: 60px 20px;
+  color: #aaa;
+  text-align: center;
+  font-size: 13px;
+}
+
+/* =========================
+   MOBILE CALENDAR VIEWS
+========================= */
+
+@media (max-width: 700px) {
+  .calendar-title-row {
+    gap: 7px;
+  }
+
+  .calendar-view-select {
+    height: 29px;
+    padding: 0 22px 0 8px;
+    font-size: 10px;
+  }
+
+  .week-view-card {
+    border-radius: 14px;
+  }
+
+  .week-day-head {
+    padding: 9px 2px;
+  }
+
+  .week-day-head span {
+    font-size: 9px;
+  }
+
+  .week-day-head strong {
+    font-size: 10px;
+  }
+
+  .week-day-head.today strong {
+    width: 24px;
+    height: 24px;
+  }
+
+  .week-day-column {
+    min-height: 105px;
+    padding: 5px 3px;
+  }
+
+  .week-event {
+    padding: 6px 5px;
+    margin-bottom: 4px;
+  }
+
+  .week-event-time {
+    font-size: 8px;
+  }
+
+  .week-event-title {
+    font-size: 9px;
+  }
+
+  .week-empty-day {
+    padding: 8px 2px;
+    font-size: 9px;
+  }
+
+  .agenda-view-card {
+    border-radius: 14px;
+  }
+
+  .agenda-item {
+    grid-template-columns: 66px 7px minmax(0, 1fr) 15px;
+    gap: 8px;
+    padding: 13px 12px;
+  }
+
+  .agenda-date strong {
+    font-size: 10px;
+  }
+
+  .agenda-date span {
+    font-size: 9px;
+  }
+
+  .agenda-main strong {
+    font-size: 12px;
+  }
+
+  .agenda-main span {
+    font-size: 9px;
+  }
+
+  .agenda-arrow {
+    font-size: 17px;
+  }
+}
