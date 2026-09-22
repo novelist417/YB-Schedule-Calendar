@@ -960,11 +960,345 @@ function App() {
   }
 
   // =========================
+  // 주간 타임테이블 설정
+  // =========================
+
+  const WEEK_START_HOUR = 7
+  const WEEK_END_HOUR = 24
+  const HOUR_HEIGHT = 58
+
+  function getWeekSchedules(date) {
+    const dateString = toDateString(date)
+
+    return schedules
+      .filter(
+        (schedule) =>
+          schedule.event_date === dateString
+      )
+      .sort((a, b) =>
+        (
+          a.event_time || '99:99'
+        ).localeCompare(
+          b.event_time || '99:99'
+        )
+      )
+  }
+
+  function getWeekEventStyle(time) {
+    if (!time) return {}
+
+    const [hourString, minuteString] =
+      time.split(':')
+
+    const hour = Number(hourString)
+    const minute = Number(minuteString)
+
+    if (
+      hour < WEEK_START_HOUR ||
+      hour >= WEEK_END_HOUR
+    ) {
+      return {
+        display: 'none',
+      }
+    }
+
+    const top =
+      ((hour - WEEK_START_HOUR) * HOUR_HEIGHT) +
+      ((minute / 60) * HOUR_HEIGHT)
+
+    return {
+      top: `${top}px`,
+    }
+  }
+
+  // =========================
   // 화면
   // =========================
 
   return (
     <div className="app">
+      <style>{`
+        /* =========================
+           주간 타임테이블
+           ========================= */
+
+        .week-timetable-wrapper {
+          width: 100%;
+          overflow-x: auto;
+          overflow-y: hidden;
+          -webkit-overflow-scrolling: touch;
+          border-radius: 18px;
+        }
+
+        .week-timetable-card {
+          min-width: 820px;
+          background: #ffffff;
+          border: 1px solid #ececf2;
+          border-radius: 18px;
+          overflow: hidden;
+          box-shadow: 0 8px 28px rgba(25, 25, 45, 0.05);
+        }
+
+        .week-timetable-head {
+          display: grid;
+          grid-template-columns: 78px repeat(7, minmax(105px, 1fr));
+          border-bottom: 1px solid #ececf2;
+          background: #fafafd;
+        }
+
+        .time-column-head {
+          min-height: 64px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: #9999a8;
+          font-size: 12px;
+          font-weight: 600;
+          border-right: 1px solid #ececf2;
+        }
+
+        .week-timetable-day-head {
+          min-height: 64px;
+          border: 0;
+          border-right: 1px solid #ececf2;
+          background: transparent;
+          cursor: pointer;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 3px;
+          color: #777786;
+        }
+
+        .week-timetable-day-head:last-child {
+          border-right: 0;
+        }
+
+        .week-timetable-day-head span {
+          font-size: 12px;
+          font-weight: 600;
+        }
+
+        .week-timetable-day-head strong {
+          font-size: 16px;
+          color: #30303a;
+        }
+
+        .week-timetable-day-head.today {
+          background: #f2efff;
+        }
+
+        .week-timetable-day-head.today span,
+        .week-timetable-day-head.today strong {
+          color: #6b59c7;
+        }
+
+        .week-timetable-body {
+          position: relative;
+          display: grid;
+          grid-template-columns: 78px repeat(7, minmax(105px, 1fr));
+          min-height: ${(
+            WEEK_END_HOUR -
+            WEEK_START_HOUR
+          ) * HOUR_HEIGHT}px;
+          background: #fff;
+        }
+
+        .time-column {
+          position: relative;
+          border-right: 1px solid #ececf2;
+          background: #fafafd;
+          z-index: 3;
+        }
+
+        .time-slot {
+          height: ${HOUR_HEIGHT}px;
+          box-sizing: border-box;
+          padding: 8px 7px 0 4px;
+          text-align: right;
+          color: #a1a1af;
+          font-size: 10px;
+          border-bottom: 1px solid #f0f0f4;
+          white-space: nowrap;
+        }
+
+        .week-timetable-day-column {
+          position: relative;
+          min-width: 105px;
+          height: ${
+            (WEEK_END_HOUR -
+            WEEK_START_HOUR) *
+            HOUR_HEIGHT
+          }px;
+          border-right: 1px solid #ececf2;
+          background: #fff;
+        }
+
+        .week-timetable-day-column:last-child {
+          border-right: 0;
+        }
+
+        .timetable-hour-cell {
+          height: ${HOUR_HEIGHT}px;
+          box-sizing: border-box;
+          border-bottom: 1px solid #f0f0f4;
+        }
+
+        .timetable-event {
+          position: absolute;
+          left: 4px;
+          right: 4px;
+          min-height: 48px;
+          padding: 7px 7px 7px 8px;
+          border: 0;
+          border-radius: 9px;
+          background: #f5f4fb;
+          text-align: left;
+          cursor: pointer;
+          overflow: hidden;
+          z-index: 5;
+          box-shadow: 0 2px 6px rgba(30, 30, 50, 0.06);
+        }
+
+        .timetable-event:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 4px 10px rgba(30, 30, 50, 0.1);
+        }
+
+        .timetable-event-dot {
+          display: inline-block;
+          width: 7px;
+          height: 7px;
+          border-radius: 50%;
+          margin-right: 5px;
+          vertical-align: 1px;
+        }
+
+        .timetable-event-time {
+          color: #777786;
+          font-size: 10px;
+          font-weight: 600;
+          white-space: nowrap;
+        }
+
+        .timetable-event strong {
+          display: block;
+          margin-top: 3px;
+          color: #30303a;
+          font-size: 11px;
+          line-height: 1.3;
+          font-weight: 700;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .week-untimed-area {
+          padding: 10px 12px;
+          border-bottom: 1px solid #ececf2;
+          background: #fafafd;
+        }
+
+        .week-untimed-title {
+          margin-bottom: 7px;
+          color: #9999a8;
+          font-size: 11px;
+          font-weight: 700;
+        }
+
+        .week-untimed-list {
+          display: flex;
+          gap: 7px;
+          overflow-x: auto;
+          padding-bottom: 2px;
+        }
+
+        .week-untimed-item {
+          flex: 0 0 auto;
+          display: flex;
+          align-items: center;
+          gap: 5px;
+          padding: 7px 9px;
+          border: 1px solid #e9e7f2;
+          border-radius: 8px;
+          background: #fff;
+          cursor: pointer;
+          color: #444450;
+          font-size: 11px;
+        }
+
+        .week-untimed-item strong {
+          font-size: 11px;
+        }
+
+        .week-untimed-dot {
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          flex: 0 0 auto;
+        }
+
+        .week-untimed-date {
+          color: #9999a8;
+          font-size: 10px;
+        }
+
+        @media (max-width: 700px) {
+          .week-timetable-wrapper {
+            margin-left: -4px;
+            margin-right: -4px;
+            width: calc(100% + 8px);
+          }
+
+          .week-timetable-card {
+            min-width: 760px;
+            border-radius: 14px;
+          }
+
+          .week-timetable-head,
+          .week-timetable-body {
+            grid-template-columns: 62px repeat(7, minmax(100px, 1fr));
+          }
+
+          .time-column-head {
+            min-height: 56px;
+            font-size: 10px;
+          }
+
+          .week-timetable-day-head {
+            min-height: 56px;
+          }
+
+          .week-timetable-day-head span {
+            font-size: 10px;
+          }
+
+          .week-timetable-day-head strong {
+            font-size: 13px;
+          }
+
+          .time-slot {
+            padding-right: 5px;
+            font-size: 9px;
+          }
+
+          .timetable-event {
+            left: 3px;
+            right: 3px;
+            padding: 6px;
+          }
+
+          .timetable-event-time {
+            font-size: 9px;
+          }
+
+          .timetable-event strong {
+            font-size: 10px;
+          }
+        }
+      `}</style>
+
       <header className="header">
         <div
           className="logo"
@@ -1571,111 +1905,50 @@ function App() {
             )}
 
             {/* =========================
-                WEEK
+                WEEK — TIMETABLE
                ========================= */}
             {calendarView ===
               'week' && (
-              <div className="week-view-card">
-                <div className="week-view-head">
-                  {weekDates.map(
-                    (date) => {
-                      const dateString =
-                        toDateString(
-                          date
-                        )
-
-                      const isToday =
-                        dateString ===
-                        toDateString(
-                          today
-                        )
-
-                      return (
-                        <button
-                          className={`week-day-head ${
-                            isToday
-                              ? 'today'
-                              : ''
-                          }`}
-                          key={
-                            dateString
-                          }
-                          onClick={() =>
-                            handleDateStringClick(
-                              dateString
-                            )
-                          }
-                        >
-                          <span>
-                            {
-                              WEEKDAYS[
-                                date.getDay()
-                              ]
-                            }
-                          </span>
-
-                          <strong>
-                            {date.getMonth() +
-                              1}
-                            .
-                            {date.getDate()}
-                          </strong>
-                        </button>
+              <div className="week-timetable-wrapper">
+                <div className="week-timetable-card">
+                  {weekDates.some(
+                    (date) =>
+                      getWeekSchedules(
+                        date
+                      ).some(
+                        (schedule) =>
+                          !schedule.event_time
                       )
-                    }
-                  )}
-                </div>
+                  ) && (
+                    <div className="week-untimed-area">
+                      <div className="week-untimed-title">
+                        시간 미정
+                      </div>
 
-                <div className="week-view-body">
-                  {weekDates.map(
-                    (date) => {
-                      const dateString =
-                        toDateString(
-                          date
-                        )
-
-                      const daySchedules =
-                        schedules
-                          .filter(
-                            (schedule) =>
-                              schedule.event_date ===
-                              dateString
-                          )
-                          .sort(
-                            (a, b) =>
-                              (
-                                a.event_time ||
-                                '99:99'
-                              ).localeCompare(
-                                b.event_time ||
-                                  '99:99'
+                      <div className="week-untimed-list">
+                        {weekDates.map(
+                          (date) => {
+                            const dateString =
+                              toDateString(
+                                date
                               )
-                          )
 
-                      return (
-                        <div
-                          className="week-day-column"
-                          key={dateString}
-                        >
-                          {daySchedules.length ===
-                          0 ? (
-                            <button
-                              className="week-empty-day"
-                              onClick={() =>
-                                handleDateStringClick(
-                                  dateString
-                                )
-                              }
-                            >
-                              -
-                            </button>
-                          ) : (
-                            daySchedules.map(
+                            const untimedSchedules =
+                              getWeekSchedules(
+                                date
+                              ).filter(
+                                (
+                                  schedule
+                                ) =>
+                                  !schedule.event_time
+                              )
+
+                            return untimedSchedules.map(
                               (
                                 schedule
                               ) => (
                                 <button
-                                  className="week-event"
+                                  className="week-untimed-item"
                                   key={
                                     schedule.id
                                   }
@@ -1686,7 +1959,7 @@ function App() {
                                   }
                                 >
                                   <span
-                                    className="week-event-dot"
+                                    className="week-untimed-dot"
                                     style={{
                                       backgroundColor:
                                         TYPE_COLORS[
@@ -1697,27 +1970,211 @@ function App() {
                                     }}
                                   />
 
-                                  <span className="week-event-time">
-                                    {schedule.event_time
-                                      ? formatTime(
-                                          schedule.event_time
-                                        )
-                                      : '시간 미정'}
+                                  <span className="week-untimed-date">
+                                    {
+                                      WEEKDAYS[
+                                        date.getDay()
+                                      ]
+                                    }{' '}
+                                    {date.getMonth() +
+                                      1}
+                                    .
+                                    {date.getDate()}
                                   </span>
 
-                                  <span className="week-event-title">
+                                  <strong>
                                     {
                                       schedule.title
                                     }
-                                  </span>
+                                  </strong>
                                 </button>
                               )
                             )
-                          )}
-                        </div>
-                      )
-                    }
+                          }
+                        )}
+                      </div>
+                    </div>
                   )}
+
+                  <div className="week-timetable-head">
+                    <div className="time-column-head">
+                      시간
+                    </div>
+
+                    {weekDates.map(
+                      (date) => {
+                        const dateString =
+                          toDateString(
+                            date
+                          )
+
+                        const isToday =
+                          dateString ===
+                          toDateString(
+                            today
+                          )
+
+                        return (
+                          <button
+                            className={`week-timetable-day-head ${
+                              isToday
+                                ? 'today'
+                                : ''
+                            }`}
+                            key={
+                              dateString
+                            }
+                            onClick={() =>
+                              handleDateStringClick(
+                                dateString
+                              )
+                            }
+                          >
+                            <span>
+                              {
+                                WEEKDAYS[
+                                  date.getDay()
+                                ]
+                              }
+                            </span>
+
+                            <strong>
+                              {date.getMonth() +
+                                1}
+                              .
+                              {date.getDate()}
+                            </strong>
+                          </button>
+                        )
+                      }
+                    )}
+                  </div>
+
+                  <div className="week-timetable-body">
+                    <div className="time-column">
+                      {Array.from(
+                        {
+                          length:
+                            WEEK_END_HOUR -
+                            WEEK_START_HOUR,
+                        },
+                        (_, index) =>
+                          index +
+                          WEEK_START_HOUR
+                      ).map(
+                        (hour) => (
+                          <div
+                            className="time-slot"
+                            key={hour}
+                          >
+                            {hour < 12
+                              ? `오전 ${hour}시`
+                              : hour === 12
+                                ? '오후 12시'
+                                : `오후 ${hour - 12}시`}
+                          </div>
+                        )
+                      )}
+                    </div>
+
+                    {weekDates.map(
+                      (date) => {
+                        const dateString =
+                          toDateString(
+                            date
+                          )
+
+                        const daySchedules =
+                          getWeekSchedules(
+                            date
+                          )
+
+                        const timedSchedules =
+                          daySchedules.filter(
+                            (
+                              schedule
+                            ) =>
+                              schedule.event_time
+                          )
+
+                        return (
+                          <div
+                            className="week-timetable-day-column"
+                            key={
+                              dateString
+                            }
+                          >
+                            {Array.from(
+                              {
+                                length:
+                                  WEEK_END_HOUR -
+                                  WEEK_START_HOUR,
+                              },
+                              (_, index) =>
+                                index +
+                                WEEK_START_HOUR
+                            ).map(
+                              (
+                                hour
+                              ) => (
+                                <div
+                                  className="timetable-hour-cell"
+                                  key={
+                                    hour
+                                  }
+                                />
+                              )
+                            )}
+
+                            {timedSchedules.map(
+                              (
+                                schedule
+                              ) => (
+                                <button
+                                  className="timetable-event"
+                                  key={
+                                    schedule.id
+                                  }
+                                  style={getWeekEventStyle(
+                                    schedule.event_time
+                                  )}
+                                  onClick={() =>
+                                    handleDateStringClick(
+                                      dateString
+                                    )
+                                  }
+                                >
+                                  <span
+                                    className="timetable-event-dot"
+                                    style={{
+                                      backgroundColor:
+                                        TYPE_COLORS[
+                                          schedule
+                                            .schedule_type
+                                        ] ||
+                                        '#999',
+                                    }}
+                                  />
+
+                                  <span className="timetable-event-time">
+                                    {formatTime(
+                                      schedule.event_time
+                                    )}
+                                  </span>
+
+                                  <strong>
+                                    {
+                                      schedule.title
+                                    }
+                                  </strong>
+                                </button>
+                              )
+                            )}
+                          </div>
+                        )
+                      }
+                    )}
+                  </div>
                 </div>
               </div>
             )}
