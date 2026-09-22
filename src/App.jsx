@@ -1103,31 +1103,8 @@ function App() {
         (hour) => hour !== null
       )
 
-  let weekStartHour = 8
-  let weekEndHour = 23
-
-  if (timedHours.length > 0) {
-    const minHour = Math.min(
-      ...timedHours
-    )
-
-    const maxHour = Math.max(
-      ...timedHours
-    )
-
-    weekStartHour = Math.max(
-      6,
-      minHour - 1
-    )
-
-    weekEndHour = Math.min(
-      24,
-      Math.max(
-        maxHour + 1,
-        weekStartHour + 6
-      )
-    )
-  }
+  const weekStartHour = 6
+  const weekEndHour = 23
 
   const weekTimeSlots =
     Array.from(
