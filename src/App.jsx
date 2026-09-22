@@ -20,10 +20,13 @@ const EMPTY_FORM = {
   schedule_type: '방송',
   event_date: '',
   event_time: '',
+  end_date: '',
+  end_time: '',
   place: '',
   address: '',
   details: '',
   related_link: '',
+  related_link_text: '',
 }
 
 const EMPTY_REQUEST_FORM = {
@@ -256,7 +259,7 @@ function App() {
 
   function openNewScheduleForm() {
     setEditingSchedule(null)
-    setForm(EMPTY_FORM)
+    setForm({ ...EMPTY_FORM })
     setFormError('')
     setShowForm(true)
   }
@@ -272,10 +275,16 @@ function App() {
       event_time: schedule.event_time
         ? schedule.event_time.slice(0, 5)
         : '',
+      end_date: schedule.end_date || '',
+      end_time: schedule.end_time
+        ? schedule.end_time.slice(0, 5)
+        : '',
       place: schedule.place || '',
       address: schedule.address || '',
       details: schedule.details || '',
       related_link: schedule.related_link || '',
+      related_link_text:
+        schedule.related_link_text || '',
     })
 
     setFormError('')
@@ -285,7 +294,7 @@ function App() {
   function closeForm() {
     setShowForm(false)
     setEditingSchedule(null)
-    setForm(EMPTY_FORM)
+    setForm({ ...EMPTY_FORM })
     setFormError('')
   }
 
@@ -317,6 +326,38 @@ function App() {
       return
     }
 
+    // 종료 일자를 입력하지 않고 종료 시간만 입력한 경우
+    // 시작 날짜와 같은 날의 종료 시간으로 처리
+    const effectiveEndDate =
+      form.end_date ||
+      (form.end_time
+        ? form.event_date
+        : '')
+
+    // 종료 날짜가 시작 날짜보다 빠른지 확인
+    if (
+      effectiveEndDate &&
+      effectiveEndDate < form.event_date
+    ) {
+      setFormError(
+        '종료 일자는 시작 일자보다 빠를 수 없습니다.'
+      )
+      return
+    }
+
+    // 같은 날짜에 시작/종료 시간이 모두 있는 경우 시간 순서 확인
+    if (
+      effectiveEndDate === form.event_date &&
+      form.event_time &&
+      form.end_time &&
+      form.end_time < form.event_time
+    ) {
+      setFormError(
+        '같은 날짜라면 종료 시간은 시작 시간보다 빠를 수 없습니다.'
+      )
+      return
+    }
+
     setSaving(true)
     setFormError('')
 
@@ -325,11 +366,15 @@ function App() {
       schedule_type: form.schedule_type,
       event_date: form.event_date,
       event_time: form.event_time || null,
+      end_date: effectiveEndDate || null,
+      end_time: form.end_time || null,
       place: form.place.trim() || null,
       address: form.address.trim() || null,
       details: form.details.trim() || null,
       related_link:
         form.related_link.trim() || null,
+      related_link_text:
+        form.related_link_text.trim() || null,
       updated_at: new Date().toISOString(),
     }
 
@@ -558,6 +603,91 @@ function App() {
     )
   }
 
+  // =========================
+  // 일정 날짜 / 종료 날짜 처리
+  // =========================
+
+  function isScheduleOnDate(
+    schedule,
+    dateString
+  ) {
+    if (
+      !schedule?.event_date ||
+      !dateString
+    ) {
+      return false
+    }
+
+    const startDate =
+      schedule.event_date
+
+    const endDate =
+      schedule.end_date ||
+      startDate
+
+    return (
+      dateString >= startDate &&
+      dateString <= endDate
+    )
+  }
+
+  function formatScheduleDateTime(
+    schedule
+  ) {
+    if (!schedule?.event_date) {
+      return ''
+    }
+
+    const startDate =
+      formatDateText(
+        schedule.event_date
+      )
+
+    const hasDifferentEndDate =
+      schedule.end_date &&
+      schedule.end_date !==
+        schedule.event_date
+
+    const endDate =
+      hasDifferentEndDate
+        ? formatDateText(
+            schedule.end_date
+          )
+        : ''
+
+    const startTime =
+      schedule.event_time
+        ? formatTime(
+            schedule.event_time
+          )
+        : ''
+
+    const endTime =
+      schedule.end_time
+        ? formatTime(
+            schedule.end_time
+          )
+        : ''
+
+    let result = startDate
+
+    if (startTime) {
+      result += ` ${startTime}`
+    }
+
+    if (endDate) {
+      result += ` ~ ${endDate}`
+
+      if (endTime) {
+        result += ` ${endTime}`
+      }
+    } else if (endTime) {
+      result += ` ~ ${endTime}`
+    }
+
+    return result
+  }
+
   async function handleDateStringClick(
     date
   ) {
@@ -566,7 +696,10 @@ function App() {
     const daySchedules =
       schedules.filter(
         (schedule) =>
-          schedule.event_date === date
+          isScheduleOnDate(
+            schedule,
+            date
+          )
       )
 
     setSelectedDate(date)
@@ -594,9 +727,9 @@ function App() {
   // =========================
 
   function openRequestForm() {
-    setRequestForm(
-      EMPTY_REQUEST_FORM
-    )
+    setRequestForm({
+      ...EMPTY_REQUEST_FORM,
+    })
 
     setRequestError('')
     setShowRequestForm(true)
@@ -604,9 +737,9 @@ function App() {
 
   function closeRequestForm() {
     setShowRequestForm(false)
-    setRequestForm(
-      EMPTY_REQUEST_FORM
-    )
+    setRequestForm({
+      ...EMPTY_REQUEST_FORM,
+    })
     setRequestError('')
   }
 
@@ -988,6 +1121,7 @@ function App() {
             schedule.address,
             schedule.details,
             schedule.related_link,
+            schedule.related_link_text,
             schedule.schedule_type,
           ]
             .filter(Boolean)
@@ -1042,8 +1176,10 @@ function App() {
 
     return filteredSchedules.filter(
       (schedule) =>
-        schedule.event_date ===
-        date
+        isScheduleOnDate(
+          schedule,
+          date
+        )
     )
   }
 
@@ -1053,8 +1189,10 @@ function App() {
     return filteredSchedules
       .filter(
         (schedule) =>
-          schedule.event_date ===
-          dateString
+          isScheduleOnDate(
+            schedule,
+            dateString
+          )
       )
       .sort((a, b) =>
         (
@@ -1077,8 +1215,12 @@ function App() {
   const weekSchedules =
     filteredSchedules.filter(
       (schedule) =>
-        weekDateStrings.includes(
-          schedule.event_date
+        weekDateStrings.some(
+          (dateString) =>
+            isScheduleOnDate(
+              schedule,
+              dateString
+            )
         )
     )
 
@@ -1137,8 +1279,10 @@ function App() {
     return timedWeekSchedules.filter(
       (schedule) => {
         if (
-          schedule.event_date !==
-          dateString
+          !isScheduleOnDate(
+            schedule,
+            dateString
+          )
         ) {
           return false
         }
@@ -1398,8 +1542,8 @@ function App() {
                       key={schedule.id}
                     >
                       <div className="list-item-date">
-                        {formatListDate(
-                          schedule.event_date
+                        {formatScheduleDateTime(
+                          schedule
                         )}
                       </div>
 
@@ -1427,14 +1571,6 @@ function App() {
                         </h3>
 
                         <div className="list-item-info">
-                          {schedule.event_time && (
-                            <span>
-                              {formatTime(
-                                schedule.event_time
-                              )}
-                            </span>
-                          )}
-
                           {schedule.place && (
                             <span>
                               {
@@ -2240,11 +2376,9 @@ function App() {
                           </strong>
 
                           <span>
-                            {schedule.event_time
-                              ? formatTime(
-                                  schedule.event_time
-                                )
-                              : '시간 미정'}
+                            {formatScheduleDateTime(
+                              schedule
+                            )}
 
                             {schedule.place
                               ? ` · ${schedule.place}`
@@ -2342,14 +2476,9 @@ function App() {
                         </strong>
 
                         <span>
-                          {formatDateText(
-                            schedule.event_date
+                          {formatScheduleDateTime(
+                            schedule
                           )}
-
-                          {schedule.event_time &&
-                            ` ${formatTime(
-                              schedule.event_time
-                            )}`}
                         </span>
                       </div>
 
@@ -2409,7 +2538,8 @@ function App() {
                             target="_blank"
                             rel="noreferrer"
                           >
-                            링크 열기
+                            {schedule.related_link_text ||
+                              '링크 열기'}
                           </a>
                         </div>
                       )}
@@ -2640,7 +2770,7 @@ function App() {
                 </label>
 
                 <label>
-                  날짜 *
+                  시작 날짜 *
                   <input
                     type="date"
                     name="event_date"
@@ -2654,12 +2784,50 @@ function App() {
                 </label>
 
                 <label>
-                  시간
+                  시작 시간
                   <input
                     type="time"
                     name="event_time"
                     value={
                       form.event_time
+                    }
+                    onChange={
+                      handleFormChange
+                    }
+                  />
+                </label>
+
+                <label>
+                  종료 날짜
+                  <span className="form-optional">
+                    선택사항
+                  </span>
+                  <input
+                    type="date"
+                    name="end_date"
+                    min={
+                      form.event_date ||
+                      undefined
+                    }
+                    value={
+                      form.end_date
+                    }
+                    onChange={
+                      handleFormChange
+                    }
+                  />
+                </label>
+
+                <label>
+                  종료 시간
+                  <span className="form-optional">
+                    선택사항
+                  </span>
+                  <input
+                    type="time"
+                    name="end_time"
+                    value={
+                      form.end_time
                     }
                     onChange={
                       handleFormChange
@@ -2715,6 +2883,17 @@ function App() {
                       handleFormChange
                     }
                     placeholder="https://..."
+                  />
+
+                  <input
+                    name="related_link_text"
+                    value={
+                      form.related_link_text
+                    }
+                    onChange={
+                      handleFormChange
+                    }
+                    placeholder="링크에 표시할 텍스트 (선택)"
                   />
                 </label>
 
