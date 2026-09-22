@@ -25,6 +25,8 @@ const EMPTY_REQUEST_FORM = {
   details: '',
 }
 
+const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
+
 function App() {
   const [session, setSession] = useState(null)
   const [profile, setProfile] = useState(null)
@@ -41,6 +43,7 @@ function App() {
   const [selectedSchedules, setSelectedSchedules] = useState([])
 
   const [page, setPage] = useState('calendar')
+  const [calendarView, setCalendarView] = useState('month')
 
   const [showForm, setShowForm] = useState(false)
   const [editingSchedule, setEditingSchedule] = useState(null)
@@ -48,13 +51,11 @@ function App() {
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState('')
 
-  // 개인 메모
   const [memos, setMemos] = useState({})
   const [memoText, setMemoText] = useState({})
   const [editingMemoId, setEditingMemoId] = useState(null)
   const [memoSaving, setMemoSaving] = useState(null)
 
-  // 요청사항
   const [showRequestForm, setShowRequestForm] = useState(false)
   const [requestForm, setRequestForm] = useState(
     EMPTY_REQUEST_FORM
@@ -160,10 +161,11 @@ function App() {
     setLoginError('')
     setSignupMessage('')
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email: email.trim(),
-      password,
-    })
+    const { error } =
+      await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      })
 
     if (error) {
       setLoginError(error.message)
@@ -177,19 +179,24 @@ function App() {
     setSignupMessage('')
 
     if (!email.trim() || !password) {
-      setLoginError('이메일과 비밀번호를 입력해주세요.')
+      setLoginError(
+        '이메일과 비밀번호를 입력해주세요.'
+      )
       return
     }
 
     if (password.length < 6) {
-      setLoginError('비밀번호는 6자 이상 입력해주세요.')
+      setLoginError(
+        '비밀번호는 6자 이상 입력해주세요.'
+      )
       return
     }
 
-    const { data, error } = await supabase.auth.signUp({
-      email: email.trim(),
-      password,
-    })
+    const { data, error } =
+      await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+      })
 
     if (error) {
       setLoginError(error.message)
@@ -197,9 +204,13 @@ function App() {
     }
 
     if (data.session) {
-      setSignupMessage('회원가입이 완료되었습니다.')
+      setSignupMessage(
+        '회원가입이 완료되었습니다.'
+      )
     } else {
-      setSignupMessage('회원가입이 완료되었습니다.')
+      setSignupMessage(
+        '회원가입이 완료되었습니다.'
+      )
     }
   }
 
@@ -230,7 +241,8 @@ function App() {
 
     setForm({
       title: schedule.title || '',
-      schedule_type: schedule.schedule_type || '방송',
+      schedule_type:
+        schedule.schedule_type || '방송',
       event_date: schedule.event_date || '',
       event_time: schedule.event_time
         ? schedule.event_time.slice(0, 5)
@@ -267,12 +279,16 @@ function App() {
     if (!isAdmin) return
 
     if (!form.title.trim()) {
-      setFormError('일정 제목을 입력해주세요.')
+      setFormError(
+        '일정 제목을 입력해주세요.'
+      )
       return
     }
 
     if (!form.event_date) {
-      setFormError('날짜를 선택해주세요.')
+      setFormError(
+        '날짜를 선택해주세요.'
+      )
       return
     }
 
@@ -287,7 +303,8 @@ function App() {
       place: form.place.trim() || null,
       address: form.address.trim() || null,
       details: form.details.trim() || null,
-      related_link: form.related_link.trim() || null,
+      related_link:
+        form.related_link.trim() || null,
       updated_at: new Date().toISOString(),
     }
 
@@ -309,7 +326,10 @@ function App() {
     }
 
     if (error) {
-      console.error('일정 저장 실패:', error)
+      console.error(
+        '일정 저장 실패:',
+        error
+      )
       setFormError(error.message)
       setSaving(false)
       return
@@ -323,7 +343,9 @@ function App() {
     setSelectedSchedules([])
   }
 
-  async function handleDeleteSchedule(schedule) {
+  async function handleDeleteSchedule(
+    schedule
+  ) {
     if (!isAdmin) return
 
     const confirmed = window.confirm(
@@ -338,8 +360,13 @@ function App() {
       .eq('id', schedule.id)
 
     if (error) {
-      console.error('일정 삭제 실패:', error)
-      alert(`삭제에 실패했습니다.\n${error.message}`)
+      console.error(
+        '일정 삭제 실패:',
+        error
+      )
+      alert(
+        `삭제에 실패했습니다.\n${error.message}`
+      )
       return
     }
 
@@ -354,21 +381,28 @@ function App() {
   // =========================
 
   async function loadMemos(scheduleIds) {
-    if (!session?.user || !scheduleIds?.length) {
+    if (
+      !session?.user ||
+      !scheduleIds?.length
+    ) {
       setMemos({})
       setMemoText({})
       setEditingMemoId(null)
       return
     }
 
-    const { data, error } = await supabase
-      .from('memos')
-      .select('*')
-      .eq('user_id', session.user.id)
-      .in('schedule_id', scheduleIds)
+    const { data, error } =
+      await supabase
+        .from('memos')
+        .select('*')
+        .eq('user_id', session.user.id)
+        .in('schedule_id', scheduleIds)
 
     if (error) {
-      console.error('메모 조회 실패:', error)
+      console.error(
+        '메모 조회 실패:',
+        error
+      )
       return
     }
 
@@ -377,7 +411,8 @@ function App() {
 
     ;(data || []).forEach((memo) => {
       memoMap[memo.schedule_id] = memo
-      textMap[memo.schedule_id] = memo.content
+      textMap[memo.schedule_id] =
+        memo.content
     })
 
     setMemos(memoMap)
@@ -385,18 +420,21 @@ function App() {
     setEditingMemoId(null)
   }
 
-  async function handleSaveMemo(scheduleId) {
+  async function handleSaveMemo(
+    scheduleId
+  ) {
     if (!session?.user) return
 
-    const content = (memoText[scheduleId] || '').trim()
+    const content = (
+      memoText[scheduleId] || ''
+    ).trim()
 
-    if (!content) {
-      return
-    }
+    if (!content) return
 
     setMemoSaving(scheduleId)
 
-    const existingMemo = memos[scheduleId]
+    const existingMemo =
+      memos[scheduleId]
 
     let result
 
@@ -405,10 +443,14 @@ function App() {
         .from('memos')
         .update({
           content,
-          updated_at: new Date().toISOString(),
+          updated_at:
+            new Date().toISOString(),
         })
         .eq('id', existingMemo.id)
-        .eq('user_id', session.user.id)
+        .eq(
+          'user_id',
+          session.user.id
+        )
     } else {
       result = await supabase
         .from('memos')
@@ -420,21 +462,32 @@ function App() {
     }
 
     if (result.error) {
-      console.error('메모 저장 실패:', result.error)
-      alert(`메모 저장에 실패했습니다.\n${result.error.message}`)
+      console.error(
+        '메모 저장 실패:',
+        result.error
+      )
+
+      alert(
+        `메모 저장에 실패했습니다.\n${result.error.message}`
+      )
+
       setMemoSaving(null)
       return
     }
 
     await loadMemos(
-      selectedSchedules.map((schedule) => schedule.id)
+      selectedSchedules.map(
+        (schedule) => schedule.id
+      )
     )
 
     setEditingMemoId(null)
     setMemoSaving(null)
   }
 
-  async function handleDeleteMemo(scheduleId) {
+  async function handleDeleteMemo(
+    scheduleId
+  ) {
     if (!session?.user) return
 
     const memo = memos[scheduleId]
@@ -451,33 +504,51 @@ function App() {
       .from('memos')
       .delete()
       .eq('id', memo.id)
-      .eq('user_id', session.user.id)
+      .eq(
+        'user_id',
+        session.user.id
+      )
 
     if (error) {
-      console.error('메모 삭제 실패:', error)
-      alert(`메모 삭제에 실패했습니다.\n${error.message}`)
+      console.error(
+        '메모 삭제 실패:',
+        error
+      )
+
+      alert(
+        `메모 삭제에 실패했습니다.\n${error.message}`
+      )
+
       return
     }
 
     await loadMemos(
-      selectedSchedules.map((schedule) => schedule.id)
+      selectedSchedules.map(
+        (schedule) => schedule.id
+      )
     )
   }
 
-  async function handleDateClick(day) {
-    if (!day) return
+  async function handleDateStringClick(
+    date
+  ) {
+    if (!date) return
 
-    const date = formatDate(day)
-
-    const daySchedules = schedules.filter(
-      (schedule) => schedule.event_date === date
-    )
+    const daySchedules =
+      schedules.filter(
+        (schedule) =>
+          schedule.event_date === date
+      )
 
     setSelectedDate(date)
-    setSelectedSchedules(daySchedules)
+    setSelectedSchedules(
+      daySchedules
+    )
 
     await loadMemos(
-      daySchedules.map((schedule) => schedule.id)
+      daySchedules.map(
+        (schedule) => schedule.id
+      )
     )
   }
 
@@ -486,14 +557,18 @@ function App() {
   // =========================
 
   function openRequestForm() {
-    setRequestForm(EMPTY_REQUEST_FORM)
+    setRequestForm(
+      EMPTY_REQUEST_FORM
+    )
     setRequestError('')
     setShowRequestForm(true)
   }
 
   function closeRequestForm() {
     setShowRequestForm(false)
-    setRequestForm(EMPTY_REQUEST_FORM)
+    setRequestForm(
+      EMPTY_REQUEST_FORM
+    )
     setRequestError('')
   }
 
@@ -512,29 +587,44 @@ function App() {
     if (!session?.user) return
 
     if (!requestForm.title.trim()) {
-      setRequestError('제목을 입력해주세요.')
+      setRequestError(
+        '제목을 입력해주세요.'
+      )
       return
     }
 
-    if (!requestForm.details.trim()) {
-      setRequestError('요청 내용을 입력해주세요.')
+    if (
+      !requestForm.details.trim()
+    ) {
+      setRequestError(
+        '요청 내용을 입력해주세요.'
+      )
       return
     }
 
     setRequestSaving(true)
     setRequestError('')
 
-    const { error } = await supabase
-      .from('schedule_requests')
-      .insert({
-        title: requestForm.title.trim(),
-        request_type: requestForm.request_type,
-        details: requestForm.details.trim(),
-        submitter_email: session.user.email,
-      })
+    const { error } =
+      await supabase
+        .from('schedule_requests')
+        .insert({
+          title:
+            requestForm.title.trim(),
+          request_type:
+            requestForm.request_type,
+          details:
+            requestForm.details.trim(),
+          submitter_email:
+            session.user.email,
+        })
 
     if (error) {
-      console.error('요청사항 등록 실패:', error)
+      console.error(
+        '요청사항 등록 실패:',
+        error
+      )
+
       setRequestError(error.message)
       setRequestSaving(false)
       return
@@ -545,7 +635,9 @@ function App() {
     setRequestSaving(false)
     closeRequestForm()
 
-    alert('요청사항이 등록되었습니다.')
+    alert(
+      '요청사항이 등록되었습니다.'
+    )
   }
 
   async function loadMyRequests() {
@@ -554,14 +646,23 @@ function App() {
       return
     }
 
-    const { data, error } = await supabase
-      .from('schedule_requests')
-      .select('*')
-      .eq('submitter_email', session.user.email)
-      .order('created_at', { ascending: false })
+    const { data, error } =
+      await supabase
+        .from('schedule_requests')
+        .select('*')
+        .eq(
+          'submitter_email',
+          session.user.email
+        )
+        .order('created_at', {
+          ascending: false,
+        })
 
     if (error) {
-      console.error('내 요청사항 조회 실패:', error)
+      console.error(
+        '내 요청사항 조회 실패:',
+        error
+      )
       return
     }
 
@@ -576,13 +677,20 @@ function App() {
 
     setRequestLoading(true)
 
-    const { data, error } = await supabase
-      .from('schedule_requests')
-      .select('*')
-      .order('created_at', { ascending: false })
+    const { data, error } =
+      await supabase
+        .from('schedule_requests')
+        .select('*')
+        .order('created_at', {
+          ascending: false,
+        })
 
     if (error) {
-      console.error('요청사항 전체 조회 실패:', error)
+      console.error(
+        '요청사항 전체 조회 실패:',
+        error
+      )
+
       setRequestLoading(false)
       return
     }
@@ -591,7 +699,9 @@ function App() {
     setRequestLoading(false)
   }
 
-  async function handleToggleRequestStatus(request) {
+  async function handleToggleRequestStatus(
+    request
+  ) {
     if (!isAdmin) return
 
     const nextStatus =
@@ -599,44 +709,104 @@ function App() {
         ? '반영 전'
         : '반영 완료'
 
-    const { error } = await supabase
-      .from('schedule_requests')
-      .update({
-        status: nextStatus,
-      })
-      .eq('id', request.id)
+    const { error } =
+      await supabase
+        .from('schedule_requests')
+        .update({
+          status: nextStatus,
+        })
+        .eq('id', request.id)
 
     if (error) {
-      console.error('요청사항 상태 변경 실패:', error)
+      console.error(
+        '요청사항 상태 변경 실패:',
+        error
+      )
+
       alert(
         `상태 변경에 실패했습니다.\n${error.message}`
       )
+
       return
     }
 
     await loadAllRequests()
   }
 
-  function getDaysInMonth(year, month) {
-    return new Date(year, month + 1, 0).getDate()
+  // =========================
+  // 날짜 / 달력
+  // =========================
+
+  function getDaysInMonth(
+    year,
+    month
+  ) {
+    return new Date(
+      year,
+      month + 1,
+      0
+    ).getDate()
   }
 
-  function getFirstDayOfMonth(year, month) {
-    return new Date(year, month, 1).getDay()
+  function getFirstDayOfMonth(
+    year,
+    month
+  ) {
+    return new Date(
+      year,
+      month,
+      1
+    ).getDay()
   }
 
-  function formatDate(day) {
-    return `${currentYear}-${String(currentMonth + 1).padStart(
-      2,
-      '0'
-    )}-${String(day).padStart(2, '0')}`
+  function toDateString(date) {
+    const year =
+      date.getFullYear()
+
+    const month = String(
+      date.getMonth() + 1
+    ).padStart(2, '0')
+
+    const day = String(
+      date.getDate()
+    ).padStart(2, '0')
+
+    return `${year}-${month}-${day}`
+  }
+
+  function getWeekDates(date) {
+    const base = new Date(date)
+    const day = base.getDay()
+
+    const start = new Date(base)
+
+    start.setDate(
+      base.getDate() - day
+    )
+
+    return Array.from(
+      { length: 7 },
+      (_, index) => {
+        const current =
+          new Date(start)
+
+        current.setDate(
+          start.getDate() + index
+        )
+
+        return current
+      }
+    )
   }
 
   function formatTime(time) {
     if (!time) return ''
 
-    const [hourString, minute] = time.split(':')
-    const hour = Number(hourString)
+    const [hourString, minute] =
+      time.split(':')
+
+    const hour =
+      Number(hourString)
 
     if (hour === 0) {
       return `오전 12:${minute}`
@@ -653,28 +823,49 @@ function App() {
     return `오후 ${hour - 12}:${minute}`
   }
 
-  function formatDateText(dateString) {
+  function formatDateText(
+    dateString
+  ) {
     if (!dateString) return ''
 
-    const [year, month, day] = dateString.split('-')
+    const [
+      year,
+      month,
+      day,
+    ] = dateString.split('-')
 
-    return `${year}. ${Number(month)}. ${Number(day)}.`
+    return `${year}. ${Number(
+      month
+    )}. ${Number(day)}.`
   }
 
-  function formatListDate(dateString) {
+  function formatListDate(
+    dateString
+  ) {
     if (!dateString) return ''
 
-    const [year, month, day] = dateString.split('-')
+    const [
+      year,
+      month,
+      day,
+    ] = dateString.split('-')
 
     return `${year}.${month}.${day}`
   }
 
-  function formatRequestDate(dateString) {
+  function formatRequestDate(
+    dateString
+  ) {
     if (!dateString) return ''
 
-    const date = new Date(dateString)
+    const date =
+      new Date(dateString)
 
-    if (Number.isNaN(date.getTime())) {
+    if (
+      Number.isNaN(
+        date.getTime()
+      )
+    ) {
       return ''
     }
 
@@ -686,49 +877,111 @@ function App() {
   }
 
   const today = new Date()
-  const currentYear = today.getFullYear()
-  const currentMonth = today.getMonth()
 
-  const daysInMonth = getDaysInMonth(
-    currentYear,
-    currentMonth
-  )
+  const currentYear =
+    today.getFullYear()
 
-  const firstDay = getFirstDayOfMonth(
-    currentYear,
-    currentMonth
-  )
+  const currentMonth =
+    today.getMonth()
+
+  const daysInMonth =
+    getDaysInMonth(
+      currentYear,
+      currentMonth
+    )
+
+  const firstDay =
+    getFirstDayOfMonth(
+      currentYear,
+      currentMonth
+    )
 
   const calendarDays = []
 
-  for (let i = 0; i < firstDay; i++) {
+  for (
+    let i = 0;
+    i < firstDay;
+    i++
+  ) {
     calendarDays.push(null)
   }
 
-  for (let day = 1; day <= daysInMonth; day++) {
+  for (
+    let day = 1;
+    day <= daysInMonth;
+    day++
+  ) {
     calendarDays.push(day)
   }
 
-  function getSchedulesForDate(day) {
+  const weekDates =
+    getWeekDates(today)
+
+  const agendaSchedules =
+    [...schedules].sort(
+      (a, b) => {
+        const dateCompare =
+          a.event_date.localeCompare(
+            b.event_date
+          )
+
+        if (
+          dateCompare !== 0
+        ) {
+          return dateCompare
+        }
+
+        return (
+          a.event_time ||
+          '99:99'
+        ).localeCompare(
+          b.event_time ||
+            '99:99'
+        )
+      }
+    )
+
+  function getSchedulesForDate(
+    day
+  ) {
     if (!day) return []
 
-    const date = formatDate(day)
+    const date = `${currentYear}-${String(
+      currentMonth + 1
+    ).padStart(2, '0')}-${String(
+      day
+    ).padStart(2, '0')}`
 
     return schedules.filter(
-      (schedule) => schedule.event_date === date
+      (schedule) =>
+        schedule.event_date ===
+        date
     )
   }
+
+  // =========================
+  // 화면
+  // =========================
 
   return (
     <div className="app">
       <header className="header">
         <div
           className="logo"
-          onClick={() => setPage('calendar')}
-          style={{ cursor: 'pointer' }}
+          onClick={() =>
+            setPage('calendar')
+          }
+          style={{
+            cursor: 'pointer',
+          }}
         >
-          <span className="logo-mark">YB</span>
-          <span>YB Schedule Calendar</span>
+          <span className="logo-mark">
+            YB
+          </span>
+
+          <span>
+            YB Schedule Calendar
+          </span>
         </div>
 
         <div className="header-right">
@@ -740,7 +993,9 @@ function App() {
                     ? 'nav-button active'
                     : 'nav-button'
                 }
-                onClick={() => setPage('calendar')}
+                onClick={() =>
+                  setPage('calendar')
+                }
               >
                 달력
               </button>
@@ -752,7 +1007,9 @@ function App() {
                       ? 'nav-button active'
                       : 'nav-button'
                   }
-                  onClick={() => setPage('list')}
+                  onClick={() =>
+                    setPage('list')
+                  }
                 >
                   일정목록
                 </button>
@@ -817,7 +1074,9 @@ function App() {
                 placeholder="이메일"
                 value={email}
                 onChange={(e) =>
-                  setEmail(e.target.value)
+                  setEmail(
+                    e.target.value
+                  )
                 }
               />
 
@@ -826,7 +1085,9 @@ function App() {
                 placeholder="비밀번호"
                 value={password}
                 onChange={(e) =>
-                  setPassword(e.target.value)
+                  setPassword(
+                    e.target.value
+                  )
                 }
               />
 
@@ -867,10 +1128,8 @@ function App() {
           </section>
         )}
 
-        {/* =========================
-            관리자 일정목록
-           ========================= */}
-        {page === 'list' && isAdmin ? (
+        {page === 'list' &&
+        isAdmin ? (
           <section className="schedule-list-page">
             <div className="list-page-header">
               <div>
@@ -881,96 +1140,114 @@ function App() {
                 <h1>일정목록</h1>
 
                 <p className="page-description">
-                  등록된 모든 일정을 관리합니다.
+                  등록된 모든 일정을
+                  관리합니다.
                 </p>
               </div>
 
               <button
                 className="add-schedule-button"
-                onClick={openNewScheduleForm}
+                onClick={
+                  openNewScheduleForm
+                }
               >
                 + 일정 추가
               </button>
             </div>
 
             <div className="schedule-list">
-              {schedules.length === 0 ? (
+              {schedules.length ===
+              0 ? (
                 <div className="empty-list">
-                  등록된 일정이 없습니다.
+                  등록된 일정이
+                  없습니다.
                 </div>
               ) : (
-                schedules.map((schedule) => (
-                  <div
-                    className="schedule-list-item"
-                    key={schedule.id}
-                  >
-                    <div className="list-item-date">
-                      {formatListDate(
-                        schedule.event_date
-                      )}
-                    </div>
-
-                    <div className="list-item-main">
-                      <div
-                        className="list-item-type"
-                        style={{
-                          color:
-                            TYPE_COLORS[
-                              schedule.schedule_type
-                            ] || '#777',
-                        }}
-                      >
-                        {schedule.schedule_type}
-                      </div>
-
-                      <h3>{schedule.title}</h3>
-
-                      <div className="list-item-info">
-                        {schedule.event_time && (
-                          <span>
-                            {formatTime(
-                              schedule.event_time
-                            )}
-                          </span>
-                        )}
-
-                        {schedule.place && (
-                          <span>
-                            {schedule.place}
-                          </span>
+                schedules.map(
+                  (schedule) => (
+                    <div
+                      className="schedule-list-item"
+                      key={schedule.id}
+                    >
+                      <div className="list-item-date">
+                        {formatListDate(
+                          schedule.event_date
                         )}
                       </div>
-                    </div>
 
-                    <div className="list-item-actions">
-                      <button
-                        onClick={() =>
-                          openEditForm(schedule)
-                        }
-                      >
-                        수정
-                      </button>
+                      <div className="list-item-main">
+                        <div
+                          className="list-item-type"
+                          style={{
+                            color:
+                              TYPE_COLORS[
+                                schedule
+                                  .schedule_type
+                              ] ||
+                              '#777',
+                          }}
+                        >
+                          {
+                            schedule.schedule_type
+                          }
+                        </div>
 
-                      <button
-                        className="delete-button"
-                        onClick={() =>
-                          handleDeleteSchedule(
-                            schedule
-                          )
-                        }
-                      >
-                        삭제
-                      </button>
+                        <h3>
+                          {
+                            schedule.title
+                          }
+                        </h3>
+
+                        <div className="list-item-info">
+                          {schedule.event_time && (
+                            <span>
+                              {formatTime(
+                                schedule.event_time
+                              )}
+                            </span>
+                          )}
+
+                          {schedule.place && (
+                            <span>
+                              {
+                                schedule.place
+                              }
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="list-item-actions">
+                        <button
+                          onClick={() =>
+                            openEditForm(
+                              schedule
+                            )
+                          }
+                        >
+                          수정
+                        </button>
+
+                        <button
+                          className="delete-button"
+                          onClick={() =>
+                            handleDeleteSchedule(
+                              schedule
+                            )
+                          }
+                        >
+                          삭제
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                ))
+                  )
+                )
               )}
             </div>
           </section>
-        ) : page === 'requests' && session ? (
-          /* =========================
-             요청사항 별도 페이지
-             ========================= */
+        ) : page ===
+            'requests' &&
+          session ? (
           <section className="schedule-list-page request-page">
             <div className="list-page-header">
               <div>
@@ -992,7 +1269,9 @@ function App() {
               {!isAdmin && (
                 <button
                   className="add-schedule-button"
-                  onClick={openRequestForm}
+                  onClick={
+                    openRequestForm
+                  }
                 >
                   + 요청사항
                 </button>
@@ -1002,55 +1281,113 @@ function App() {
             {isAdmin ? (
               requestLoading ? (
                 <div className="empty-list">
-                  요청사항을 불러오는 중입니다.
+                  요청사항을
+                  불러오는 중입니다.
                 </div>
-              ) : allRequests.length === 0 ? (
+              ) : allRequests.length ===
+                0 ? (
                 <div className="empty-list">
-                  등록된 요청사항이 없습니다.
+                  등록된 요청사항이
+                  없습니다.
                 </div>
               ) : (
                 <div className="request-admin-list">
-                  {allRequests.map((request) => (
-                    <div
-                      className="request-admin-item"
-                      key={request.id}
-                    >
-                      <div className="request-admin-top">
-                        <div>
-                          <span className="request-type-badge">
-                            {request.request_type}
-                          </span>
+                  {allRequests.map(
+                    (request) => (
+                      <div
+                        className="request-admin-item"
+                        key={request.id}
+                      >
+                        <div className="request-admin-top">
+                          <div>
+                            <span className="request-type-badge">
+                              {
+                                request.request_type
+                              }
+                            </span>
 
-                          <h3>
-                            {request.title}
-                          </h3>
+                            <h3>
+                              {
+                                request.title
+                              }
+                            </h3>
+                          </div>
+
+                          <button
+                            className={
+                              request.status ===
+                              '반영 완료'
+                                ? 'request-status-button completed'
+                                : 'request-status-button'
+                            }
+                            onClick={() =>
+                              handleToggleRequestStatus(
+                                request
+                              )
+                            }
+                          >
+                            {
+                              request.status
+                            }
+                          </button>
                         </div>
 
-                        <button
-                          className={
-                            request.status ===
-                            '반영 완료'
-                              ? 'request-status-button completed'
-                              : 'request-status-button'
+                        <p className="request-details">
+                          {
+                            request.details
                           }
-                          onClick={() =>
-                            handleToggleRequestStatus(
-                              request
-                            )
-                          }
-                        >
-                          {request.status}
-                        </button>
+                        </p>
+
+                        <div className="request-meta">
+                          <span>
+                            {
+                              request.submitter_email
+                            }
+                          </span>
+
+                          <span>
+                            {formatRequestDate(
+                              request.created_at
+                            )}
+                          </span>
+                        </div>
                       </div>
+                    )
+                  )}
+                </div>
+              )
+            ) : myRequests.length ===
+              0 ? (
+              <div className="empty-list">
+                아직 등록한
+                요청사항이 없습니다.
+              </div>
+            ) : (
+              <div className="my-request-list">
+                {myRequests.map(
+                  (request) => (
+                    <div
+                      className="my-request-item"
+                      key={request.id}
+                    >
+                      <div className="my-request-main">
+                        <div className="my-request-type">
+                          {
+                            request.request_type
+                          }
+                        </div>
 
-                      <p className="request-details">
-                        {request.details}
-                      </p>
+                        <h3>
+                          {
+                            request.title
+                          }
+                        </h3>
 
-                      <div className="request-meta">
-                        <span>
-                          {request.submitter_email}
-                        </span>
+                        <p>
+                          {
+                            request.details
+                          }
+                        </p>
 
                         <span>
                           {formatRequestDate(
@@ -1058,129 +1395,298 @@ function App() {
                           )}
                         </span>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              )
-            ) : myRequests.length === 0 ? (
-              <div className="empty-list">
-                아직 등록한 요청사항이 없습니다.
-              </div>
-            ) : (
-              <div className="my-request-list">
-                {myRequests.map((request) => (
-                  <div
-                    className="my-request-item"
-                    key={request.id}
-                  >
-                    <div className="my-request-main">
-                      <div className="my-request-type">
-                        {request.request_type}
+
+                      <div
+                        className={
+                          request.status ===
+                          '반영 완료'
+                            ? 'my-request-status completed'
+                            : 'my-request-status'
+                        }
+                      >
+                        {
+                          request.status
+                        }
                       </div>
-
-                      <h3>
-                        {request.title}
-                      </h3>
-
-                      <p>
-                        {request.details}
-                      </p>
-
-                      <span>
-                        {formatRequestDate(
-                          request.created_at
-                        )}
-                      </span>
                     </div>
-
-                    <div
-                      className={
-                        request.status ===
-                        '반영 완료'
-                          ? 'my-request-status completed'
-                          : 'my-request-status'
-                      }
-                    >
-                      {request.status}
-                    </div>
-                  </div>
-                ))}
+                  )
+                )}
               </div>
             )}
           </section>
         ) : (
-          /* =========================
-             달력
-             ========================= */
           <section className="calendar-section">
             <div className="calendar-header">
-              <h1>
-                {currentYear}.{' '}
-                {String(currentMonth + 1).padStart(
-                  2,
-                  '0'
-                )}
-              </h1>
+              <div className="calendar-title-row">
+                <h1>
+                  {currentYear}.{' '}
+                  {String(
+                    currentMonth + 1
+                  ).padStart(2, '0')}
+                </h1>
+
+                <select
+                  className="calendar-view-select"
+                  value={calendarView}
+                  onChange={(e) =>
+                    setCalendarView(
+                      e.target.value
+                    )
+                  }
+                  aria-label="Calendar view"
+                >
+                  <option value="month">
+                    Month
+                  </option>
+
+                  <option value="week">
+                    Week
+                  </option>
+
+                  <option value="agenda">
+                    Agenda
+                  </option>
+                </select>
+              </div>
 
               {isAdmin && (
                 <button
                   className="add-schedule-button"
-                  onClick={openNewScheduleForm}
+                  onClick={
+                    openNewScheduleForm
+                  }
                 >
                   + 일정 추가
                 </button>
               )}
             </div>
 
-            <div className="calendar-card">
-              <div className="weekdays">
-                <div>일</div>
-                <div>월</div>
-                <div>화</div>
-                <div>수</div>
-                <div>목</div>
-                <div>금</div>
-                <div>토</div>
+            {/* =========================
+                MONTH
+               ========================= */}
+            {calendarView ===
+              'month' && (
+              <div className="calendar-card">
+                <div className="weekdays">
+                  {WEEKDAYS.map(
+                    (day) => (
+                      <div key={day}>
+                        {day}
+                      </div>
+                    )
+                  )}
+                </div>
+
+                <div className="calendar-grid">
+                  {calendarDays.map(
+                    (day, index) => {
+                      const daySchedules =
+                        getSchedulesForDate(
+                          day
+                        )
+
+                      const isToday =
+                        day ===
+                          today.getDate() &&
+                        currentMonth ===
+                          today.getMonth() &&
+                        currentYear ===
+                          today.getFullYear()
+
+                      return (
+                        <button
+                          key={index}
+                          className={`calendar-day ${
+                            isToday
+                              ? 'today'
+                              : ''
+                          }`}
+                          onClick={() => {
+                            if (!day)
+                              return
+
+                            handleDateStringClick(
+                              `${currentYear}-${String(
+                                currentMonth +
+                                  1
+                              ).padStart(
+                                2,
+                                '0'
+                              )}-${String(
+                                day
+                              ).padStart(
+                                2,
+                                '0'
+                              )}`
+                            )
+                          }}
+                          disabled={!day}
+                        >
+                          {day && (
+                            <>
+                              <span className="date-number">
+                                {day}
+                              </span>
+
+                              <div className="events">
+                                {daySchedules.map(
+                                  (
+                                    schedule
+                                  ) => (
+                                    <div
+                                      className="event"
+                                      key={
+                                        schedule.id
+                                      }
+                                    >
+                                      <span
+                                        className="event-dot"
+                                        style={{
+                                          backgroundColor:
+                                            TYPE_COLORS[
+                                              schedule
+                                                .schedule_type
+                                            ] ||
+                                            '#999',
+                                        }}
+                                      />
+
+                                      <span className="event-title">
+                                        {
+                                          schedule.title
+                                        }
+                                      </span>
+                                    </div>
+                                  )
+                                )}
+                              </div>
+                            </>
+                          )}
+                        </button>
+                      )
+                    }
+                  )}
+                </div>
               </div>
+            )}
 
-              <div className="calendar-grid">
-                {calendarDays.map((day, index) => {
-                  const daySchedules =
-                    getSchedulesForDate(day)
+            {/* =========================
+                WEEK
+               ========================= */}
+            {calendarView ===
+              'week' && (
+              <div className="week-view-card">
+                <div className="week-view-head">
+                  {weekDates.map(
+                    (date) => {
+                      const dateString =
+                        toDateString(
+                          date
+                        )
 
-                  const isToday =
-                    day === today.getDate() &&
-                    currentMonth ===
-                      today.getMonth() &&
-                    currentYear ===
-                      today.getFullYear()
+                      const isToday =
+                        dateString ===
+                        toDateString(
+                          today
+                        )
 
-                  return (
-                    <button
-                      key={index}
-                      className={`calendar-day ${
-                        isToday ? 'today' : ''
-                      }`}
-                      onClick={() =>
-                        handleDateClick(day)
-                      }
-                      disabled={!day}
-                    >
-                      {day && (
-                        <>
-                          <span className="date-number">
-                            {day}
+                      return (
+                        <button
+                          className={`week-day-head ${
+                            isToday
+                              ? 'today'
+                              : ''
+                          }`}
+                          key={
+                            dateString
+                          }
+                          onClick={() =>
+                            handleDateStringClick(
+                              dateString
+                            )
+                          }
+                        >
+                          <span>
+                            {
+                              WEEKDAYS[
+                                date.getDay()
+                              ]
+                            }
                           </span>
 
-                          <div className="events">
-                            {daySchedules.map(
-                              (schedule) => (
-                                <div
-                                  className="event"
-                                  key={schedule.id}
+                          <strong>
+                            {date.getMonth() +
+                              1}
+                            .
+                            {date.getDate()}
+                          </strong>
+                        </button>
+                      )
+                    }
+                  )}
+                </div>
+
+                <div className="week-view-body">
+                  {weekDates.map(
+                    (date) => {
+                      const dateString =
+                        toDateString(
+                          date
+                        )
+
+                      const daySchedules =
+                        schedules
+                          .filter(
+                            (schedule) =>
+                              schedule.event_date ===
+                              dateString
+                          )
+                          .sort(
+                            (a, b) =>
+                              (
+                                a.event_time ||
+                                '99:99'
+                              ).localeCompare(
+                                b.event_time ||
+                                  '99:99'
+                              )
+                          )
+
+                      return (
+                        <div
+                          className="week-day-column"
+                          key={dateString}
+                        >
+                          {daySchedules.length ===
+                          0 ? (
+                            <button
+                              className="week-empty-day"
+                              onClick={() =>
+                                handleDateStringClick(
+                                  dateString
+                                )
+                              }
+                            >
+                              -
+                            </button>
+                          ) : (
+                            daySchedules.map(
+                              (
+                                schedule
+                              ) => (
+                                <button
+                                  className="week-event"
+                                  key={
+                                    schedule.id
+                                  }
+                                  onClick={() =>
+                                    handleDateStringClick(
+                                      dateString
+                                    )
+                                  }
                                 >
                                   <span
-                                    className="event-dot"
+                                    className="week-event-dot"
                                     style={{
                                       backgroundColor:
                                         TYPE_COLORS[
@@ -1191,26 +1697,121 @@ function App() {
                                     }}
                                   />
 
-                                  <span className="event-title">
-                                    {schedule.title}
+                                  <span className="week-event-time">
+                                    {schedule.event_time
+                                      ? formatTime(
+                                          schedule.event_time
+                                        )
+                                      : '시간 미정'}
                                   </span>
-                                </div>
+
+                                  <span className="week-event-title">
+                                    {
+                                      schedule.title
+                                    }
+                                  </span>
+                                </button>
                               )
-                            )}
-                          </div>
-                        </>
-                      )}
-                    </button>
-                  )
-                })}
+                            )
+                          )}
+                        </div>
+                      )
+                    }
+                  )}
+                </div>
               </div>
-            </div>
+            )}
+
+            {/* =========================
+                AGENDA
+               ========================= */}
+            {calendarView ===
+              'agenda' && (
+              <div className="agenda-view-card">
+                {agendaSchedules.length ===
+                0 ? (
+                  <div className="agenda-empty">
+                    등록된 일정이
+                    없습니다.
+                  </div>
+                ) : (
+                  agendaSchedules.map(
+                    (schedule) => (
+                      <button
+                        className="agenda-item"
+                        key={schedule.id}
+                        onClick={() =>
+                          handleDateStringClick(
+                            schedule.event_date
+                          )
+                        }
+                      >
+                        <div className="agenda-date">
+                          <strong>
+                            {formatDateText(
+                              schedule.event_date
+                            )}
+                          </strong>
+
+                          <span>
+                            {
+                              WEEKDAYS[
+                                new Date(
+                                  `${schedule.event_date}T00:00:00`
+                                ).getDay()
+                              ]
+                            }
+                            요
+                          </span>
+                        </div>
+
+                        <span
+                          className="agenda-type-dot"
+                          style={{
+                            backgroundColor:
+                              TYPE_COLORS[
+                                schedule
+                                  .schedule_type
+                              ] ||
+                              '#999',
+                          }}
+                        />
+
+                        <div className="agenda-main">
+                          <strong>
+                            {
+                              schedule.title
+                            }
+                          </strong>
+
+                          <span>
+                            {schedule.event_time
+                              ? formatTime(
+                                  schedule.event_time
+                                )
+                              : '시간 미정'}
+
+                            {schedule.place
+                              ? ` · ${schedule.place}`
+                              : ''}
+                          </span>
+                        </div>
+
+                        <span className="agenda-arrow">
+                          ›
+                        </span>
+                      </button>
+                    )
+                  )
+                )}
+              </div>
+            )}
           </section>
         )}
       </main>
 
       {/* =========================
-          일정 상세 bottom sheet
+          일정 상세
          ========================= */}
       {selectedDate && (
         <div
@@ -1230,7 +1831,9 @@ function App() {
 
             <div className="sheet-header">
               <h2>
-                {formatDateText(selectedDate)}
+                {formatDateText(
+                  selectedDate
+                )}
               </h2>
 
               <button
@@ -1245,225 +1848,257 @@ function App() {
             </div>
 
             <div className="schedule-detail">
-              {selectedSchedules.length === 0 ? (
-                <p>등록된 일정이 없습니다.</p>
+              {selectedSchedules.length ===
+              0 ? (
+                <p>
+                  등록된 일정이
+                  없습니다.
+                </p>
               ) : (
-                selectedSchedules.map((schedule) => (
-                  <div
-                    className="schedule-item"
-                    key={schedule.id}
-                  >
+                selectedSchedules.map(
+                  (schedule) => (
                     <div
-                      className="detail-type"
-                      style={{
-                        backgroundColor:
-                          TYPE_COLORS[
-                            schedule.schedule_type
-                          ] || '#999',
-                      }}
+                      className="schedule-item"
+                      key={schedule.id}
                     >
-                      {schedule.schedule_type}
-                    </div>
-
-                    <h3>{schedule.title}</h3>
-
-                    <div className="detail-row">
-                      <strong>일시</strong>
-
-                      <span>
-                        {formatDateText(
-                          schedule.event_date
-                        )}
-
-                        {schedule.event_time &&
-                          ` ${formatTime(
-                            schedule.event_time
-                          )}`}
-                      </span>
-                    </div>
-
-                    {schedule.place && (
-                      <div className="detail-row">
-                        <strong>장소</strong>
-
-                        <span>
-                          {schedule.place}
-                        </span>
+                      <div
+                        className="detail-type"
+                        style={{
+                          backgroundColor:
+                            TYPE_COLORS[
+                              schedule
+                                .schedule_type
+                            ] ||
+                            '#999',
+                        }}
+                      >
+                        {
+                          schedule.schedule_type
+                        }
                       </div>
-                    )}
 
-                    {schedule.address && (
+                      <h3>
+                        {schedule.title}
+                      </h3>
+
                       <div className="detail-row">
-                        <strong>주소</strong>
-
-                        <span>
-                          {schedule.address}
-                        </span>
-                      </div>
-                    )}
-
-                    {schedule.details && (
-                      <div className="detail-section">
                         <strong>
-                          참고 사항
+                          일시
                         </strong>
 
-                        <p>
-                          {schedule.details}
-                        </p>
+                        <span>
+                          {formatDateText(
+                            schedule.event_date
+                          )}
+
+                          {schedule.event_time &&
+                            ` ${formatTime(
+                              schedule.event_time
+                            )}`}
+                        </span>
                       </div>
-                    )}
 
-                    {schedule.related_link && (
-                      <div className="detail-section">
-                        <strong>
-                          참고 링크
-                        </strong>
+                      {schedule.place && (
+                        <div className="detail-row">
+                          <strong>
+                            장소
+                          </strong>
 
-                        <a
-                          className="reference-link"
-                          href={
-                            schedule.related_link
-                          }
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          링크 열기
-                        </a>
-                      </div>
-                    )}
+                          <span>
+                            {
+                              schedule.place
+                            }
+                          </span>
+                        </div>
+                      )}
 
-                    {/* 개인 메모 */}
-                    {session?.user && (
-                      <div className="memo-section">
-                        <div className="memo-heading">
-                          <div>
-                            <strong>
-                              내 메모
-                            </strong>
+                      {schedule.address && (
+                        <div className="detail-row">
+                          <strong>
+                            주소
+                          </strong>
 
-                            <span>
-                              로그인한 계정에서만 볼 수 있어요.
-                            </span>
+                          <span>
+                            {
+                              schedule.address
+                            }
+                          </span>
+                        </div>
+                      )}
+
+                      {schedule.details && (
+                        <div className="detail-section">
+                          <strong>
+                            참고 사항
+                          </strong>
+
+                          <p>
+                            {
+                              schedule.details
+                            }
+                          </p>
+                        </div>
+                      )}
+
+                      {schedule.related_link && (
+                        <div className="detail-section">
+                          <strong>
+                            참고 링크
+                          </strong>
+
+                          <a
+                            className="reference-link"
+                            href={
+                              schedule.related_link
+                            }
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            링크 열기
+                          </a>
+                        </div>
+                      )}
+
+                      {session?.user && (
+                        <div className="memo-section">
+                          <div className="memo-heading">
+                            <div>
+                              <strong>
+                                내 메모
+                              </strong>
+
+                              <span>
+                                로그인한 계정에서만 볼 수 있어요.
+                              </span>
+                            </div>
+
+                            {memos[
+                              schedule.id
+                            ] && (
+                              <div className="memo-actions">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setEditingMemoId(
+                                      schedule.id
+                                    )
+
+                                    setMemoText(
+                                      (
+                                        prev
+                                      ) => ({
+                                        ...prev,
+                                        [schedule.id]:
+                                          memos[
+                                            schedule.id
+                                          ].content,
+                                      })
+                                    )
+                                  }}
+                                >
+                                  ✏️
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    handleDeleteMemo(
+                                      schedule.id
+                                    )
+                                  }
+                                >
+                                  🗑️
+                                </button>
+                              </div>
+                            )}
                           </div>
 
-                          {memos[schedule.id] && (
-                            <div className="memo-actions">
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setEditingMemoId(
+                          {memos[
+                            schedule.id
+                          ] &&
+                          editingMemoId !==
+                            schedule.id ? (
+                            <div className="memo-view">
+                              {
+                                memos[
+                                  schedule.id
+                                ].content
+                              }
+                            </div>
+                          ) : (
+                            <div className="memo-editor">
+                              <textarea
+                                value={
+                                  memoText[
                                     schedule.id
-                                  )
-
+                                  ] || ''
+                                }
+                                onChange={(e) =>
                                   setMemoText(
-                                    (prev) => ({
+                                    (
+                                      prev
+                                    ) => ({
                                       ...prev,
                                       [schedule.id]:
-                                        memos[
-                                          schedule.id
-                                        ].content,
+                                        e.target
+                                          .value,
                                     })
                                   )
-                                }}
-                                aria-label="메모 수정"
-                              >
-                                ✏️
-                              </button>
+                                }
+                                placeholder="이 일정에 대한 메모를 남겨보세요."
+                                rows="2"
+                              />
 
                               <button
                                 type="button"
+                                className="memo-save-button"
                                 onClick={() =>
-                                  handleDeleteMemo(
+                                  handleSaveMemo(
                                     schedule.id
                                   )
                                 }
-                                aria-label="메모 삭제"
+                                disabled={
+                                  memoSaving ===
+                                  schedule.id
+                                }
                               >
-                                🗑️
+                                {memoSaving ===
+                                schedule.id
+                                  ? '저장 중...'
+                                  : '저장'}
                               </button>
                             </div>
                           )}
                         </div>
+                      )}
 
-                        {memos[schedule.id] &&
-                        editingMemoId !==
-                          schedule.id ? (
-                          <div className="memo-view">
-                            {
-                              memos[
-                                schedule.id
-                              ].content
+                      {isAdmin && (
+                        <div className="admin-actions">
+                          <button
+                            onClick={() =>
+                              openEditForm(
+                                schedule
+                              )
                             }
-                          </div>
-                        ) : (
-                          <div className="memo-editor">
-                            <textarea
-                              value={
-                                memoText[
-                                  schedule.id
-                                ] || ''
-                              }
-                              onChange={(e) =>
-                                setMemoText(
-                                  (prev) => ({
-                                    ...prev,
-                                    [schedule.id]:
-                                      e.target.value,
-                                  })
-                                )
-                              }
-                              placeholder="이 일정에 대한 메모를 남겨보세요."
-                              rows="2"
-                            />
+                          >
+                            수정
+                          </button>
 
-                            <button
-                              type="button"
-                              className="memo-save-button"
-                              onClick={() =>
-                                handleSaveMemo(
-                                  schedule.id
-                                )
-                              }
-                              disabled={
-                                memoSaving ===
-                                schedule.id
-                              }
-                            >
-                              {memoSaving ===
-                              schedule.id
-                                ? '저장 중...'
-                                : '저장'}
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {isAdmin && (
-                      <div className="admin-actions">
-                        <button
-                          onClick={() =>
-                            openEditForm(schedule)
-                          }
-                        >
-                          수정
-                        </button>
-
-                        <button
-                          className="delete-button"
-                          onClick={() =>
-                            handleDeleteSchedule(
-                              schedule
-                            )
-                          }
-                        >
-                          삭제
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                ))
+                          <button
+                            className="delete-button"
+                            onClick={() =>
+                              handleDeleteSchedule(
+                                schedule
+                              )
+                            }
+                          >
+                            삭제
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )
+                )
               )}
             </div>
           </div>
@@ -1473,259 +2108,303 @@ function App() {
       {/* =========================
           일정 추가 / 수정
          ========================= */}
-      {showForm && isAdmin && (
-        <div className="overlay">
+      {showForm &&
+        isAdmin && (
           <div
-            className="bottom-sheet schedule-form-sheet"
-            onClick={(e) =>
-              e.stopPropagation()
-            }
+            className="overlay"
+            onClick={closeForm}
           >
-            <div className="sheet-handle" />
-
-            <div className="sheet-header">
-              <h2>
-                {editingSchedule
-                  ? '일정 수정'
-                  : '일정 추가'}
-              </h2>
-
-              <button
-                className="close-button"
-                onClick={closeForm}
-              >
-                ×
-              </button>
-            </div>
-
-            <form
-              className="schedule-form"
-              onSubmit={handleSaveSchedule}
+            <div
+              className="bottom-sheet schedule-form-sheet"
+              onClick={(e) =>
+                e.stopPropagation()
+              }
             >
-              <label>
-                제목 *
-                <input
-                  name="title"
-                  value={form.title}
-                  onChange={handleFormChange}
-                  placeholder="예: 중앙대학교 축제"
-                />
-              </label>
+              <div className="sheet-handle" />
 
-              <label>
-                유형 *
-                <select
-                  name="schedule_type"
-                  value={form.schedule_type}
-                  onChange={handleFormChange}
+              <div className="sheet-header">
+                <h2>
+                  {editingSchedule
+                    ? '일정 수정'
+                    : '일정 추가'}
+                </h2>
+
+                <button
+                  className="close-button"
+                  onClick={closeForm}
                 >
-                  <option value="방송">
-                    방송
-                  </option>
+                  ×
+                </button>
+              </div>
 
-                  <option value="지역축제/행사">
-                    지역축제/행사
-                  </option>
-
-                  <option value="기념일">
-                    기념일
-                  </option>
-
-                  <option value="대학축제">
-                    대학축제
-                  </option>
-                </select>
-              </label>
-
-              <label>
-                날짜 *
-                <input
-                  type="date"
-                  name="event_date"
-                  value={form.event_date}
-                  onChange={handleFormChange}
-                />
-              </label>
-
-              <label>
-                시간
-                <input
-                  type="time"
-                  name="event_time"
-                  value={form.event_time}
-                  onChange={handleFormChange}
-                />
-              </label>
-
-              <label>
-                장소
-                <input
-                  name="place"
-                  value={form.place}
-                  onChange={handleFormChange}
-                  placeholder="장소"
-                />
-              </label>
-
-              <label>
-                주소 / 지도
-                <input
-                  name="address"
-                  value={form.address}
-                  onChange={handleFormChange}
-                  placeholder="주소 또는 지도 링크"
-                />
-              </label>
-
-              <label>
-                참고 사항
-                <textarea
-                  name="details"
-                  value={form.details}
-                  onChange={handleFormChange}
-                  placeholder="참고 사항"
-                  rows="3"
-                />
-              </label>
-
-              <label>
-                참고 링크
-                <input
-                  name="related_link"
-                  value={form.related_link}
-                  onChange={handleFormChange}
-                  placeholder="https://..."
-                />
-              </label>
-
-              {formError && (
-                <p className="error-message">
-                  {formError}
-                </p>
-              )}
-
-              <button
-                className="save-schedule-button"
-                type="submit"
-                disabled={saving}
+              <form
+                className="schedule-form"
+                onSubmit={
+                  handleSaveSchedule
+                }
               >
-                {saving
-                  ? '저장 중...'
-                  : editingSchedule
-                    ? '수정 저장'
-                    : '일정 저장'}
-              </button>
-            </form>
+                <label>
+                  제목 *
+                  <input
+                    name="title"
+                    value={form.title}
+                    onChange={
+                      handleFormChange
+                    }
+                    placeholder="예: 중앙대학교 축제"
+                  />
+                </label>
+
+                <label>
+                  유형 *
+                  <select
+                    name="schedule_type"
+                    value={
+                      form.schedule_type
+                    }
+                    onChange={
+                      handleFormChange
+                    }
+                  >
+                    <option value="방송">
+                      방송
+                    </option>
+
+                    <option value="지역축제/행사">
+                      지역축제/행사
+                    </option>
+
+                    <option value="기념일">
+                      기념일
+                    </option>
+
+                    <option value="대학축제">
+                      대학축제
+                    </option>
+                  </select>
+                </label>
+
+                <label>
+                  날짜 *
+                  <input
+                    type="date"
+                    name="event_date"
+                    value={
+                      form.event_date
+                    }
+                    onChange={
+                      handleFormChange
+                    }
+                  />
+                </label>
+
+                <label>
+                  시간
+                  <input
+                    type="time"
+                    name="event_time"
+                    value={
+                      form.event_time
+                    }
+                    onChange={
+                      handleFormChange
+                    }
+                  />
+                </label>
+
+                <label>
+                  장소
+                  <input
+                    name="place"
+                    value={form.place}
+                    onChange={
+                      handleFormChange
+                    }
+                    placeholder="장소"
+                  />
+                </label>
+
+                <label>
+                  주소 / 지도
+                  <input
+                    name="address"
+                    value={form.address}
+                    onChange={
+                      handleFormChange
+                    }
+                    placeholder="주소 또는 지도 링크"
+                  />
+                </label>
+
+                <label>
+                  참고 사항
+                  <textarea
+                    name="details"
+                    value={form.details}
+                    onChange={
+                      handleFormChange
+                    }
+                    placeholder="참고 사항"
+                    rows="3"
+                  />
+                </label>
+
+                <label>
+                  참고 링크
+                  <input
+                    name="related_link"
+                    value={
+                      form.related_link
+                    }
+                    onChange={
+                      handleFormChange
+                    }
+                    placeholder="https://..."
+                  />
+                </label>
+
+                {formError && (
+                  <p className="error-message">
+                    {formError}
+                  </p>
+                )}
+
+                <button
+                  className="save-schedule-button"
+                  type="submit"
+                  disabled={saving}
+                >
+                  {saving
+                    ? '저장 중...'
+                    : editingSchedule
+                      ? '수정 저장'
+                      : '일정 저장'}
+                </button>
+              </form>
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
       {/* =========================
           요청사항 작성
          ========================= */}
-      {showRequestForm && session && (
-        <div
-          className="overlay"
-          onClick={closeRequestForm}
-        >
+      {showRequestForm &&
+        session && (
           <div
-            className="bottom-sheet request-form-sheet"
-            onClick={(e) =>
-              e.stopPropagation()
+            className="overlay"
+            onClick={
+              closeRequestForm
             }
           >
-            <div className="sheet-handle" />
-
-            <div className="sheet-header">
-              <div>
-                <h2>요청사항</h2>
-              </div>
-
-              <button
-                className="close-button"
-                onClick={closeRequestForm}
-              >
-                ×
-              </button>
-            </div>
-
-            <form
-              className="schedule-form"
-              onSubmit={handleSubmitRequest}
+            <div
+              className="bottom-sheet request-form-sheet"
+              onClick={(e) =>
+                e.stopPropagation()
+              }
             >
-              <label>
-                요청 유형 *
-                <select
-                  name="request_type"
-                  value={
-                    requestForm.request_type
-                  }
-                  onChange={
-                    handleRequestFormChange
+              <div className="sheet-handle" />
+
+              <div className="sheet-header">
+                <h2>
+                  요청사항
+                </h2>
+
+                <button
+                  className="close-button"
+                  onClick={
+                    closeRequestForm
                   }
                 >
-                  <option value="일정 추가">
-                    일정 추가
-                  </option>
+                  ×
+                </button>
+              </div>
 
-                  <option value="일정 수정">
-                    일정 수정
-                  </option>
-
-                  <option value="기타">
-                    기타
-                  </option>
-                </select>
-              </label>
-
-              <label>
-                제목 *
-                <input
-                  name="title"
-                  value={requestForm.title}
-                  onChange={
-                    handleRequestFormChange
-                  }
-                  placeholder="예: 10월 일정 추가 요청"
-                />
-              </label>
-
-              <label>
-                요청 내용 *
-                <textarea
-                  name="details"
-                  value={requestForm.details}
-                  onChange={
-                    handleRequestFormChange
-                  }
-                  placeholder="추가하거나 수정했으면 하는 내용을 적어주세요."
-                  rows="5"
-                />
-              </label>
-
-              <p className="request-user-info">
-                요청자: {session.user.email}
-              </p>
-
-              {requestError && (
-                <p className="error-message">
-                  {requestError}
-                </p>
-              )}
-
-              <button
-                className="save-schedule-button"
-                type="submit"
-                disabled={requestSaving}
+              <form
+                className="schedule-form"
+                onSubmit={
+                  handleSubmitRequest
+                }
               >
-                {requestSaving
-                  ? '등록 중...'
-                  : '요청사항 등록'}
-              </button>
-            </form>
+                <label>
+                  요청 유형 *
+                  <select
+                    name="request_type"
+                    value={
+                      requestForm.request_type
+                    }
+                    onChange={
+                      handleRequestFormChange
+                    }
+                  >
+                    <option value="일정 추가">
+                      일정 추가
+                    </option>
+
+                    <option value="일정 수정">
+                      일정 수정
+                    </option>
+
+                    <option value="기타">
+                      기타
+                    </option>
+                  </select>
+                </label>
+
+                <label>
+                  제목 *
+                  <input
+                    name="title"
+                    value={
+                      requestForm.title
+                    }
+                    onChange={
+                      handleRequestFormChange
+                    }
+                    placeholder="예: 10월 일정 추가 요청"
+                  />
+                </label>
+
+                <label>
+                  요청 내용 *
+                  <textarea
+                    name="details"
+                    value={
+                      requestForm.details
+                    }
+                    onChange={
+                      handleRequestFormChange
+                    }
+                    placeholder="추가하거나 수정했으면 하는 내용을 적어주세요."
+                    rows="5"
+                  />
+                </label>
+
+                <p className="request-user-info">
+                  요청자:{' '}
+                  {session.user.email}
+                </p>
+
+                {requestError && (
+                  <p className="error-message">
+                    {requestError}
+                  </p>
+                )}
+
+                <button
+                  className="save-schedule-button"
+                  type="submit"
+                  disabled={
+                    requestSaving
+                  }
+                >
+                  {requestSaving
+                    ? '등록 중...'
+                    : '요청사항 등록'}
+                </button>
+              </form>
+            </div>
           </div>
-        </div>
-      )}
+        )}
     </div>
   )
 }
