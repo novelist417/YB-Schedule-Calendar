@@ -3144,7 +3144,8 @@ body {
 /* 일정은 날짜 숫자 바로 아래 */
 .calendar-day .events {
   width: 100% !important;
-  margin-top: 32px !important;
+  margin-top: 28px !important;
+  padding-top: 0 !important;
   text-align: left !important;
 }
 
