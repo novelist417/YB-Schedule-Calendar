@@ -63,6 +63,11 @@ function App() {
   const [page, setPage] = useState('calendar')
   const [calendarView, setCalendarView] = useState('month')
 
+  // 달력 이동 기준 날짜
+  const [calendarCursor, setCalendarCursor] = useState(
+    new Date()
+  )
+
   // 검색 / 필터
   const [searchText, setSearchText] = useState('')
   const [filterType, setFilterType] = useState('all')
@@ -259,7 +264,7 @@ function App() {
 
   function openNewScheduleForm() {
     setEditingSchedule(null)
-    setForm({ ...EMPTY_FORM })
+    setForm(EMPTY_FORM)
     setFormError('')
     setShowForm(true)
   }
@@ -294,7 +299,7 @@ function App() {
   function closeForm() {
     setShowForm(false)
     setEditingSchedule(null)
-    setForm({ ...EMPTY_FORM })
+    setForm(EMPTY_FORM)
     setFormError('')
   }
 
@@ -321,23 +326,14 @@ function App() {
 
     if (!form.event_date) {
       setFormError(
-        '날짜를 선택해주세요.'
+        '시작 날짜를 선택해주세요.'
       )
       return
     }
 
-    // 종료 일자를 입력하지 않고 종료 시간만 입력한 경우
-    // 시작 날짜와 같은 날의 종료 시간으로 처리
-    const effectiveEndDate =
-      form.end_date ||
-      (form.end_time
-        ? form.event_date
-        : '')
-
-    // 종료 날짜가 시작 날짜보다 빠른지 확인
     if (
-      effectiveEndDate &&
-      effectiveEndDate < form.event_date
+      form.end_date &&
+      form.end_date < form.event_date
     ) {
       setFormError(
         '종료 일자는 시작 일자보다 빠를 수 없습니다.'
@@ -345,9 +341,15 @@ function App() {
       return
     }
 
-    // 같은 날짜에 시작/종료 시간이 모두 있는 경우 시간 순서 확인
+    const effectiveEndDate =
+      form.end_date ||
+      (form.end_time
+        ? form.event_date
+        : '')
+
     if (
-      effectiveEndDate === form.event_date &&
+      effectiveEndDate ===
+        form.event_date &&
       form.event_time &&
       form.end_time &&
       form.end_time < form.event_time
@@ -603,10 +605,6 @@ function App() {
     )
   }
 
-  // =========================
-  // 일정 날짜 / 종료 날짜 처리
-  // =========================
-
   function isScheduleOnDate(
     schedule,
     dateString
@@ -629,63 +627,6 @@ function App() {
       dateString >= startDate &&
       dateString <= endDate
     )
-  }
-
-  function formatScheduleDateTime(
-    schedule
-  ) {
-    if (!schedule?.event_date) {
-      return ''
-    }
-
-    const startDate =
-      formatDateText(
-        schedule.event_date
-      )
-
-    const hasDifferentEndDate =
-      schedule.end_date &&
-      schedule.end_date !==
-        schedule.event_date
-
-    const endDate =
-      hasDifferentEndDate
-        ? formatDateText(
-            schedule.end_date
-          )
-        : ''
-
-    const startTime =
-      schedule.event_time
-        ? formatTime(
-            schedule.event_time
-          )
-        : ''
-
-    const endTime =
-      schedule.end_time
-        ? formatTime(
-            schedule.end_time
-          )
-        : ''
-
-    let result = startDate
-
-    if (startTime) {
-      result += ` ${startTime}`
-    }
-
-    if (endDate) {
-      result += ` ~ ${endDate}`
-
-      if (endTime) {
-        result += ` ${endTime}`
-      }
-    } else if (endTime) {
-      result += ` ~ ${endTime}`
-    }
-
-    return result
   }
 
   async function handleDateStringClick(
@@ -727,9 +668,9 @@ function App() {
   // =========================
 
   function openRequestForm() {
-    setRequestForm({
-      ...EMPTY_REQUEST_FORM,
-    })
+    setRequestForm(
+      EMPTY_REQUEST_FORM
+    )
 
     setRequestError('')
     setShowRequestForm(true)
@@ -737,9 +678,9 @@ function App() {
 
   function closeRequestForm() {
     setShowRequestForm(false)
-    setRequestForm({
-      ...EMPTY_REQUEST_FORM,
-    })
+    setRequestForm(
+      EMPTY_REQUEST_FORM
+    )
     setRequestError('')
   }
 
@@ -1050,13 +991,175 @@ function App() {
     ).padStart(2, '0')}`
   }
 
+  function formatScheduleDateTime(
+    schedule
+  ) {
+    if (!schedule?.event_date) {
+      return ''
+    }
+
+    const startDate =
+      formatDateText(
+        schedule.event_date
+      )
+
+    const endDate =
+      schedule.end_date &&
+      schedule.end_date !==
+        schedule.event_date
+        ? formatDateText(
+            schedule.end_date
+          )
+        : ''
+
+    const startTime =
+      schedule.event_time
+        ? formatTime(
+            schedule.event_time
+          )
+        : ''
+
+    const endTime =
+      schedule.end_time
+        ? formatTime(
+            schedule.end_time
+          )
+        : ''
+
+    let result = startDate
+
+    if (startTime) {
+      result += ` ${startTime}`
+    }
+
+    if (endDate) {
+      result += ` ~ ${endDate}`
+
+      if (endTime) {
+        result += ` ${endTime}`
+      }
+    } else if (endTime) {
+      result += ` ~ ${endTime}`
+    }
+
+    return result
+  }
+
+  function formatScheduleTimeRange(
+    schedule
+  ) {
+    const startTime =
+      schedule.event_time
+        ? formatTime(
+            schedule.event_time
+          )
+        : ''
+
+    const endTime =
+      schedule.end_time
+        ? formatTime(
+            schedule.end_time
+          )
+        : ''
+
+    if (startTime && endTime) {
+      return `${startTime} ~ ${endTime}`
+    }
+
+    if (startTime) {
+      return startTime
+    }
+
+    if (endTime) {
+      return `~ ${endTime}`
+    }
+
+    return '시간 미정'
+  }
+
+  function isSameDay(
+    first,
+    second
+  ) {
+    return (
+      first.getFullYear() ===
+        second.getFullYear() &&
+      first.getMonth() ===
+        second.getMonth() &&
+      first.getDate() ===
+        second.getDate()
+    )
+  }
+
+  function getMonthTitle(date) {
+    return `${date.getFullYear()}. ${String(
+      date.getMonth() + 1
+    ).padStart(2, '0')}`
+  }
+
+  function getWeekTitle(dates) {
+    if (!dates.length) return ''
+
+    const first = dates[0]
+    const last =
+      dates[dates.length - 1]
+
+    const firstText = `${first.getFullYear()}. ${String(
+      first.getMonth() + 1
+    ).padStart(2, '0')}. ${String(
+      first.getDate()
+    ).padStart(2, '0')}`
+
+    const lastText = `${last.getFullYear()}. ${String(
+      last.getMonth() + 1
+    ).padStart(2, '0')}. ${String(
+      last.getDate()
+    ).padStart(2, '0')}`
+
+    return `${firstText} ~ ${lastText}`
+  }
+
+  function moveCalendar(
+    direction
+  ) {
+    setCalendarCursor(
+      (prev) => {
+        const next =
+          new Date(prev)
+
+        if (
+          calendarView === 'week'
+        ) {
+          next.setDate(
+            next.getDate() +
+              direction * 7
+          )
+        } else {
+          next.setMonth(
+            next.getMonth() +
+              direction
+          )
+          next.setDate(1)
+        }
+
+        return next
+      }
+    )
+  }
+
+  function moveToToday() {
+    setCalendarCursor(
+      new Date()
+    )
+  }
+
   const today = new Date()
 
   const currentYear =
-    today.getFullYear()
+    calendarCursor.getFullYear()
 
   const currentMonth =
-    today.getMonth()
+    calendarCursor.getMonth()
 
   const daysInMonth =
     getDaysInMonth(
@@ -1089,7 +1192,9 @@ function App() {
   }
 
   const weekDates =
-    getWeekDates(today)
+    getWeekDates(
+      calendarCursor
+    )
 
   // =========================
   // 검색 / 필터 적용
@@ -1139,9 +1244,35 @@ function App() {
       normalizedSearch,
     ])
 
+  // 현재 어젠다 달에 걸쳐 있는 일정
+  const agendaMonthStart = `${currentYear}-${String(
+    currentMonth + 1
+  ).padStart(2, '0')}-01`
+
+  const agendaMonthEnd = `${currentYear}-${String(
+    currentMonth + 1
+  ).padStart(2, '0')}-${String(
+    daysInMonth
+  ).padStart(2, '0')}`
+
   const agendaSchedules =
-    [...filteredSchedules].sort(
-      (a, b) => {
+    [...filteredSchedules]
+      .filter((schedule) => {
+        const scheduleStart =
+          schedule.event_date
+
+        const scheduleEnd =
+          schedule.end_date ||
+          schedule.event_date
+
+        return (
+          scheduleStart <=
+            agendaMonthEnd &&
+          scheduleEnd >=
+            agendaMonthStart
+        )
+      })
+      .sort((a, b) => {
         const dateCompare =
           a.event_date.localeCompare(
             b.event_date
@@ -1160,8 +1291,7 @@ function App() {
           b.event_time ||
             '99:99'
         )
-      }
-    )
+      })
 
   function getSchedulesForDate(
     day
@@ -1302,13 +1432,6 @@ function App() {
 
   const filteredAdminRequests =
     useMemo(() => {
-      if (
-        requestStatusFilter ===
-        'all'
-      ) {
-        return allRequests
-      }
-
       if (
         requestStatusFilter ===
         'completed'
@@ -1678,23 +1801,6 @@ function App() {
                   >
                     반영 완료
                   </button>
-
-                  <button
-                    type="button"
-                    className={
-                      requestStatusFilter ===
-                      'all'
-                        ? 'request-filter-button active'
-                        : 'request-filter-button'
-                    }
-                    onClick={() =>
-                      setRequestStatusFilter(
-                        'all'
-                      )
-                    }
-                  >
-                    전체
-                  </button>
                 </div>
 
                 {requestLoading ? (
@@ -1708,10 +1814,7 @@ function App() {
                     {requestStatusFilter ===
                     'completed'
                       ? '반영 완료된 요청사항이 없습니다.'
-                      : requestStatusFilter ===
-                        'pending'
-                        ? '반영 전 요청사항이 없습니다.'
-                        : '등록된 요청사항이 없습니다.'}
+                      : '반영 전 요청사항이 없습니다.'}
                   </div>
                 ) : (
                   <div className="request-admin-list">
@@ -1858,12 +1961,50 @@ function App() {
           <section className="calendar-section">
             <div className="calendar-header">
               <div className="calendar-title-row">
-                <h1>
-                  {currentYear}.{' '}
-                  {String(
-                    currentMonth + 1
-                  ).padStart(2, '0')}
-                </h1>
+                <div className="calendar-navigation">
+                  <button
+                    type="button"
+                    className="calendar-nav-button"
+                    onClick={() =>
+                      moveCalendar(-1)
+                    }
+                    aria-label="이전"
+                  >
+                    ‹
+                  </button>
+
+                  <h1>
+                    {calendarView ===
+                    'week'
+                      ? getWeekTitle(
+                          weekDates
+                        )
+                      : getMonthTitle(
+                          calendarCursor
+                        )}
+                  </h1>
+
+                  <button
+                    type="button"
+                    className="calendar-nav-button"
+                    onClick={() =>
+                      moveCalendar(1)
+                    }
+                    aria-label="다음"
+                  >
+                    ›
+                  </button>
+
+                  <button
+                    type="button"
+                    className="calendar-today-button"
+                    onClick={
+                      moveToToday
+                    }
+                  >
+                    오늘
+                  </button>
+                </div>
 
                 <select
                   className="calendar-view-select"
@@ -2376,9 +2517,16 @@ function App() {
                           </strong>
 
                           <span>
-                            {formatScheduleDateTime(
+                            {formatScheduleTimeRange(
                               schedule
                             )}
+
+                            {schedule.end_date &&
+                              schedule.end_date !==
+                                schedule.event_date &&
+                              ` · ${formatDateText(
+                                schedule.end_date
+                              )}까지`}
 
                             {schedule.place
                               ? ` · ${schedule.place}`
@@ -2799,18 +2947,15 @@ function App() {
 
                 <label>
                   종료 날짜
-                  <span className="form-optional">
-                    선택사항
-                  </span>
                   <input
                     type="date"
                     name="end_date"
+                    value={
+                      form.end_date
+                    }
                     min={
                       form.event_date ||
                       undefined
-                    }
-                    value={
-                      form.end_date
                     }
                     onChange={
                       handleFormChange
@@ -2820,9 +2965,6 @@ function App() {
 
                 <label>
                   종료 시간
-                  <span className="form-optional">
-                    선택사항
-                  </span>
                   <input
                     type="time"
                     name="end_time"
@@ -2873,7 +3015,7 @@ function App() {
                 </label>
 
                 <label>
-                  참고 링크
+                  참고 링크 주소
                   <input
                     name="related_link"
                     value={
@@ -2882,9 +3024,12 @@ function App() {
                     onChange={
                       handleFormChange
                     }
-                    placeholder="https://..."
+                    placeholder="https://www.instagram.com/..."
                   />
+                </label>
 
+                <label>
+                  링크 표시 문구
                   <input
                     name="related_link_text"
                     value={
@@ -2893,7 +3038,7 @@ function App() {
                     onChange={
                       handleFormChange
                     }
-                    placeholder="링크에 표시할 텍스트 (선택)"
+                    placeholder="예: YB 공식 인스타그램"
                   />
                 </label>
 
