@@ -13,23 +13,27 @@ function App() {
   const [selectedDate, setSelectedDate] = useState(null)
   const [selectedSchedules, setSelectedSchedules] = useState([])
 
-  useEffect(() => {
-    loadSchedules()
-  }, [])
+useEffect(() => {
+  loadSchedules()
+}, [])
 
-  async function loadSchedules() {
-    const { data, error } = await supabase
-      .from('schedules')
-      .select('*')
-      .order('event_date', { ascending: true })
+async function loadSchedules() {
+  console.log('Supabase 조회 시작')
 
-    if (error) {
-      console.error('일정 불러오기 실패:', error)
-      return
-    }
+  const { data, error } = await supabase
+    .from('schedules')
+    .select('*')
 
-    setSchedules(data || [])
+  console.log('일정 데이터:', data)
+  console.log('조회 오류:', error)
+
+  if (error) {
+    console.error('일정 불러오기 실패:', error)
+    return
   }
+
+  setSchedules(data || [])
+}
 
   const today = new Date()
   const year = today.getFullYear()
