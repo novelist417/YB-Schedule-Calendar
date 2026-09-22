@@ -732,7 +732,7 @@ function App() {
         </div>
 
         <div className="header-right">
-          {isAdmin && (
+          {session && (
             <nav className="admin-nav">
               <button
                 className={
@@ -745,29 +745,38 @@ function App() {
                 달력
               </button>
 
+              {isAdmin && (
+                <button
+                  className={
+                    page === 'list'
+                      ? 'nav-button active'
+                      : 'nav-button'
+                  }
+                  onClick={() => setPage('list')}
+                >
+                  일정목록
+                </button>
+              )}
+
               <button
                 className={
-                  page === 'list'
+                  page === 'requests'
                     ? 'nav-button active'
                     : 'nav-button'
                 }
                 onClick={() => {
-                  setPage('list')
-                  loadAllRequests()
+                  setPage('requests')
+
+                  if (isAdmin) {
+                    loadAllRequests()
+                  } else {
+                    loadMyRequests()
+                  }
                 }}
               >
-                일정목록
+                요청사항
               </button>
             </nav>
-          )}
-
-          {session && !isAdmin && (
-            <button
-              className="header-button"
-              onClick={openRequestForm}
-            >
-              요청사항
-            </button>
           )}
 
           {isAdmin && (
@@ -858,6 +867,9 @@ function App() {
           </section>
         )}
 
+        {/* =========================
+            관리자 일정목록
+           ========================= */}
         {page === 'list' && isAdmin ? (
           <section className="schedule-list-page">
             <div className="list-page-header">
@@ -954,27 +966,41 @@ function App() {
                 ))
               )}
             </div>
+          </section>
+        ) : page === 'requests' && session ? (
+          /* =========================
+             요청사항 별도 페이지
+             ========================= */
+          <section className="schedule-list-page request-page">
+            <div className="list-page-header">
+              <div>
+                <p className="page-eyebrow">
+                  {isAdmin
+                    ? 'ADMIN'
+                    : 'MY REQUESTS'}
+                </p>
 
-            {/* =========================
-                관리자 요청사항 관리
-               ========================= */}
-            <div className="request-admin-section">
-              <div className="list-page-header request-admin-header">
-                <div>
-                  <p className="page-eyebrow">
-                    FEEDBACK
-                  </p>
+                <h1>요청사항</h1>
 
-                  <h2>요청사항</h2>
-
-                  <p className="page-description">
-                    이용자가 보낸 요청사항을 확인하고
-                    반영 상태를 관리합니다.
-                  </p>
-                </div>
+                <p className="page-description">
+                  {isAdmin
+                    ? '이용자가 보낸 요청사항을 확인하고 반영 상태를 관리합니다.'
+                    : '일정 추가나 수정이 필요한 경우 요청사항을 남겨주세요.'}
+                </p>
               </div>
 
-              {requestLoading ? (
+              {!isAdmin && (
+                <button
+                  className="add-schedule-button"
+                  onClick={openRequestForm}
+                >
+                  + 요청사항
+                </button>
+              )}
+            </div>
+
+            {isAdmin ? (
+              requestLoading ? (
                 <div className="empty-list">
                   요청사항을 불러오는 중입니다.
                 </div>
@@ -1035,10 +1061,57 @@ function App() {
                     </div>
                   ))}
                 </div>
-              )}
-            </div>
+              )
+            ) : myRequests.length === 0 ? (
+              <div className="empty-list">
+                아직 등록한 요청사항이 없습니다.
+              </div>
+            ) : (
+              <div className="my-request-list">
+                {myRequests.map((request) => (
+                  <div
+                    className="my-request-item"
+                    key={request.id}
+                  >
+                    <div className="my-request-main">
+                      <div className="my-request-type">
+                        {request.request_type}
+                      </div>
+
+                      <h3>
+                        {request.title}
+                      </h3>
+
+                      <p>
+                        {request.details}
+                      </p>
+
+                      <span>
+                        {formatRequestDate(
+                          request.created_at
+                        )}
+                      </span>
+                    </div>
+
+                    <div
+                      className={
+                        request.status ===
+                        '반영 완료'
+                          ? 'my-request-status completed'
+                          : 'my-request-status'
+                      }
+                    >
+                      {request.status}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </section>
         ) : (
+          /* =========================
+             달력
+             ========================= */
           <section className="calendar-section">
             <div className="calendar-header">
               <h1>
@@ -1132,74 +1205,6 @@ function App() {
                 })}
               </div>
             </div>
-
-            {/* 일반 사용자용 내 요청사항 */}
-            {session && !isAdmin && (
-              <section className="my-request-section">
-                <div className="my-request-header">
-                  <div>
-                    <p className="page-eyebrow">
-                      MY REQUESTS
-                    </p>
-
-                    <h2>내 요청사항</h2>
-                  </div>
-
-                  <button
-                    className="add-schedule-button"
-                    onClick={openRequestForm}
-                  >
-                    + 요청사항
-                  </button>
-                </div>
-
-                {myRequests.length === 0 ? (
-                  <div className="empty-list">
-                    아직 등록한 요청사항이 없습니다.
-                  </div>
-                ) : (
-                  <div className="my-request-list">
-                    {myRequests.map((request) => (
-                      <div
-                        className="my-request-item"
-                        key={request.id}
-                      >
-                        <div className="my-request-main">
-                          <div className="my-request-type">
-                            {request.request_type}
-                          </div>
-
-                          <h3>
-                            {request.title}
-                          </h3>
-
-                          <p>
-                            {request.details}
-                          </p>
-
-                          <span>
-                            {formatRequestDate(
-                              request.created_at
-                            )}
-                          </span>
-                        </div>
-
-                        <div
-                          className={
-                            request.status ===
-                            '반영 완료'
-                              ? 'my-request-status completed'
-                              : 'my-request-status'
-                          }
-                        >
-                          {request.status}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </section>
-            )}
           </section>
         )}
       </main>
@@ -1616,7 +1621,7 @@ function App() {
       )}
 
       {/* =========================
-          요청사항 작성 / 내 요청 확인
+          요청사항 작성
          ========================= */}
       {showRequestForm && session && (
         <div
@@ -1717,46 +1722,6 @@ function App() {
                   ? '등록 중...'
                   : '요청사항 등록'}
               </button>
-
-              {myRequests.length > 0 && (
-                <div className="request-form-history">
-                  <strong>내 요청사항</strong>
-
-                  <div className="request-history-list">
-                    {myRequests
-                      .slice(0, 5)
-                      .map((request) => (
-                        <div
-                          className="request-history-item"
-                          key={request.id}
-                        >
-                          <div>
-                            <span>
-                              {
-                                request.request_type
-                              }
-                            </span>
-
-                            <strong>
-                              {request.title}
-                            </strong>
-                          </div>
-
-                          <span
-                            className={
-                              request.status ===
-                              '반영 완료'
-                                ? 'history-status completed'
-                                : 'history-status'
-                            }
-                          >
-                            {request.status}
-                          </span>
-                        </div>
-                      ))}
-                  </div>
-                </div>
-              )}
             </form>
           </div>
         </div>
