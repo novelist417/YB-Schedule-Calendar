@@ -26,6 +26,8 @@ function App() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loginError, setLoginError] = useState('')
+  const [isSignupMode, setIsSignupMode] = useState(false)
+  const [signupMessage, setSignupMessage] = useState('')
 
   const [schedules, setSchedules] = useState([])
 
