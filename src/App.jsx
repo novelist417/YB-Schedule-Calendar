@@ -2,10 +2,10 @@ import { useEffect, useMemo, useState } from 'react'
 import { supabase } from './lib/supabase'
 
 const TYPE_COLORS = {
-  방송: '#5B8DEF',
-  '지역축제/행사': '#F39C5A',
-  기념일: '#E77FB5',
-  대학축제: '#7A68D8',
+  방송: '#1B7FEB',
+  '지역축제/행사': '#3A3CFF',
+  기념일: '#FFE300',
+  대학축제: '#03B00A',
 }
 
 const TYPE_OPTIONS = [
@@ -54,6 +54,7 @@ function App() {
   const [loginError, setLoginError] = useState('')
   const [isSignupMode, setIsSignupMode] = useState(false)
   const [signupMessage, setSignupMessage] = useState('')
+  const [showAuthPrompt, setShowAuthPrompt] = useState(false)
 
   const [schedules, setSchedules] = useState([])
   const [scheduleLoadError, setScheduleLoadError] = useState('')
@@ -212,7 +213,10 @@ function App() {
 
     if (error) {
       setLoginError(error.message)
+      return
     }
+
+    setShowAuthPrompt(false)
   }
 
   async function handleSignup(e) {
@@ -250,6 +254,7 @@ function App() {
       setSignupMessage(
         '회원가입이 완료되었습니다.'
       )
+      setShowAuthPrompt(false)
     } else {
       setSignupMessage(
         '회원가입이 완료되었습니다.'
@@ -687,12 +692,54 @@ function App() {
     )
   }
 
-  function handleEventClick(
-    schedule
+  async function handleEventClick(
+    schedule,
+    dateString = schedule?.event_date
   ) {
     if (!schedule) return
 
+    const targetDate =
+      dateString || schedule.event_date
+
+    const daySchedules =
+      schedules
+        .filter((item) =>
+          isScheduleOnDate(
+            item,
+            targetDate
+          )
+        )
+        .sort((a, b) =>
+          (
+            a.event_time ||
+            '99:99'
+          ).localeCompare(
+            b.event_time ||
+              '99:99'
+          )
+        )
+
+    setSelectedDate(targetDate)
+    setSelectedSchedules(daySchedules)
     setSelectedSchedule(schedule)
+
+    await loadMemos(
+      daySchedules.map(
+        (item) => item.id
+      )
+    )
+  }
+
+  function openAuthPrompt() {
+    setLoginError('')
+    setSignupMessage('')
+    setShowAuthPrompt(true)
+  }
+
+  function closeAuthPrompt() {
+    setShowAuthPrompt(false)
+    setLoginError('')
+    setSignupMessage('')
   }
 
   function closeScheduleOverlay() {
@@ -1114,7 +1161,7 @@ function App() {
       day,
     ] = dateString.split('-')
 
-    return `${year}.${month}.${day}`
+    return `${year}.${month}.${day}.`
   }
 
   function formatRequestDate(
@@ -1513,6 +1560,22 @@ function App() {
     weekSchedules
       .filter(
         (schedule) =>
+          !schedule.event_time &&
+          schedule.schedule_type !==
+            '기념일'
+      )
+      .sort((a, b) =>
+        a.event_date.localeCompare(
+          b.event_date
+        )
+      )
+
+  const untimedAnniversarySchedules =
+    weekSchedules
+      .filter(
+        (schedule) =>
+          schedule.schedule_type ===
+            '기념일' &&
           !schedule.event_time
       )
       .sort((a, b) =>
@@ -1526,20 +1589,6 @@ function App() {
       (schedule) =>
         !!schedule.event_time
     )
-
-  function getHourFromTime(
-    time
-  ) {
-    if (!time) return null
-
-    const hour = Number(
-      time.split(':')[0]
-    )
-
-    return Number.isNaN(hour)
-      ? null
-      : hour
-  }
 
   function getMinutesFromTime(
     time
@@ -1571,6 +1620,10 @@ function App() {
 
   const weekStartHour = 6
   const weekEndHour = 23
+  const weekStartMinutes =
+    weekStartHour * 60
+  const weekEndMinutes =
+    (weekEndHour + 1) * 60
 
   const weekTimeSlots =
     Array.from(
@@ -1584,7 +1637,7 @@ function App() {
         weekStartHour + index
     )
 
-  function getScheduleHourRange(
+  function getScheduleTimeRange(
     schedule,
     dateString
   ) {
@@ -1617,17 +1670,26 @@ function App() {
     }
 
     if (dateString === endDate) {
-      if (endMinutes !== null) {
-        rangeEnd = endMinutes
-      }
+      rangeEnd =
+        endMinutes !== null
+          ? endMinutes
+          : 24 * 60
     }
 
-    if (
-      startDate === endDate &&
-      endMinutes !== null
-    ) {
-      rangeStart = startMinutes
-      rangeEnd = endMinutes
+    if (startDate === endDate) {
+      if (endMinutes === null) {
+        rangeEnd = Math.min(
+          startMinutes + 60,
+          24 * 60
+        )
+      } else if (
+        rangeEnd <= rangeStart
+      ) {
+        rangeEnd = Math.min(
+          rangeStart + 60,
+          24 * 60
+        )
+      }
     }
 
     return {
@@ -1636,54 +1698,66 @@ function App() {
     }
   }
 
-  function scheduleOccupiesHour(
-    schedule,
-    dateString,
-    hour
+  function getTimedSchedulesForDate(
+    dateString
   ) {
-    if (
-      !isScheduleOnDate(
-        schedule,
-        dateString
+    return timedWeekSchedules
+      .filter((schedule) =>
+        isScheduleOnDate(
+          schedule,
+          dateString
+        )
       )
-    ) {
-      return false
-    }
-
-    const range =
-      getScheduleHourRange(
-        schedule,
-        dateString
+      .sort((a, b) =>
+        (
+          a.event_time ||
+          '99:99'
+        ).localeCompare(
+          b.event_time ||
+            '99:99'
+        )
       )
+  }
 
-    if (!range) {
-      return false
-    }
-
-    const hourStart =
-      hour * 60
-
-    const hourEnd =
-      hourStart + 60
-
-    return (
-      range.start < hourEnd &&
-      range.end > hourStart
+  function getAnniversariesForDate(
+    dateString
+  ) {
+    return untimedAnniversarySchedules.filter(
+      (schedule) =>
+        isScheduleOnDate(
+          schedule,
+          dateString
+        )
     )
   }
 
-  function getSchedulesForHour(
-    dateString,
-    hour
+  async function handleWeekBlankClick(
+    dateString
   ) {
-    return timedWeekSchedules.filter(
-      (schedule) =>
-        scheduleOccupiesHour(
-          schedule,
-          dateString,
-          hour
+    const anniversaries =
+      getAnniversariesForDate(
+        dateString
+      )
+
+    if (anniversaries.length === 1) {
+      await handleEventClick(
+        anniversaries[0],
+        dateString
+      )
+    } else if (
+      anniversaries.length > 1
+    ) {
+      setSelectedDate(dateString)
+      setSelectedSchedules(
+        anniversaries
+      )
+      setSelectedSchedule(null)
+      await loadMemos(
+        anniversaries.map(
+          (schedule) => schedule.id
         )
-    )
+      )
+    }
   }
 
   // =========================
@@ -1719,6 +1793,343 @@ function App() {
 
   return (
     <div className="app">
+      <style>{`
+        .yb-logo-mark {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 42px;
+          height: 42px;
+          flex: 0 0 42px;
+          border-radius: 11px;
+          background: #111;
+          color: #fff;
+          font-size: 18px;
+          font-weight: 900;
+          letter-spacing: -2px;
+          line-height: 1;
+        }
+
+        .logo-title {
+          font-weight: 800;
+          letter-spacing: -0.4px;
+        }
+
+        .timetable-body {
+          position: relative;
+        }
+
+        .timetable-row {
+          height: 72px !important;
+          min-height: 72px !important;
+        }
+
+        .timetable-events-layer {
+          position: absolute;
+          inset: 0 0 0 82px;
+          display: grid;
+          grid-template-columns: repeat(7, minmax(95px, 1fr));
+          pointer-events: none;
+          z-index: 5;
+        }
+
+        .timetable-day-event-layer {
+          position: relative;
+          min-width: 0;
+          height: 100%;
+          padding: 0 4px;
+        }
+
+        .timetable-event {
+          position: absolute;
+          left: 4px;
+          right: 4px;
+          margin: 0;
+          min-height: 24px;
+          padding: 5px 6px 5px 8px;
+          overflow: hidden;
+          border: 0;
+          border-left: 3px solid var(--event-color, #999);
+          border-radius: 7px;
+          background: color-mix(in srgb, var(--event-color, #999) 13%, white);
+          color: #222;
+          text-align: left;
+          cursor: pointer;
+          pointer-events: auto;
+          box-sizing: border-box;
+        }
+
+        .timetable-event:hover {
+          filter: brightness(0.97);
+        }
+
+        .timetable-event-time {
+          display: block;
+          margin-bottom: 2px;
+          color: #666;
+          font-size: 10px;
+          font-weight: 700;
+          line-height: 1.2;
+        }
+
+        .timetable-event-title {
+          display: -webkit-box;
+          overflow: hidden;
+          color: #222;
+          font-size: 12px;
+          font-weight: 700;
+          line-height: 1.3;
+          -webkit-box-orient: vertical;
+          -webkit-line-clamp: 3;
+        }
+
+        .timetable-anniversary {
+          position: absolute;
+          top: 0;
+          left: 4px;
+          right: 4px;
+          min-height: 34px;
+          padding: 5px 7px;
+          border: 1px solid rgba(255, 227, 0, 0.5);
+          border-radius: 7px;
+          background: rgba(255, 227, 0, 0.18);
+          color: #4b4400;
+          text-align: left;
+          cursor: pointer;
+          pointer-events: auto;
+          box-sizing: border-box;
+          z-index: 1;
+        }
+
+        .timetable-anniversary span {
+          display: block;
+          margin-bottom: 2px;
+          font-size: 9px;
+          font-weight: 800;
+        }
+
+        .timetable-anniversary strong {
+          display: block;
+          overflow: hidden;
+          font-size: 11px;
+          line-height: 1.25;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .timetable-anniversary-badge {
+          display: inline-flex !important;
+          margin-top: 4px;
+          padding: 2px 5px;
+          border-radius: 5px;
+          background: rgba(255, 227, 0, 0.18);
+          color: #8d7c00 !important;
+          font-size: 9px !important;
+          font-weight: 800;
+        }
+
+        .list-item-date {
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          gap: 3px;
+          flex: 0 0 120px;
+          min-width: 0;
+        }
+
+        .list-item-date-text {
+          font-size: 13px;
+          font-weight: 800;
+          line-height: 1.2;
+          white-space: nowrap;
+        }
+
+        .list-item-time-text {
+          color: #777;
+          font-size: 11px;
+          line-height: 1.2;
+          white-space: normal;
+        }
+
+        .schedule-detail {
+          padding-top: 2px;
+        }
+
+        .schedule-detail > p {
+          margin: 8px 0;
+          color: #888;
+          text-align: center;
+        }
+
+        .schedule-selection-list {
+          display: grid;
+          gap: 9px;
+        }
+
+        .schedule-selection-item {
+          display: grid;
+          grid-template-columns: 9px minmax(0, 1fr) auto;
+          align-items: center;
+          gap: 10px;
+          width: 100%;
+          padding: 14px 13px;
+          border: 1px solid #e9e9ed;
+          border-radius: 13px;
+          background: #fff;
+          color: #222;
+          text-align: left;
+          box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+          cursor: pointer;
+        }
+
+        .schedule-selection-item:hover {
+          background: #fafafa;
+          transform: translateY(-1px);
+        }
+
+        .selection-type-dot {
+          width: 8px;
+          height: 34px;
+          border-radius: 99px;
+        }
+
+        .selection-main {
+          display: grid;
+          gap: 3px;
+          min-width: 0;
+        }
+
+        .selection-type {
+          color: #888;
+          font-size: 10px;
+          font-weight: 700;
+        }
+
+        .selection-main strong {
+          overflow: hidden;
+          font-size: 14px;
+          line-height: 1.35;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .selection-time {
+          color: #777;
+          font-size: 11px;
+        }
+
+        .selection-arrow {
+          color: #aaa;
+          font-size: 22px;
+        }
+
+        .auth-sheet {
+          max-width: 460px;
+        }
+
+        .auth-prompt-text {
+          margin: 0 0 18px;
+          color: #666;
+          font-size: 13px;
+          line-height: 1.6;
+        }
+
+        .auth-form {
+          display: grid;
+          gap: 9px;
+        }
+
+        .auth-form input {
+          width: 100%;
+          box-sizing: border-box;
+          padding: 12px 13px;
+          border: 1px solid #ddd;
+          border-radius: 9px;
+          font: inherit;
+        }
+
+        .auth-form > button[type='submit'] {
+          padding: 12px;
+          border: 0;
+          border-radius: 9px;
+          background: #171717;
+          color: #fff;
+          font-weight: 700;
+          cursor: pointer;
+        }
+
+        .login-required-button {
+          width: 100%;
+          padding: 11px 12px;
+          border: 1px dashed #d5d5d5;
+          border-radius: 9px;
+          background: #fafafa;
+          color: #777;
+          font-size: 12px;
+          cursor: pointer;
+        }
+
+        @media (max-width: 640px) {
+          .logo-title {
+            display: none;
+          }
+
+          .yb-logo-mark {
+            width: 38px;
+            height: 38px;
+            flex-basis: 38px;
+            border-radius: 10px;
+            font-size: 16px;
+          }
+
+          .list-item-date {
+            flex-basis: 82px;
+          }
+
+          .list-item-date-text {
+            font-size: 12px;
+          }
+
+          .list-item-time-text {
+            font-size: 10px;
+          }
+
+          .timetable-events-layer {
+            left: 58px;
+          }
+
+          .timetable-row {
+            height: 68px !important;
+            min-height: 68px !important;
+          }
+
+          .timetable-event {
+            left: 2px;
+            right: 2px;
+            padding: 4px 4px 4px 6px;
+            border-left-width: 2px;
+            border-radius: 5px;
+          }
+
+          .timetable-event-time {
+            font-size: 9px;
+          }
+
+          .timetable-event-title {
+            font-size: 10px;
+          }
+
+          .timetable-anniversary {
+            left: 2px;
+            right: 2px;
+            padding: 4px;
+          }
+
+          .timetable-anniversary strong {
+            font-size: 9px;
+          }
+        }
+      `}</style>
       <header className="header">
         <div
           className="logo"
@@ -1729,11 +2140,11 @@ function App() {
             cursor: 'pointer',
           }}
         >
-          <span className="logo-mark">
+          <span className="logo-mark yb-logo-mark" aria-label="YB">
             YB
           </span>
 
-          <span>
+          <span className="logo-title">
             YB Schedule Calendar
           </span>
         </div>
@@ -1790,6 +2201,16 @@ function App() {
             </nav>
           )}
 
+          {!session && (
+            <button
+              className="nav-button"
+              type="button"
+              onClick={openAuthPrompt}
+            >
+              요청사항
+            </button>
+          )}
+
           {isAdmin && (
             <span className="admin-badge">
               ADMIN
@@ -1808,80 +2229,6 @@ function App() {
       </header>
 
       <main className="main">
-        {!session && (
-          <section className="login-section">
-            <h2>
-              {isSignupMode
-                ? '회원가입'
-                : '로그인'}
-            </h2>
-
-            <form
-              onSubmit={
-                isSignupMode
-                  ? handleSignup
-                  : handleLogin
-              }
-            >
-              <input
-                type="email"
-                placeholder="이메일"
-                value={email}
-                onChange={(e) =>
-                  setEmail(
-                    e.target.value
-                  )
-                }
-              />
-
-              <input
-                type="password"
-                placeholder="비밀번호"
-                value={password}
-                onChange={(e) =>
-                  setPassword(
-                    e.target.value
-                  )
-                }
-              />
-
-              <button type="submit">
-                {isSignupMode
-                  ? '회원가입'
-                  : '로그인'}
-              </button>
-
-              {loginError && (
-                <p className="error-message">
-                  {loginError}
-                </p>
-              )}
-
-              {signupMessage && (
-                <p className="success-message">
-                  {signupMessage}
-                </p>
-              )}
-
-              <button
-                type="button"
-                className="auth-switch-button"
-                onClick={() => {
-                  setIsSignupMode(
-                    (prev) => !prev
-                  )
-
-                  setLoginError('')
-                  setSignupMessage('')
-                }}
-              >
-                {isSignupMode
-                  ? '이미 계정이 있어요 → 로그인'
-                  : '처음 오셨나요? → 회원가입'}
-              </button>
-            </form>
-          </section>
-        )}
 
         {page === 'list' &&
         isAdmin ? (
@@ -1933,9 +2280,16 @@ function App() {
                       key={schedule.id}
                     >
                       <div className="list-item-date">
-                        {formatScheduleDateTime(
-                          schedule
-                        )}
+                        <span className="list-item-date-text">
+                          {formatListDate(
+                            schedule.event_date
+                          )}
+                        </span>
+                        <span className="list-item-time-text">
+                          {formatScheduleTimeRange(
+                            schedule
+                          )}
+                        </span>
                       </div>
 
                       <div className="list-item-main">
@@ -2656,18 +3010,17 @@ function App() {
                     <div className="untimed-title">
                       시간 미정
                     </div>
-
                     <div className="untimed-list">
                       {untimedWeekSchedules.map(
                         (schedule) => (
                           <button
+                            type="button"
                             className="untimed-event"
-                            key={
-                              schedule.id
-                            }
+                            key={schedule.id}
                             onClick={() =>
                               handleEventClick(
-                                schedule
+                                schedule,
+                                schedule.event_date
                               )
                             }
                           >
@@ -2676,34 +3029,17 @@ function App() {
                               style={{
                                 backgroundColor:
                                   TYPE_COLORS[
-                                    schedule
-                                      .schedule_type
-                                  ] ||
-                                  '#999',
+                                    schedule.schedule_type
+                                  ] || '#999',
                               }}
                             />
-
                             <span className="untimed-date">
-                              {
-                                WEEKDAYS[
-                                  new Date(
-                                    `${schedule.event_date}T00:00:00`
-                                  ).getDay()
-                                ]
-                              }{' '}
-                              {Number(
-                                schedule.event_date.slice(
-                                  8,
-                                  10
-                                )
+                              {formatListDate(
+                                schedule.event_date
                               )}
-                              일
                             </span>
-
                             <span className="untimed-name">
-                              {
-                                schedule.title
-                              }
+                              {schedule.title}
                             </span>
                           </button>
                         )
@@ -2716,54 +3052,56 @@ function App() {
                   <div className="timetable">
                     <div className="timetable-header">
                       <div className="time-column-head" />
+                      {weekDates.map((date) => {
+                        const dateString =
+                          toDateString(date)
+                        const isToday =
+                          dateString ===
+                          toDateString(today)
+                        const anniversaries =
+                          getAnniversariesForDate(
+                            dateString
+                          )
 
-                      {weekDates.map(
-                        (date) => {
-                          const dateString =
-                            toDateString(
-                              date
-                            )
-
-                          const isToday =
-                            dateString ===
-                            toDateString(
-                              today
-                            )
-
-                          return (
-                            <button
-                              className={`timetable-day-head ${
+                        return (
+                          <button
+                            type="button"
+                            className={
+                              `timetable-day-head ${
                                 isToday
                                   ? 'today'
                                   : ''
-                              }`}
-                              key={
+                              }`
+                            }
+                            key={dateString}
+                            onClick={() =>
+                              handleDateStringClick(
                                 dateString
+                              )
+                            }
+                          >
+                            <span>
+                              {
+                                WEEKDAYS[
+                                  date.getDay()
+                                ]
                               }
-                              onClick={() =>
-                                handleDateStringClick(
-                                  dateString
-                                )
-                              }
-                            >
-                              <span>
-                                {
-                                  WEEKDAYS[
-                                    date.getDay()
-                                  ]
-                                }
+                            </span>
+                            <strong>
+                              {date.getMonth() +
+                                1}
+                              .
+                              {date.getDate()}
+                            </strong>
+                            {anniversaries.length >
+                              0 && (
+                              <span className="timetable-anniversary-badge">
+                                기념일
                               </span>
-
-                              <strong>
-                                {date.getMonth() +
-                                  1}
-                                .
-                                {date.getDate()}
-                              </strong>
-                            </button>
-                          )
-                        }
-                      )}
+                            )}
+                          </button>
+                        )
+                      })}
                     </div>
 
                     <div className="timetable-body">
@@ -2783,77 +3121,173 @@ function App() {
                                 )}:00`
                               )}
                             </div>
-
                             {weekDates.map(
                               (date) => {
                                 const dateString =
                                   toDateString(
                                     date
                                   )
-
-                                const cellSchedules =
-                                  getSchedulesForHour(
-                                    dateString,
-                                    hour
-                                  )
-
                                 return (
                                   <div
                                     className="timetable-cell"
                                     key={`${dateString}-${hour}`}
-                                  >
-                                    {cellSchedules.map(
-                                      (
-                                        schedule
-                                      ) => (
-                                        <button
-                                          className="timetable-event"
-                                          key={
-                                            schedule.id
-                                          }
-                                          onClick={() =>
-                                            handleEventClick(
-                                              schedule
-                                            )
-                                          }
-                                          style={{
-                                            borderLeftColor:
-                                              TYPE_COLORS[
-                                                schedule
-                                                  .schedule_type
-                                              ] ||
-                                              '#999',
-                                          }}
-                                        >
-                                          <span className="timetable-event-time">
-                                            {schedule.event_time?.slice(
-                                              0,
-                                              5
-                                            )}
-                                          </span>
-
-                                          <span className="timetable-event-title">
-                                            {
-                                              schedule.title
-                                            }
-                                          </span>
-                                        </button>
+                                    onClick={() =>
+                                      handleWeekBlankClick(
+                                        dateString
                                       )
-                                    )}
-                                  </div>
+                                    }
+                                  />
                                 )
                               }
                             )}
                           </div>
                         )
                       )}
+
+                      <div className="timetable-events-layer">
+                        {weekDates.map(
+                          (date, dayIndex) => {
+                            const dateString =
+                              toDateString(date)
+                            const daySchedules =
+                              getTimedSchedulesForDate(
+                                dateString
+                              )
+                            const anniversaries =
+                              getAnniversariesForDate(
+                                dateString
+                              )
+
+                            return (
+                              <div
+                                className="timetable-day-event-layer"
+                                key={dateString}
+                                style={{
+                                  gridColumn:
+                                    dayIndex + 1,
+                                }}
+                              >
+                                {anniversaries.map(
+                                  (schedule) => (
+                                    <button
+                                      type="button"
+                                      className="timetable-anniversary"
+                                      key={schedule.id}
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        handleEventClick(
+                                          schedule,
+                                          dateString
+                                        )
+                                      }}
+                                    >
+                                      <span>
+                                        기념일
+                                      </span>
+                                      <strong>
+                                        {schedule.title}
+                                      </strong>
+                                    </button>
+                                  )
+                                )}
+
+                                {daySchedules.map(
+                                  (schedule) => {
+                                    const range =
+                                      getScheduleTimeRange(
+                                        schedule,
+                                        dateString
+                                      )
+
+                                    if (!range) {
+                                      return null
+                                    }
+
+                                    const visibleStart =
+                                      Math.max(
+                                        range.start,
+                                        weekStartMinutes
+                                      )
+                                    const visibleEnd =
+                                      Math.min(
+                                        range.end,
+                                        weekEndMinutes
+                                      )
+
+                                    if (
+                                      visibleEnd <=
+                                      visibleStart
+                                    ) {
+                                      return null
+                                    }
+
+                                    const top =
+                                      ((visibleStart -
+                                        weekStartMinutes) /
+                                        60) *
+                                      100
+                                    const height =
+                                      ((visibleEnd -
+                                        visibleStart) /
+                                        60) *
+                                      100
+                                    const typeColor =
+                                      TYPE_COLORS[
+                                        schedule.schedule_type
+                                      ] || '#999'
+
+                                    return (
+                                      <button
+                                        type="button"
+                                        className="timetable-event"
+                                        key={schedule.id}
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          handleEventClick(
+                                            schedule,
+                                            dateString
+                                          )
+                                        }}
+                                        style={{
+                                          top: `${top}%`,
+                                          height: `${height}%`,
+                                          borderLeftColor:
+                                            typeColor,
+                                          '--event-color':
+                                            typeColor,
+                                        }}
+                                      >
+                                        <span className="timetable-event-time">
+                                          {schedule.event_time?.slice(
+                                            0,
+                                            5
+                                          )}
+                                          {schedule.end_time
+                                            ? ` ~ ${schedule.end_time.slice(
+                                                0,
+                                                5
+                                              )}`
+                                            : ''}
+                                        </span>
+                                        <span className="timetable-event-title">
+                                          {schedule.title}
+                                        </span>
+                                      </button>
+                                    )
+                                  }
+                                )}
+                              </div>
+                            )
+                          }
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                {timedWeekSchedules.length ===
-                  0 &&
-                  untimedWeekSchedules.length ===
+                {timedWeekSchedules.length === 0 &&
+                  untimedWeekSchedules.length === 0 &&
+                  untimedAnniversarySchedules.length ===
                     0 && (
                     <div className="week-no-results">
                       이 주에는 표시할 일정이
@@ -2888,7 +3322,8 @@ function App() {
                           key={schedule.id}
                           onClick={() =>
                             handleEventClick(
-                              schedule
+                              schedule,
+                              schedule.event_date
                             )
                           }
                         >
@@ -3038,7 +3473,8 @@ function App() {
                           key={schedule.id}
                           onClick={() =>
                             handleEventClick(
-                              schedule
+                              schedule,
+                              schedule.event_date
                             )
                           }
                         >
@@ -3183,8 +3619,8 @@ function App() {
                     </div>
                   )}
 
-                  {session?.user && (
-                    <div className="memo-section">
+                  <div className="memo-section">
+                    {session?.user ? (
                       <div className="memo-heading">
                         <div>
                           <strong>
@@ -3294,7 +3730,16 @@ function App() {
                         </div>
                       )}
                     </div>
-                  )}
+                    ) : (
+                      <button
+                        type="button"
+                        className="login-required-button"
+                        onClick={openAuthPrompt}
+                      >
+                        로그인하면 이 일정에 개인 메모를 남길 수 있어요
+                      </button>
+                    )}
+                  </div>
 
                   {isAdmin && (
                     <div className="admin-actions">
@@ -3323,6 +3768,95 @@ function App() {
                 </div>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {showAuthPrompt && (
+        <div
+          className="overlay"
+          onClick={closeAuthPrompt}
+        >
+          <div
+            className="bottom-sheet auth-sheet"
+            onClick={(e) =>
+              e.stopPropagation()
+            }
+          >
+            <div className="sheet-handle" />
+            <div className="sheet-header">
+              <h2>
+                {isSignupMode
+                  ? '회원가입'
+                  : '로그인'}
+              </h2>
+              <button
+                type="button"
+                className="close-button"
+                onClick={closeAuthPrompt}
+              >
+                ×
+              </button>
+            </div>
+            <p className="auth-prompt-text">
+              일정은 로그인 없이 자유롭게 볼 수 있어요.<br />
+              개인 메모나 요청사항을 이용하려면 로그인해주세요.
+            </p>
+            <form
+              className="auth-form"
+              onSubmit={
+                isSignupMode
+                  ? handleSignup
+                  : handleLogin
+              }
+            >
+              <input
+                type="email"
+                placeholder="이메일"
+                value={email}
+                onChange={(e) =>
+                  setEmail(e.target.value)
+                }
+              />
+              <input
+                type="password"
+                placeholder="비밀번호"
+                value={password}
+                onChange={(e) =>
+                  setPassword(e.target.value)
+                }
+              />
+              <button type="submit">
+                {isSignupMode
+                  ? '회원가입'
+                  : '로그인'}
+              </button>
+              {loginError && (
+                <p className="error-message">
+                  {loginError}
+                </p>
+              )}
+              {signupMessage && (
+                <p className="success-message">
+                  {signupMessage}
+                </p>
+              )}
+              <button
+                type="button"
+                className="auth-switch-button"
+                onClick={() => {
+                  setIsSignupMode(
+                    (prev) => !prev
+                  )
+                  setLoginError('')
+                  setSignupMessage('')
+                }}
+              >
+                {isSignupMode
+                  ? '이미 계정이 있어요 → 로그인'
+                  : '처음 오셨나요? → 회원가입'}
+              </button>
+            </form>
           </div>
         </div>
       )}
