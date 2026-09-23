@@ -2010,17 +2010,20 @@ function App() {
           gap: 10px;
           width: 100%;
           padding: 14px 13px;
-          border: 1px solid #e9e9ed;
+          border: 1px solid #353535;
           border-radius: 13px;
-          background: #fff;
-          color: #222;
+          background: #202020;
+          color: #f4f4f4;
           text-align: left;
-          box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+          box-shadow: 0 2px 12px rgba(0,0,0,0.18);
           cursor: pointer;
+          box-sizing: border-box;
+          transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
         }
 
         .schedule-selection-item:hover {
-          background: #fafafa;
+          background: #282828;
+          border-color: #454545;
           transform: translateY(-1px);
         }
 
@@ -2037,7 +2040,7 @@ function App() {
         }
 
         .selection-type {
-          color: #888;
+          color: #a8a8a8;
           font-size: 10px;
           font-weight: 700;
         }
@@ -2051,12 +2054,12 @@ function App() {
         }
 
         .selection-time {
-          color: #777;
+          color: #9a9a9a;
           font-size: 11px;
         }
 
         .selection-arrow {
-          color: #aaa;
+          color: #8d8d8d;
           font-size: 22px;
         }
 
