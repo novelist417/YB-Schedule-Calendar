@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from './lib/supabase'
 
 const TYPE_COLORS = {
   방송: '#1B7FEB',
-  '지역축제/행사': '#3A3CFF',
+  '지역축제/행사': '#7C5CFF',
   기념일: '#FFE300',
   대학축제: '#03B00A',
 }
@@ -72,6 +72,8 @@ function App() {
   const [calendarCursor, setCalendarCursor] = useState(
     new Date()
   )
+
+  const timetableScrollRef = useRef(null)
 
   const [searchText, setSearchText] = useState('')
   const [filterType, setFilterType] = useState('all')
@@ -151,6 +153,35 @@ function App() {
       setAllRequests([])
     }
   }, [isAdmin])
+
+  useEffect(() => {
+    if (
+      page !== 'calendar' ||
+      calendarView !== 'week'
+    ) {
+      return
+    }
+
+    const resetTimetableScroll = () => {
+      const element = timetableScrollRef.current
+
+      if (!element) return
+
+      element.scrollTop = 0
+      element.scrollLeft = 0
+    }
+
+    const frame = window.requestAnimationFrame(
+      resetTimetableScroll
+    )
+
+    return () =>
+      window.cancelAnimationFrame(frame)
+  }, [
+    page,
+    calendarView,
+    calendarCursor,
+  ])
 
   async function checkSession() {
     const { data } = await supabase.auth.getSession()
@@ -1801,13 +1832,28 @@ function App() {
           width: 42px;
           height: 42px;
           flex: 0 0 42px;
-          border-radius: 11px;
-          background: #111;
+          border-radius: 8px;
+          background: transparent;
           color: #fff;
-          font-size: 18px;
-          font-weight: 900;
-          letter-spacing: -2px;
+          font-size: 22px;
+          font-weight: 950;
+          font-style: italic;
+          letter-spacing: -7px;
           line-height: 1;
+          transform: skewX(-8deg);
+        }
+
+        .yb-logo-y,
+        .yb-logo-b {
+          display: inline-block;
+        }
+
+        .yb-logo-y {
+          transform: translateY(-1px);
+        }
+
+        .yb-logo-b {
+          transform: translate(4px, 1px);
         }
 
         .logo-title {
@@ -1851,8 +1897,13 @@ function App() {
           border: 0;
           border-left: 3px solid var(--event-color, #999);
           border-radius: 7px;
-          background: color-mix(in srgb, var(--event-color, #999) 13%, white);
-          color: #222;
+          z-index: 2;
+          background: color-mix(
+            in srgb,
+            var(--event-color, #999) 18%,
+            #181818
+          );
+          color: #fff;
           text-align: left;
           cursor: pointer;
           pointer-events: auto;
@@ -1866,7 +1917,7 @@ function App() {
         .timetable-event-time {
           display: block;
           margin-bottom: 2px;
-          color: #666;
+          color: #c0c0c0;
           font-size: 10px;
           font-weight: 700;
           line-height: 1.2;
@@ -1875,7 +1926,7 @@ function App() {
         .timetable-event-title {
           display: -webkit-box;
           overflow: hidden;
-          color: #222;
+          color: #fff;
           font-size: 12px;
           font-weight: 700;
           line-height: 1.3;
@@ -1885,15 +1936,13 @@ function App() {
 
         .timetable-anniversary {
           position: absolute;
-          top: 0;
-          left: 4px;
-          right: 4px;
-          min-height: 34px;
-          padding: 5px 7px;
-          border: 1px solid rgba(255, 227, 0, 0.5);
-          border-radius: 7px;
-          background: rgba(255, 227, 0, 0.18);
-          color: #4b4400;
+          inset: 0 3px 0 3px;
+          min-height: 0;
+          padding: 10px 8px;
+          border: 1px solid rgba(255, 227, 0, 0.55);
+          border-radius: 6px;
+          background: rgba(255, 227, 0, 0.13);
+          color: #fff;
           text-align: left;
           cursor: pointer;
           pointer-events: auto;
@@ -1902,19 +1951,25 @@ function App() {
         }
 
         .timetable-anniversary span {
-          display: block;
-          margin-bottom: 2px;
+          display: inline-flex;
+          margin-bottom: 5px;
+          padding: 2px 5px;
+          border-radius: 4px;
+          background: rgba(255, 227, 0, 0.18);
+          color: #FFE300;
           font-size: 9px;
-          font-weight: 800;
+          font-weight: 900;
         }
 
         .timetable-anniversary strong {
           display: block;
           overflow: hidden;
+          color: #fff;
           font-size: 11px;
-          line-height: 1.25;
+          line-height: 1.35;
           text-overflow: ellipsis;
-          white-space: nowrap;
+          white-space: normal;
+          text-shadow: 0 1px 3px rgba(0,0,0,0.45);
         }
 
         .timetable-anniversary-badge {
@@ -1923,7 +1978,7 @@ function App() {
           padding: 2px 5px;
           border-radius: 5px;
           background: rgba(255, 227, 0, 0.18);
-          color: #8d7c00 !important;
+          color: #FFE300 !important;
           font-size: 9px !important;
           font-weight: 800;
         }
@@ -1942,6 +1997,10 @@ function App() {
           font-weight: 800;
           line-height: 1.2;
           white-space: nowrap;
+        }
+
+        .list-item-date-mobile {
+          display: none;
         }
 
         .list-item-time-text {
@@ -2071,7 +2130,10 @@ function App() {
 
         @media (max-width: 640px) {
           .logo-title {
-            display: none;
+            display: inline;
+            font-size: 11px;
+            white-space: nowrap;
+            letter-spacing: -0.6px;
           }
 
           .yb-logo-mark {
@@ -2086,7 +2148,12 @@ function App() {
             flex-basis: 82px;
           }
 
-          .list-item-date-text {
+          .list-item-date-desktop {
+            display: none;
+          }
+
+          .list-item-date-mobile {
+            display: block;
             font-size: 12px;
           }
 
@@ -2120,13 +2187,19 @@ function App() {
           }
 
           .timetable-anniversary {
-            left: 2px;
-            right: 2px;
-            padding: 4px;
+            inset: 0 2px;
+            padding: 6px 4px;
+            border-radius: 5px;
+          }
+
+          .timetable-anniversary span {
+            margin-bottom: 4px;
+            font-size: 8px;
           }
 
           .timetable-anniversary strong {
             font-size: 9px;
+            line-height: 1.3;
           }
         }
       `}</style>
@@ -2140,8 +2213,16 @@ function App() {
             cursor: 'pointer',
           }}
         >
-          <span className="logo-mark yb-logo-mark" aria-label="YB">
-            YB
+          <span
+            className="logo-mark yb-logo-mark"
+            aria-label="YB"
+          >
+            <span className="yb-logo-y">
+              Y
+            </span>
+            <span className="yb-logo-b">
+              B
+            </span>
           </span>
 
           <span className="logo-title">
@@ -2280,10 +2361,24 @@ function App() {
                       key={schedule.id}
                     >
                       <div className="list-item-date">
-                        <span className="list-item-date-text">
+                        <span className="list-item-date-text list-item-date-desktop">
                           {formatListDate(
                             schedule.event_date
                           )}
+                        </span>
+                        <span className="list-item-date-text list-item-date-mobile">
+                          {schedule.event_date
+                            ? `${schedule.event_date.slice(
+                                2,
+                                4
+                              )}.${schedule.event_date.slice(
+                                5,
+                                7
+                              )}.${schedule.event_date.slice(
+                                8,
+                                10
+                              )}.`
+                            : ''}
                         </span>
                         <span className="list-item-time-text">
                           {formatScheduleTimeRange(
@@ -3048,7 +3143,7 @@ function App() {
                   </div>
                 )}
 
-                <div className="timetable-scroll">
+                <div ref={timetableScrollRef} className="timetable-scroll">
                   <div className="timetable">
                     <div className="timetable-header">
                       <div className="time-column-head" />
@@ -3167,7 +3262,7 @@ function App() {
                                     dayIndex + 1,
                                 }}
                               >
-                                {anniversaries.map(
+                                {anniversaries.slice(0, 1).map(
                                   (schedule) => (
                                     <button
                                       type="button"
@@ -3175,17 +3270,26 @@ function App() {
                                       key={schedule.id}
                                       onClick={(e) => {
                                         e.stopPropagation()
-                                        handleEventClick(
-                                          schedule,
+                                        handleDateStringClick(
                                           dateString
                                         )
                                       }}
                                     >
                                       <span>
                                         기념일
+                                        {anniversaries.length > 1
+                                          ? ` ${anniversaries.length}건`
+                                          : ''}
                                       </span>
                                       <strong>
-                                        {schedule.title}
+                                        {anniversaries.length > 1
+                                          ? anniversaries
+                                              .map(
+                                                (item) =>
+                                                  item.title
+                                              )
+                                              .join(' · ')
+                                          : schedule.title}
                                       </strong>
                                     </button>
                                   )
@@ -3224,12 +3328,14 @@ function App() {
                                     const top =
                                       ((visibleStart -
                                         weekStartMinutes) /
-                                        60) *
+                                        (weekEndMinutes -
+                                          weekStartMinutes)) *
                                       100
                                     const height =
                                       ((visibleEnd -
                                         visibleStart) /
-                                        60) *
+                                        (weekEndMinutes -
+                                          weekStartMinutes)) *
                                       100
                                     const typeColor =
                                       TYPE_COLORS[
