@@ -1868,12 +1868,9 @@ function App() {
 
         .timetable-events-layer {
           position: absolute;
-          top: 0;
-          bottom: 0;
-          left: 70px;
-          right: 0;
+          inset: 0;
           display: grid;
-          grid-template-columns: repeat(7, minmax(0, 1fr));
+          grid-template-columns: 70px repeat(7, minmax(98px, 1fr));
           pointer-events: none;
           z-index: 5;
           overflow: hidden;
@@ -2143,8 +2140,9 @@ function App() {
           }
 
           .timetable-events-layer {
-            left: 58px;
+            left: 0;
             right: 0;
+            grid-template-columns: 58px repeat(7, minmax(92px, 1fr));
           }
 
           .timetable-row {
@@ -3226,7 +3224,7 @@ function App() {
                                 key={dateString}
                                 style={{
                                   gridColumn:
-                                    dayIndex + 1,
+                                    dayIndex + 2,
                                 }}
                               >
                                 {anniversaries.length > 0 && (
