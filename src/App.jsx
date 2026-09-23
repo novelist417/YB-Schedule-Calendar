@@ -1868,11 +1868,15 @@ function App() {
 
         .timetable-events-layer {
           position: absolute;
-          inset: 0 0 0 82px;
+          top: 0;
+          bottom: 0;
+          left: 70px;
+          right: 0;
           display: grid;
           grid-template-columns: repeat(7, minmax(0, 1fr));
           pointer-events: none;
           z-index: 5;
+          overflow: hidden;
         }
 
         .timetable-day-event-layer {
@@ -2140,6 +2144,7 @@ function App() {
 
           .timetable-events-layer {
             left: 58px;
+            right: 0;
           }
 
           .timetable-row {
