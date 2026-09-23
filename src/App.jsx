@@ -56,9 +56,14 @@ function App() {
   const [signupMessage, setSignupMessage] = useState('')
 
   const [schedules, setSchedules] = useState([])
+  const [scheduleLoadError, setScheduleLoadError] = useState('')
 
+  // 날짜 선택 → 일정 목록
   const [selectedDate, setSelectedDate] = useState(null)
   const [selectedSchedules, setSelectedSchedules] = useState([])
+
+  // 일정 목록 → 특정 일정 상세
+  const [selectedSchedule, setSelectedSchedule] = useState(null)
 
   const [page, setPage] = useState('calendar')
   const [calendarView, setCalendarView] = useState('month')
@@ -174,6 +179,8 @@ function App() {
   }
 
   async function loadSchedules() {
+    setScheduleLoadError('')
+
     const { data, error } = await supabase
       .from('schedules')
       .select('*')
@@ -182,6 +189,9 @@ function App() {
 
     if (error) {
       console.error('일정 조회 실패:', error)
+      setScheduleLoadError(
+        `일정을 불러오지 못했습니다. 잠시 후 다시 시도해주세요.\n${error.message}`
+      )
       return
     }
 
@@ -255,6 +265,7 @@ function App() {
     setPage('calendar')
     setSelectedDate(null)
     setSelectedSchedules([])
+    setSelectedSchedule(null)
     setMemos({})
     setMemoText({})
     setEditingMemoId(null)
@@ -416,6 +427,7 @@ function App() {
     closeForm()
     setSelectedDate(null)
     setSelectedSchedules([])
+    setSelectedSchedule(null)
   }
 
   async function handleDeleteSchedule(
@@ -451,6 +463,7 @@ function App() {
 
     setSelectedDate(null)
     setSelectedSchedules([])
+    setSelectedSchedule(null)
   }
 
   // =========================
@@ -637,18 +650,35 @@ function App() {
     if (!date) return
 
     const daySchedules =
-      schedules.filter(
-        (schedule) =>
-          isScheduleOnDate(
-            schedule,
-            date
+      schedules
+        .filter(
+          (schedule) =>
+            isScheduleOnDate(
+              schedule,
+              date
+            )
+        )
+        .sort((a, b) => {
+          const timeCompare = (
+            a.event_time || '99:99'
+          ).localeCompare(
+            b.event_time || '99:99'
           )
-      )
+
+          if (timeCompare !== 0) {
+            return timeCompare
+          }
+
+          return a.title.localeCompare(
+            b.title
+          )
+        })
 
     setSelectedDate(date)
     setSelectedSchedules(
       daySchedules
     )
+    setSelectedSchedule(null)
 
     await loadMemos(
       daySchedules.map(
@@ -660,9 +690,20 @@ function App() {
   function handleEventClick(
     schedule
   ) {
-    handleDateStringClick(
-      schedule.event_date
-    )
+    if (!schedule) return
+
+    setSelectedSchedule(schedule)
+  }
+
+  function closeScheduleOverlay() {
+    setSelectedDate(null)
+    setSelectedSchedules([])
+    setSelectedSchedule(null)
+  }
+
+  function backToScheduleList() {
+    setSelectedSchedule(null)
+    setEditingMemoId(null)
   }
 
   // =========================
@@ -1182,6 +1223,13 @@ function App() {
       return `~ ${endTime}`
     }
 
+    if (
+      schedule.schedule_type ===
+      '기념일'
+    ) {
+      return ''
+    }
+
     return '시간 미정'
   }
 
@@ -1493,6 +1541,34 @@ function App() {
       : hour
   }
 
+  function getMinutesFromTime(
+    time
+  ) {
+    if (!time) return null
+
+    const [
+      hourString,
+      minuteString,
+    ] = time.split(':')
+
+    const hour = Number(
+      hourString
+    )
+
+    const minute = Number(
+      minuteString
+    )
+
+    if (
+      Number.isNaN(hour) ||
+      Number.isNaN(minute)
+    ) {
+      return null
+    }
+
+    return hour * 60 + minute
+  }
+
   const weekStartHour = 6
   const weekEndHour = 23
 
@@ -1508,27 +1584,105 @@ function App() {
         weekStartHour + index
     )
 
+  function getScheduleHourRange(
+    schedule,
+    dateString
+  ) {
+    const startDate =
+      schedule.event_date
+
+    const endDate =
+      schedule.end_date ||
+      startDate
+
+    const startMinutes =
+      getMinutesFromTime(
+        schedule.event_time
+      )
+
+    const endMinutes =
+      getMinutesFromTime(
+        schedule.end_time
+      )
+
+    if (startMinutes === null) {
+      return null
+    }
+
+    let rangeStart = 0
+    let rangeEnd = 24 * 60
+
+    if (dateString === startDate) {
+      rangeStart = startMinutes
+    }
+
+    if (dateString === endDate) {
+      if (endMinutes !== null) {
+        rangeEnd = endMinutes
+      }
+    }
+
+    if (
+      startDate === endDate &&
+      endMinutes !== null
+    ) {
+      rangeStart = startMinutes
+      rangeEnd = endMinutes
+    }
+
+    return {
+      start: rangeStart,
+      end: rangeEnd,
+    }
+  }
+
+  function scheduleOccupiesHour(
+    schedule,
+    dateString,
+    hour
+  ) {
+    if (
+      !isScheduleOnDate(
+        schedule,
+        dateString
+      )
+    ) {
+      return false
+    }
+
+    const range =
+      getScheduleHourRange(
+        schedule,
+        dateString
+      )
+
+    if (!range) {
+      return false
+    }
+
+    const hourStart =
+      hour * 60
+
+    const hourEnd =
+      hourStart + 60
+
+    return (
+      range.start < hourEnd &&
+      range.end > hourStart
+    )
+  }
+
   function getSchedulesForHour(
     dateString,
     hour
   ) {
     return timedWeekSchedules.filter(
-      (schedule) => {
-        if (
-          !isScheduleOnDate(
-            schedule,
-            dateString
-          )
-        ) {
-          return false
-        }
-
-        return (
-          getHourFromTime(
-            schedule.event_time
-          ) === hour
+      (schedule) =>
+        scheduleOccupiesHour(
+          schedule,
+          dateString,
+          hour
         )
-      }
     )
   }
 
@@ -1760,8 +1914,16 @@ function App() {
               {schedules.length ===
               0 ? (
                 <div className="empty-list">
-                  등록된 일정이
-                  없습니다.
+                  {scheduleLoadError ? (
+                    <>
+                      일정을
+                      불러오지 못했습니다.
+                      <br />
+                      {scheduleLoadError}
+                    </>
+                  ) : (
+                    '등록된 일정이 없습니다.'
+                  )}
                 </div>
               ) : (
                 schedules.map(
@@ -2287,6 +2449,18 @@ function App() {
               )}
             </div>
 
+            {scheduleLoadError && (
+              <div
+                className="error-message"
+                style={{
+                  whiteSpace: 'pre-line',
+                  marginBottom: '12px',
+                }}
+              >
+                {scheduleLoadError}
+              </div>
+            )}
+
             <div className="calendar-tools">
               <div className="calendar-search">
                 <span className="search-icon">
@@ -2702,76 +2876,81 @@ function App() {
                   </div>
                 ) : (
                   agendaSchedules.map(
-                    (schedule) => (
-                      <button
-                        className="agenda-item"
-                        key={schedule.id}
-                        onClick={() =>
-                          handleDateStringClick(
-                            schedule.event_date
-                          )
-                        }
-                      >
-                        <div className="agenda-date">
-                          <strong>
-                            {formatDateText(
-                              schedule.event_date
-                            )}
-                          </strong>
+                    (schedule) => {
+                      const scheduleTime =
+                        formatScheduleTimeRange(
+                          schedule
+                        )
 
-                          <span>
-                            {
-                              WEEKDAYS[
-                                new Date(
-                                  `${schedule.event_date}T00:00:00`
-                                ).getDay()
-                              ]
-                            }
-                          </span>
-                        </div>
-
-                        <span
-                          className="agenda-type-dot"
-                          style={{
-                            backgroundColor:
-                              TYPE_COLORS[
-                                schedule
-                                  .schedule_type
-                              ] ||
-                              '#999',
-                          }}
-                        />
-
-                        <div className="agenda-main">
-                          <strong>
-                            {
-                              schedule.title
-                            }
-                          </strong>
-
-                          <span>
-                            {formatScheduleTimeRange(
+                      return (
+                        <button
+                          className="agenda-item"
+                          key={schedule.id}
+                          onClick={() =>
+                            handleEventClick(
                               schedule
-                            )}
+                            )
+                          }
+                        >
+                          <div className="agenda-date">
+                            <strong>
+                              {formatDateText(
+                                schedule.event_date
+                              )}
+                            </strong>
 
-                            {schedule.end_date &&
-                              schedule.end_date !==
-                                schedule.event_date &&
-                              ` · ${formatDateText(
-                                schedule.end_date
-                              )}까지`}
+                            <span>
+                              {
+                                WEEKDAYS[
+                                  new Date(
+                                    `${schedule.event_date}T00:00:00`
+                                  ).getDay()
+                                ]
+                              }
+                            </span>
+                          </div>
 
-                            {schedule.place
-                              ? ` · ${schedule.place}`
-                              : ''}
+                          <span
+                            className="agenda-type-dot"
+                            style={{
+                              backgroundColor:
+                                TYPE_COLORS[
+                                  schedule
+                                    .schedule_type
+                                ] ||
+                                '#999',
+                            }}
+                          />
+
+                          <div className="agenda-main">
+                            <strong>
+                              {
+                                schedule.title
+                              }
+                            </strong>
+
+                            <span>
+                              {scheduleTime}
+
+                              {schedule.end_date &&
+                                schedule.end_date !==
+                                  schedule.event_date &&
+                                ` · ${formatDateText(
+                                  schedule.end_date
+                                )}까지`}
+
+                              {schedule.place
+                                ? ` · ${schedule.place}`
+                                : ''}
+                            </span>
+                          </div>
+
+                          <span className="agenda-arrow">
+                            ›
                           </span>
-                        </div>
-
-                        <span className="agenda-arrow">
-                          ›
-                        </span>
-                      </button>
-                    )
+                        </button>
+                      )
+                    }
                   )
                 )}
               </div>
@@ -2781,14 +2960,13 @@ function App() {
       </main>
 
       {/* =========================
-          일정 상세
+          날짜별 일정 목록 / 일정 상세
          ========================= */}
       {selectedDate && (
         <div
           className="overlay"
           onClick={() => {
-            setSelectedDate(null)
-            setSelectedSchedules([])
+            closeScheduleOverlay()
           }}
         >
           <div
@@ -2800,271 +2978,349 @@ function App() {
             <div className="sheet-handle" />
 
             <div className="sheet-header">
-              <h2>
-                {formatDateText(
-                  selectedDate
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                }}
+              >
+                {selectedSchedule && (
+                  <button
+                    type="button"
+                    className="close-button"
+                    onClick={
+                      backToScheduleList
+                    }
+                    aria-label="목록으로"
+                    style={{
+                      fontSize: '22px',
+                    }}
+                  >
+                    ‹
+                  </button>
                 )}
-              </h2>
+
+                <h2>
+                  {selectedSchedule
+                    ? selectedSchedule.title
+                    : formatDateText(
+                        selectedDate
+                      )}
+                </h2>
+              </div>
 
               <button
                 className="close-button"
-                onClick={() => {
-                  setSelectedDate(null)
-                  setSelectedSchedules([])
-                }}
+                onClick={
+                  closeScheduleOverlay
+                }
               >
                 ×
               </button>
             </div>
 
             <div className="schedule-detail">
-              {selectedSchedules.length ===
-              0 ? (
-                <p>
-                  등록된 일정이
-                  없습니다.
-                </p>
-              ) : (
-                selectedSchedules.map(
-                  (schedule) => (
-                    <div
-                      className="schedule-item"
-                      key={schedule.id}
-                    >
-                      <div
-                        className="detail-type"
-                        style={{
-                          backgroundColor:
-                            TYPE_COLORS[
+              {!selectedSchedule ? (
+                selectedSchedules.length ===
+                0 ? (
+                  <p>
+                    등록된 일정이
+                    없습니다.
+                  </p>
+                ) : (
+                  <div className="schedule-selection-list">
+                    {selectedSchedules.map(
+                      (schedule) => (
+                        <button
+                          type="button"
+                          className="schedule-selection-item"
+                          key={schedule.id}
+                          onClick={() =>
+                            handleEventClick(
                               schedule
-                                .schedule_type
-                            ] ||
-                            '#999',
-                        }}
-                      >
-                        {
-                          schedule.schedule_type
-                        }
-                      </div>
+                            )
+                          }
+                        >
+                          <span
+                            className="selection-type-dot"
+                            style={{
+                              backgroundColor:
+                                TYPE_COLORS[
+                                  schedule
+                                    .schedule_type
+                                ] ||
+                                '#999',
+                            }}
+                          />
 
-                      <h3>
-                        {schedule.title}
-                      </h3>
+                          <div className="selection-main">
+                            <span className="selection-type">
+                              {
+                                schedule.schedule_type
+                              }
+                            </span>
 
-                      <div className="detail-row">
-                        <strong>
-                          일시
-                        </strong>
+                            <strong>
+                              {
+                                schedule.title
+                              }
+                            </strong>
 
-                        <span>
-                          {formatScheduleDateTime(
-                            schedule
-                          )}
-                        </span>
-                      </div>
-
-                      {schedule.place && (
-                        <div className="detail-row">
-                          <strong>
-                            장소
-                          </strong>
-
-                          <span>
-                            {
-                              schedule.place
-                            }
-                          </span>
-                        </div>
-                      )}
-
-                      {schedule.address && (
-                        <div className="detail-row">
-                          <strong>
-                            주소
-                          </strong>
-
-                          <span>
-                            {
-                              schedule.address
-                            }
-                          </span>
-                        </div>
-                      )}
-
-                      {schedule.details && (
-                        <div className="detail-section">
-                          <strong>
-                            참고 사항
-                          </strong>
-
-                          <p>
-                            {
-                              schedule.details
-                            }
-                          </p>
-                        </div>
-                      )}
-
-                      {schedule.related_link && (
-                        <div className="detail-section">
-                          <strong>
-                            참고 링크
-                          </strong>
-
-                          <a
-                            className="reference-link"
-                            href={
-                              schedule.related_link
-                            }
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            {schedule.related_link_text ||
-                              '링크 열기'}
-                          </a>
-                        </div>
-                      )}
-
-                      {session?.user && (
-                        <div className="memo-section">
-                          <div className="memo-heading">
-                            <div>
-                              <strong>
-                                내 메모
-                              </strong>
-
-                              <span>
-                                로그인한 계정에서만 볼 수 있어요.
-                              </span>
-                            </div>
-
-                            {memos[
-                              schedule.id
-                            ] && (
-                              <div className="memo-actions">
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setEditingMemoId(
-                                      schedule.id
-                                    )
-
-                                    setMemoText(
-                                      (
-                                        prev
-                                      ) => ({
-                                        ...prev,
-                                        [schedule.id]:
-                                          memos[
-                                            schedule.id
-                                          ].content,
-                                      })
-                                    )
-                                  }}
-                                >
-                                  ✏️
-                                </button>
-
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    handleDeleteMemo(
-                                      schedule.id
-                                    )
-                                  }
-                                >
-                                  🗑️
-                                </button>
-                              </div>
-                            )}
+                            <span className="selection-time">
+                              {formatScheduleTimeRange(
+                                schedule
+                              )}
+                            </span>
                           </div>
 
-                          {memos[
-                            schedule.id
-                          ] &&
-                          editingMemoId !==
-                            schedule.id ? (
-                            <div className="memo-view">
-                              {
-                                memos[
-                                  schedule.id
-                                ].content
-                              }
-                            </div>
-                          ) : (
-                            <div className="memo-editor">
-                              <textarea
-                                value={
-                                  memoText[
-                                    schedule.id
-                                  ] || ''
-                                }
-                                onChange={(e) =>
-                                  setMemoText(
-                                    (
-                                      prev
-                                    ) => ({
-                                      ...prev,
-                                      [schedule.id]:
-                                        e.target
-                                          .value,
-                                    })
-                                  )
-                                }
-                                placeholder="이 일정에 대한 메모를 남겨보세요."
-                                rows="2"
-                              />
+                          <span className="selection-arrow">
+                            ›
+                          </span>
+                        </button>
+                      )
+                    )}
+                  </div>
+                )
+              ) : (
+                <div
+                  className="schedule-item"
+                  key={
+                    selectedSchedule.id
+                  }
+                >
+                  <div
+                    className="detail-type"
+                    style={{
+                      backgroundColor:
+                        TYPE_COLORS[
+                          selectedSchedule
+                            .schedule_type
+                        ] ||
+                        '#999',
+                    }}
+                  >
+                    {
+                      selectedSchedule.schedule_type
+                    }
+                  </div>
 
-                              <button
-                                type="button"
-                                className="memo-save-button"
-                                onClick={() =>
-                                  handleSaveMemo(
-                                    schedule.id
-                                  )
-                                }
-                                disabled={
-                                  memoSaving ===
-                                  schedule.id
-                                }
-                              >
-                                {memoSaving ===
-                                schedule.id
-                                  ? '저장 중...'
-                                  : '저장'}
-                              </button>
-                            </div>
-                          )}
-                        </div>
+                  <h3>
+                    {selectedSchedule.title}
+                  </h3>
+
+                  <div className="detail-row">
+                    <strong>
+                      일시
+                    </strong>
+
+                    <span>
+                      {formatScheduleDateTime(
+                        selectedSchedule
                       )}
+                    </span>
+                  </div>
 
-                      {isAdmin && (
-                        <div className="admin-actions">
-                          <button
-                            onClick={() =>
-                              openEditForm(
-                                schedule
+                  {selectedSchedule.place && (
+                    <div className="detail-row">
+                      <strong>
+                        장소
+                      </strong>
+
+                      <span>
+                        {
+                          selectedSchedule.place
+                        }
+                      </span>
+                    </div>
+                  )}
+
+                  {selectedSchedule.address && (
+                    <div className="detail-row">
+                      <strong>
+                        주소
+                      </strong>
+
+                      <span>
+                        {
+                          selectedSchedule.address
+                        }
+                      </span>
+                    </div>
+                  )}
+
+                  {selectedSchedule.details && (
+                    <div className="detail-section">
+                      <strong>
+                        참고 사항
+                      </strong>
+
+                      <p>
+                        {
+                          selectedSchedule.details
+                        }
+                      </p>
+                    </div>
+                  )}
+
+                  {selectedSchedule.related_link && (
+                    <div className="detail-section">
+                      <strong>
+                        참고 링크
+                      </strong>
+
+                      <a
+                        className="reference-link"
+                        href={
+                          selectedSchedule.related_link
+                        }
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        {selectedSchedule.related_link_text ||
+                          '링크 열기'}
+                      </a>
+                    </div>
+                  )}
+
+                  {session?.user && (
+                    <div className="memo-section">
+                      <div className="memo-heading">
+                        <div>
+                          <strong>
+                            내 메모
+                          </strong>
+
+                          <span>
+                            로그인한 계정에서만 볼 수 있어요.
+                          </span>
+                        </div>
+
+                        {memos[
+                          selectedSchedule.id
+                        ] && (
+                          <div className="memo-actions">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingMemoId(
+                                  selectedSchedule.id
+                                )
+
+                                setMemoText(
+                                  (
+                                    prev
+                                  ) => ({
+                                    ...prev,
+                                    [selectedSchedule.id]:
+                                      memos[
+                                        selectedSchedule.id
+                                      ].content,
+                                  })
+                                )
+                              }}
+                            >
+                              ✏️
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleDeleteMemo(
+                                  selectedSchedule.id
+                                )
+                              }
+                            >
+                              🗑️
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
+                      {memos[
+                        selectedSchedule.id
+                      ] &&
+                      editingMemoId !==
+                        selectedSchedule.id ? (
+                        <div className="memo-view">
+                          {
+                            memos[
+                              selectedSchedule.id
+                            ].content
+                          }
+                        </div>
+                      ) : (
+                        <div className="memo-editor">
+                          <textarea
+                            value={
+                              memoText[
+                                selectedSchedule.id
+                              ] || ''
+                            }
+                            onChange={(e) =>
+                              setMemoText(
+                                (
+                                  prev
+                                ) => ({
+                                  ...prev,
+                                  [selectedSchedule.id]:
+                                    e.target
+                                      .value,
+                                })
                               )
                             }
-                          >
-                            수정
-                          </button>
+                            placeholder="이 일정에 대한 메모를 남겨보세요."
+                            rows="2"
+                          />
 
                           <button
-                            className="delete-button"
+                            type="button"
+                            className="memo-save-button"
                             onClick={() =>
-                              handleDeleteSchedule(
-                                schedule
+                              handleSaveMemo(
+                                selectedSchedule.id
                               )
                             }
+                            disabled={
+                              memoSaving ===
+                              selectedSchedule.id
+                            }
                           >
-                            삭제
+                            {memoSaving ===
+                            selectedSchedule.id
+                              ? '저장 중...'
+                              : '저장'}
                           </button>
                         </div>
                       )}
                     </div>
-                  )
-                )
+                  )}
+
+                  {isAdmin && (
+                    <div className="admin-actions">
+                      <button
+                        onClick={() =>
+                          openEditForm(
+                            selectedSchedule
+                          )
+                        }
+                      >
+                        수정
+                      </button>
+
+                      <button
+                        className="delete-button"
+                        onClick={() =>
+                          handleDeleteSchedule(
+                            selectedSchedule
+                          )
+                        }
+                      >
+                        삭제
+                      </button>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           </div>
