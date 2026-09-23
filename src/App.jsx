@@ -3621,6 +3621,7 @@ function App() {
 
                   <div className="memo-section">
                     {session?.user ? (
+                      <>
                       <div className="memo-heading">
                         <div>
                           <strong>
@@ -3673,37 +3674,19 @@ function App() {
                         )}
                       </div>
 
-                      {memos[
-                        selectedSchedule.id
-                      ] &&
-                      editingMemoId !==
-                        selectedSchedule.id ? (
+                      {memos[selectedSchedule.id] && editingMemoId !== selectedSchedule.id ? (
                         <div className="memo-view">
-                          {
-                            memos[
-                              selectedSchedule.id
-                            ].content
-                          }
+                          {memos[selectedSchedule.id].content}
                         </div>
                       ) : (
                         <div className="memo-editor">
                           <textarea
-                            value={
-                              memoText[
-                                selectedSchedule.id
-                              ] || ''
-                            }
+                            value={memoText[selectedSchedule.id] || ''}
                             onChange={(e) =>
-                              setMemoText(
-                                (
-                                  prev
-                                ) => ({
-                                  ...prev,
-                                  [selectedSchedule.id]:
-                                    e.target
-                                      .value,
-                                })
-                              )
+                              setMemoText((prev) => ({
+                                ...prev,
+                                [selectedSchedule.id]: e.target.value,
+                              }))
                             }
                             placeholder="이 일정에 대한 메모를 남겨보세요."
                             rows="2"
@@ -3713,23 +3696,17 @@ function App() {
                             type="button"
                             className="memo-save-button"
                             onClick={() =>
-                              handleSaveMemo(
-                                selectedSchedule.id
-                              )
+                              handleSaveMemo(selectedSchedule.id)
                             }
-                            disabled={
-                              memoSaving ===
-                              selectedSchedule.id
-                            }
+                            disabled={memoSaving === selectedSchedule.id}
                           >
-                            {memoSaving ===
-                            selectedSchedule.id
+                            {memoSaving === selectedSchedule.id
                               ? '저장 중...'
                               : '저장'}
                           </button>
                         </div>
                       )}
-                    </div>
+                      </>
                     ) : (
                       <button
                         type="button"
