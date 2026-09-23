@@ -1832,28 +1832,24 @@ function App() {
           width: 42px;
           height: 42px;
           flex: 0 0 42px;
-          border-radius: 8px;
-          background: transparent;
+          border-radius: 9px;
+          background: #7b202d;
           color: #fff;
-          font-size: 22px;
-          font-weight: 950;
-          font-style: italic;
-          letter-spacing: -7px;
+          font-size: 18px;
+          font-weight: 900;
+          font-style: normal;
+          letter-spacing: -1.5px;
           line-height: 1;
-          transform: skewX(-8deg);
         }
 
         .yb-logo-y,
         .yb-logo-b {
           display: inline-block;
-        }
-
-        .yb-logo-y {
-          transform: translateY(-1px);
+          transform: none;
         }
 
         .yb-logo-b {
-          transform: translate(4px, 1px);
+          margin-left: 1px;
         }
 
         .logo-title {
@@ -1874,7 +1870,7 @@ function App() {
           position: absolute;
           inset: 0 0 0 82px;
           display: grid;
-          grid-template-columns: repeat(7, minmax(95px, 1fr));
+          grid-template-columns: repeat(7, minmax(0, 1fr));
           pointer-events: none;
           z-index: 5;
         }
@@ -1936,48 +1932,29 @@ function App() {
 
         .timetable-anniversary {
           position: absolute;
-          inset: 0 3px 0 3px;
-          min-height: 0;
-          padding: 10px 8px;
-          border: 1px solid rgba(255, 227, 0, 0.55);
-          border-radius: 6px;
-          background: rgba(255, 227, 0, 0.13);
+          inset: 0;
+          border: 0;
+          border-radius: 0;
+          background: rgba(255, 227, 0, 0.055);
           color: #fff;
-          text-align: left;
-          cursor: pointer;
-          pointer-events: auto;
+          pointer-events: none;
           box-sizing: border-box;
-          z-index: 1;
+          z-index: 0;
         }
 
-        .timetable-anniversary span {
-          display: inline-flex;
-          margin-bottom: 5px;
-          padding: 2px 5px;
-          border-radius: 4px;
-          background: rgba(255, 227, 0, 0.18);
-          color: #FFE300;
-          font-size: 9px;
-          font-weight: 900;
-        }
-
+        .timetable-anniversary span,
         .timetable-anniversary strong {
-          display: block;
-          overflow: hidden;
-          color: #fff;
-          font-size: 11px;
-          line-height: 1.35;
-          text-overflow: ellipsis;
-          white-space: normal;
-          text-shadow: 0 1px 3px rgba(0,0,0,0.45);
+          display: none;
         }
 
         .timetable-anniversary-badge {
           display: inline-flex !important;
-          margin-top: 4px;
-          padding: 2px 5px;
-          border-radius: 5px;
-          background: rgba(255, 227, 0, 0.18);
+          align-items: center;
+          margin-top: 5px;
+          padding: 3px 7px;
+          border: 1px solid rgba(255, 227, 0, 0.65);
+          border-radius: 999px;
+          background: rgba(255, 227, 0, 0.16);
           color: #FFE300 !important;
           font-size: 9px !important;
           font-weight: 800;
@@ -2186,21 +2163,6 @@ function App() {
             font-size: 10px;
           }
 
-          .timetable-anniversary {
-            inset: 0 2px;
-            padding: 6px 4px;
-            border-radius: 5px;
-          }
-
-          .timetable-anniversary span {
-            margin-bottom: 4px;
-            font-size: 8px;
-          }
-
-          .timetable-anniversary strong {
-            font-size: 9px;
-            line-height: 1.3;
-          }
         }
       `}</style>
       <header className="header">
@@ -3262,37 +3224,11 @@ function App() {
                                     dayIndex + 1,
                                 }}
                               >
-                                {anniversaries.slice(0, 1).map(
-                                  (schedule) => (
-                                    <button
-                                      type="button"
-                                      className="timetable-anniversary"
-                                      key={schedule.id}
-                                      onClick={(e) => {
-                                        e.stopPropagation()
-                                        handleDateStringClick(
-                                          dateString
-                                        )
-                                      }}
-                                    >
-                                      <span>
-                                        기념일
-                                        {anniversaries.length > 1
-                                          ? ` ${anniversaries.length}건`
-                                          : ''}
-                                      </span>
-                                      <strong>
-                                        {anniversaries.length > 1
-                                          ? anniversaries
-                                              .map(
-                                                (item) =>
-                                                  item.title
-                                              )
-                                              .join(' · ')
-                                          : schedule.title}
-                                      </strong>
-                                    </button>
-                                  )
+                                {anniversaries.length > 0 && (
+                                  <div
+                                    className="timetable-anniversary"
+                                    aria-hidden="true"
+                                  />
                                 )}
 
                                 {daySchedules.map(
