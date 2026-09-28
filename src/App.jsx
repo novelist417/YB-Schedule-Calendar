@@ -2,10 +2,11 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from './lib/supabase'
 
 const TYPE_COLORS = {
-  방송: '#1B7FEB',
-  '지역축제/행사': '#7C5CFF',
-  기념일: '#FFE300',
-  대학축제: '#03B00A',
+  방송: '#2673C8',
+  '지역축제/행사': '#6D58D8',
+  기념일: '#D9C900',
+  대학축제: '#229B2F',
+  '콘서트/팬미팅': '#E28C29',
 }
 
 const TYPE_OPTIONS = [
@@ -13,6 +14,7 @@ const TYPE_OPTIONS = [
   '지역축제/행사',
   '기념일',
   '대학축제',
+  '콘서트/팬미팅',
 ]
 
 const EMPTY_FORM = {
@@ -33,6 +35,18 @@ const EMPTY_REQUEST_FORM = {
   title: '',
   request_type: '일정 추가',
   details: '',
+}
+
+function getAddressHref(address) {
+  const value = String(address || '').trim()
+
+  if (!value) return ''
+
+  if (/^https?:\/\//i.test(value)) {
+    return value
+  }
+
+  return `https://map.naver.com/p/search/${encodeURIComponent(value)}`
 }
 
 const WEEKDAYS = [
@@ -1992,6 +2006,20 @@ function App() {
           padding-top: 2px;
         }
 
+        .address-link {
+          color: #d7d7d7;
+          text-decoration: none;
+          line-height: 1.45;
+          word-break: break-word;
+          cursor: pointer;
+        }
+
+        .address-link:hover {
+          color: #ffffff;
+          text-decoration: underline;
+          text-underline-offset: 3px;
+        }
+
         .schedule-detail > p {
           margin: 8px 0;
           color: #888;
@@ -3625,11 +3653,16 @@ function App() {
                         주소
                       </strong>
 
-                      <span>
-                        {
+                      <a
+                        className="address-link"
+                        href={getAddressHref(
                           selectedSchedule.address
-                        }
-                      </span>
+                        )}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        {selectedSchedule.address}
+                      </a>
                     </div>
                   )}
 
@@ -3961,6 +3994,10 @@ function App() {
 
                     <option value="대학축제">
                       대학축제
+                    </option>
+
+                    <option value="콘서트/팬미팅">
+                      콘서트/팬미팅
                     </option>
                   </select>
                 </label>
