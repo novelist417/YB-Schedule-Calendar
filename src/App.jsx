@@ -116,6 +116,25 @@ function App() {
   const [allRequests, setAllRequests] = useState([])
   const [requestLoading, setRequestLoading] = useState(false)
 
+  // 스케줄표 자동 등록
+  const [showAutoImport, setShowAutoImport] = useState(false)
+  const [autoImportMode, setAutoImportMode] = useState('image')
+  const [autoImportYear, setAutoImportYear] = useState(
+    new Date().getFullYear()
+  )
+  const [autoImportMonth, setAutoImportMonth] = useState(
+    new Date().getMonth() + 1
+  )
+  const [autoImportText, setAutoImportText] = useState('')
+  const [autoImportImageData, setAutoImportImageData] = useState('')
+  const [autoImportImageName, setAutoImportImageName] = useState('')
+  const [autoImportCandidates, setAutoImportCandidates] = useState([])
+  const [autoImportStage, setAutoImportStage] = useState('input')
+  const [autoImportLoading, setAutoImportLoading] = useState(false)
+  const [autoImportSaving, setAutoImportSaving] = useState(false)
+  const [autoImportError, setAutoImportError] = useState('')
+  const autoImportFileRef = useRef(null)
+
   // 관리자 요청사항 필터
   const [requestStatusFilter, setRequestStatusFilter] =
     useState('pending')
@@ -242,6 +261,396 @@ function App() {
     }
 
     setSchedules(data || [])
+  }
+
+  // =========================
+  // 스케줄표 자동 등록
+  // =========================
+
+  function openAutoImport() {
+    const cursorYear = calendarCursor.getFullYear()
+    const cursorMonth = calendarCursor.getMonth() + 1
+
+    setAutoImportYear(cursorYear)
+    setAutoImportMonth(cursorMonth)
+    setAutoImportMode('image')
+    setAutoImportText('')
+    setAutoImportImageData('')
+    setAutoImportImageName('')
+    setAutoImportCandidates([])
+    setAutoImportStage('input')
+    setAutoImportError('')
+    setAutoImportLoading(false)
+    setAutoImportSaving(false)
+    setShowAutoImport(true)
+  }
+
+  function closeAutoImport() {
+    if (autoImportLoading || autoImportSaving) return
+
+    setShowAutoImport(false)
+    setAutoImportCandidates([])
+    setAutoImportStage('input')
+    setAutoImportError('')
+  }
+
+  function fileToDataUrl(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+
+      reader.onload = () => resolve(String(reader.result || ''))
+      reader.onerror = () =>
+        reject(new Error('이미지를 읽지 못했습니다.'))
+
+      reader.readAsDataURL(file)
+    })
+  }
+
+  async function handleAutoImportImageChange(e) {
+    const file = e.target.files?.[0]
+
+    if (!file) return
+
+    if (!file.type.startsWith('image/')) {
+      setAutoImportError(
+        'JPG, PNG, WEBP 같은 이미지 파일을 선택해주세요.'
+      )
+      return
+    }
+
+    if (file.size > 8 * 1024 * 1024) {
+      setAutoImportError(
+        '이미지는 8MB 이하로 선택해주세요.'
+      )
+      return
+    }
+
+    try {
+      setAutoImportError('')
+      const dataUrl = await fileToDataUrl(file)
+
+      setAutoImportImageData(dataUrl)
+      setAutoImportImageName(file.name)
+    } catch (error) {
+      console.error('이미지 읽기 실패:', error)
+      setAutoImportError(
+        '이미지를 읽지 못했습니다. 다시 선택해주세요.'
+      )
+    }
+  }
+
+  function isImportedScheduleDuplicate(candidate) {
+    const normalize = (value) =>
+      String(value || '')
+        .trim()
+        .toLowerCase()
+        .replace(/\\s+/g, ' ')
+
+    return schedules.some((schedule) => {
+      return (
+        normalize(schedule.title) ===
+          normalize(candidate.title) &&
+        schedule.event_date === candidate.event_date &&
+        (schedule.event_time || '') ===
+          (candidate.event_time || '') &&
+        schedule.schedule_type ===
+          candidate.schedule_type
+      )
+    })
+  }
+
+  function updateAutoImportCandidate(id, field, value) {
+    setAutoImportCandidates((prev) =>
+      prev.map((candidate) =>
+        candidate.id === id
+          ? {
+              ...candidate,
+              [field]: value,
+              duplicate: isImportedScheduleDuplicate({
+                ...candidate,
+                [field]: value,
+              }),
+            }
+          : candidate
+      )
+    )
+  }
+
+  async function handleAnalyzeAutoImport() {
+    if (!isAdmin) return
+
+    if (
+      autoImportMode === 'image' &&
+      !autoImportImageData
+    ) {
+      setAutoImportError(
+        '먼저 스케줄표 이미지를 선택해주세요.'
+      )
+      return
+    }
+
+    if (
+      autoImportMode === 'text' &&
+      !autoImportText.trim()
+    ) {
+      setAutoImportError(
+        '카페 글 내용을 붙여넣어주세요.'
+      )
+      return
+    }
+
+    setAutoImportLoading(true)
+    setAutoImportError('')
+
+    try {
+      const { data, error } =
+        await supabase.functions.invoke(
+          'import-schedules',
+          {
+            body: {
+              image_data_url:
+                autoImportMode === 'image'
+                  ? autoImportImageData
+                  : '',
+              source_text:
+                autoImportMode === 'text'
+                  ? autoImportText.trim()
+                  : '',
+              year: Number(autoImportYear),
+              month: Number(autoImportMonth),
+            },
+          }
+        )
+
+      if (error) {
+        throw new Error(
+          error.message ||
+            '스케줄표 분석에 실패했습니다.'
+        )
+      }
+
+      const imported =
+        Array.isArray(data?.schedules)
+          ? data.schedules
+          : []
+
+      if (!imported.length) {
+        throw new Error(
+          '일정을 찾지 못했습니다. 이미지나 원문 내용을 확인해주세요.'
+        )
+      }
+
+      const candidates = imported.map(
+        (schedule, index) => ({
+          id: `import-${Date.now()}-${index}`,
+          selected: !isImportedScheduleDuplicate(
+            schedule
+          ),
+          duplicate:
+            isImportedScheduleDuplicate(
+              schedule
+            ),
+          title: schedule.title || '',
+          schedule_type:
+            schedule.schedule_type ||
+            '지역축제/행사',
+          event_date:
+            schedule.event_date || '',
+          event_time:
+            schedule.event_time || '',
+          end_date:
+            schedule.end_date || '',
+          end_time:
+            schedule.end_time || '',
+          place: schedule.place || '',
+          address: schedule.address || '',
+          details: schedule.details || '',
+          related_link:
+            schedule.related_link || '',
+          related_link_text:
+            schedule.related_link_text || '',
+          confidence:
+            schedule.confidence || 'medium',
+          warning:
+            schedule.warning || '',
+          source_text:
+            schedule.source_text || '',
+        })
+      )
+
+      setAutoImportCandidates(candidates)
+      setAutoImportStage('review')
+    } catch (error) {
+      console.error(
+        '스케줄표 자동 분석 실패:',
+        error
+      )
+      setAutoImportError(
+        error.message ||
+          '스케줄표 분석에 실패했습니다.'
+      )
+    } finally {
+      setAutoImportLoading(false)
+    }
+  }
+
+  function toggleAutoImportCandidate(id) {
+    setAutoImportCandidates((prev) =>
+      prev.map((candidate) =>
+        candidate.id === id
+          ? {
+              ...candidate,
+              selected: !candidate.selected,
+            }
+          : candidate
+      )
+    )
+  }
+
+  function toggleAllAutoImportCandidates() {
+    setAutoImportCandidates((prev) => {
+      const selectable = prev.filter(
+        (candidate) => !candidate.duplicate
+      )
+      const shouldSelect =
+        selectable.some(
+          (candidate) => !candidate.selected
+        )
+
+      return prev.map((candidate) =>
+        candidate.duplicate
+          ? candidate
+          : {
+              ...candidate,
+              selected: shouldSelect,
+            }
+      )
+    })
+  }
+
+  async function handleSaveAutoImport() {
+    if (!isAdmin) return
+
+    const selected =
+      autoImportCandidates.filter(
+        (candidate) => candidate.selected
+      )
+
+    if (!selected.length) {
+      setAutoImportError(
+        '등록할 일정을 하나 이상 선택해주세요.'
+      )
+      return
+    }
+
+    for (const candidate of selected) {
+      if (
+        !candidate.title.trim() ||
+        !candidate.event_date
+      ) {
+        setAutoImportError(
+          '제목과 시작 날짜가 없는 일정이 있습니다. 확인해주세요.'
+        )
+        return
+      }
+
+      if (
+        candidate.end_date &&
+        candidate.end_date <
+          candidate.event_date
+      ) {
+        setAutoImportError(
+          `"${candidate.title}"의 종료 날짜가 시작 날짜보다 빠릅니다.`
+        )
+        return
+      }
+
+      const effectiveEndDate =
+        candidate.end_date ||
+        (candidate.end_time
+          ? candidate.event_date
+          : '')
+
+      if (
+        effectiveEndDate ===
+          candidate.event_date &&
+        candidate.event_time &&
+        candidate.end_time &&
+        candidate.end_time <
+          candidate.event_time
+      ) {
+        setAutoImportError(
+          `"${candidate.title}"의 종료 시간이 시작 시간보다 빠릅니다.`
+        )
+        return
+      }
+    }
+
+    setAutoImportSaving(true)
+    setAutoImportError('')
+
+    const payloads = selected.map(
+      (candidate) => ({
+        title: candidate.title.trim(),
+        schedule_type:
+          candidate.schedule_type,
+        event_date:
+          candidate.event_date,
+        event_time:
+          candidate.event_time || null,
+        end_date:
+          candidate.end_date ||
+          (candidate.end_time
+            ? candidate.event_date
+            : null),
+        end_time:
+          candidate.end_time || null,
+        place:
+          candidate.place.trim() || null,
+        address:
+          candidate.address.trim() || null,
+        details:
+          candidate.details.trim() || null,
+        related_link:
+          candidate.related_link.trim() ||
+          null,
+        related_link_text:
+          candidate.related_link_text.trim() ||
+          null,
+        updated_at:
+          new Date().toISOString(),
+      })
+    )
+
+    const { error } = await supabase
+      .from('schedules')
+      .insert(payloads)
+
+    if (error) {
+      console.error(
+        '자동 등록 저장 실패:',
+        error
+      )
+      setAutoImportError(
+        `일정 등록에 실패했습니다.\n${error.message}`
+      )
+      setAutoImportSaving(false)
+      return
+    }
+
+    await loadSchedules()
+
+    const savedCount = selected.length
+
+    setAutoImportSaving(false)
+    setShowAutoImport(false)
+    setAutoImportCandidates([])
+    setAutoImportStage('input')
+    setAutoImportError('')
+
+    alert(
+      `${savedCount}개의 일정이 등록되었습니다.`
+    )
   }
 
   async function handleLogin(e) {
@@ -2137,6 +2546,271 @@ function App() {
           cursor: pointer;
         }
 
+        .admin-list-actions {
+          display: flex;
+          align-items: center;
+          justify-content: flex-end;
+          gap: 8px;
+          flex-wrap: wrap;
+        }
+
+        .auto-import-button {
+          border: 1px solid #5b4650;
+          border-radius: 10px;
+          background: #241d20;
+          color: #f0dce2;
+          padding: 10px 13px;
+          font: inherit;
+          font-size: 12px;
+          font-weight: 800;
+          cursor: pointer;
+          transition: background 0.15s ease, border-color 0.15s ease;
+        }
+
+        .auto-import-button:hover {
+          background: #302327;
+          border-color: #775865;
+        }
+
+        .auto-import-sheet {
+          max-width: 900px;
+        }
+
+        .auto-import-intro {
+          margin: 0 0 14px;
+          color: #8f8f8f;
+          font-size: 12px;
+          line-height: 1.55;
+        }
+
+        .auto-import-source-tabs {
+          display: flex;
+          gap: 7px;
+          margin-bottom: 12px;
+        }
+
+        .auto-import-source-tab {
+          border: 1px solid #353535;
+          border-radius: 9px;
+          background: #1b1b1b;
+          color: #999;
+          padding: 8px 11px;
+          font: inherit;
+          font-size: 11px;
+          font-weight: 800;
+          cursor: pointer;
+        }
+
+        .auto-import-source-tab.active {
+          border-color: #7b202d;
+          background: #2a1b20;
+          color: #f4e6ea;
+        }
+
+        .auto-import-context {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 9px;
+          margin-bottom: 12px;
+        }
+
+        .auto-import-context label {
+          display: grid;
+          gap: 5px;
+          color: #aaa;
+          font-size: 11px;
+          font-weight: 700;
+        }
+
+        .auto-import-context input,
+        .auto-import-context select,
+        .auto-import-textarea {
+          width: 100%;
+          box-sizing: border-box;
+          border: 1px solid #363636;
+          border-radius: 9px;
+          background: #181818;
+          color: #f4f4f4;
+          padding: 10px 11px;
+          font: inherit;
+        }
+
+        .auto-import-textarea {
+          min-height: 180px;
+          resize: vertical;
+          line-height: 1.55;
+        }
+
+        .auto-import-image-picker {
+          display: grid;
+          gap: 9px;
+          padding: 16px;
+          border: 1px dashed #464646;
+          border-radius: 12px;
+          background: #191919;
+        }
+
+        .auto-import-image-name {
+          color: #999;
+          font-size: 11px;
+          word-break: break-all;
+        }
+
+        .auto-import-review-toolbar {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+          margin-bottom: 10px;
+          color: #999;
+          font-size: 11px;
+        }
+
+        .auto-import-candidate-list {
+          display: grid;
+          gap: 9px;
+          max-height: 52vh;
+          overflow-y: auto;
+          padding-right: 2px;
+        }
+
+        .auto-import-candidate {
+          border: 1px solid #343434;
+          border-radius: 12px;
+          background: #1d1d1d;
+          padding: 11px;
+        }
+
+        .auto-import-candidate.duplicate {
+          border-color: #51464a;
+          opacity: 0.7;
+        }
+
+        .auto-import-candidate-head {
+          display: grid;
+          grid-template-columns: auto minmax(0, 1fr) auto;
+          align-items: center;
+          gap: 9px;
+          margin-bottom: 9px;
+        }
+
+        .auto-import-candidate-head input[type='checkbox'] {
+          width: 16px;
+          height: 16px;
+          accent-color: #7b202d;
+        }
+
+        .auto-import-candidate-number {
+          color: #777;
+          font-size: 10px;
+          font-weight: 800;
+        }
+
+        .auto-import-duplicate-label {
+          color: #d1a6b0;
+          font-size: 10px;
+          font-weight: 800;
+        }
+
+        .auto-import-fields {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 7px;
+        }
+
+        .auto-import-field {
+          display: grid;
+          gap: 4px;
+        }
+
+        .auto-import-field.full {
+          grid-column: 1 / -1;
+        }
+
+        .auto-import-field span {
+          color: #777;
+          font-size: 9px;
+          font-weight: 700;
+        }
+
+        .auto-import-field input,
+        .auto-import-field select,
+        .auto-import-field textarea {
+          width: 100%;
+          box-sizing: border-box;
+          border: 1px solid #333;
+          border-radius: 7px;
+          background: #151515;
+          color: #f3f3f3;
+          padding: 8px 9px;
+          font: inherit;
+          font-size: 11px;
+        }
+
+        .auto-import-field textarea {
+          min-height: 52px;
+          resize: vertical;
+        }
+
+        .auto-import-warning {
+          margin: 8px 0 0;
+          padding: 7px 9px;
+          border-radius: 7px;
+          background: #29221d;
+          color: #d0ad8f;
+          font-size: 10px;
+          line-height: 1.45;
+        }
+
+        .auto-import-confidence {
+          color: #777;
+          font-size: 9px;
+        }
+
+        .auto-import-footer {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+          margin-top: 12px;
+        }
+
+        .auto-import-footer-actions {
+          display: flex;
+          gap: 7px;
+        }
+
+        .auto-import-secondary-button {
+          border: 1px solid #373737;
+          border-radius: 9px;
+          background: #1b1b1b;
+          color: #aaa;
+          padding: 10px 13px;
+          font: inherit;
+          font-size: 11px;
+          font-weight: 800;
+          cursor: pointer;
+        }
+
+        .auto-import-primary-button {
+          border: 1px solid #7b202d;
+          border-radius: 9px;
+          background: #7b202d;
+          color: #fff;
+          padding: 10px 13px;
+          font: inherit;
+          font-size: 11px;
+          font-weight: 800;
+          cursor: pointer;
+        }
+
+        .auto-import-primary-button:disabled,
+        .auto-import-secondary-button:disabled,
+        .auto-import-button:disabled {
+          opacity: 0.5;
+          cursor: default;
+        }
+
         @media (max-width: 640px) {
           .logo-title {
             display: inline;
@@ -2151,6 +2825,40 @@ function App() {
             flex-basis: 38px;
             border-radius: 10px;
             font-size: 16px;
+          }
+
+          .admin-list-actions {
+            width: 100%;
+            justify-content: stretch;
+          }
+
+          .admin-list-actions > button {
+            flex: 1 1 0;
+          }
+
+          .auto-import-context {
+            grid-template-columns: 1fr 1fr;
+          }
+
+          .auto-import-fields {
+            grid-template-columns: 1fr;
+          }
+
+          .auto-import-field.full {
+            grid-column: auto;
+          }
+
+          .auto-import-footer {
+            align-items: stretch;
+            flex-direction: column;
+          }
+
+          .auto-import-footer-actions {
+            width: 100%;
+          }
+
+          .auto-import-footer-actions > button {
+            flex: 1 1 0;
           }
 
           .list-item-date {
@@ -2324,14 +3032,24 @@ function App() {
                 </p>
               </div>
 
-              <button
-                className="add-schedule-button"
-                onClick={
-                  openNewScheduleForm
-                }
-              >
-                + 일정 추가
-              </button>
+              <div className="admin-list-actions">
+                <button
+                  className="auto-import-button"
+                  type="button"
+                  onClick={openAutoImport}
+                >
+                  ✨ 스케줄표 자동 등록
+                </button>
+
+                <button
+                  className="add-schedule-button"
+                  onClick={
+                    openNewScheduleForm
+                  }
+                >
+                  + 일정 추가
+                </button>
+              </div>
             </div>
 
             <div className="schedule-list">
@@ -3829,6 +4547,569 @@ function App() {
           </div>
         </div>
       )}
+
+      {showAutoImport &&
+        isAdmin && (
+          <div
+            className="overlay"
+            onClick={closeAutoImport}
+          >
+            <div
+              className="bottom-sheet auto-import-sheet"
+              onClick={(e) =>
+                e.stopPropagation()
+              }
+            >
+              <div className="sheet-handle" />
+
+              <div className="sheet-header">
+                <h2>
+                  ✨ 스케줄표 자동 등록
+                </h2>
+
+                <button
+                  type="button"
+                  className="close-button"
+                  onClick={closeAutoImport}
+                  disabled={
+                    autoImportLoading ||
+                    autoImportSaving
+                  }
+                >
+                  ×
+                </button>
+              </div>
+
+              {autoImportStage === 'input' ? (
+                <>
+                  <p className="auto-import-intro">
+                    스케줄표 이미지를 올리거나
+                    카페 글 내용을 붙여넣으면 AI가
+                    일정을 읽어냅니다. 바로 저장하지
+                    않고 먼저 검토할 수 있어요.
+                  </p>
+
+                  <div className="auto-import-source-tabs">
+                    <button
+                      type="button"
+                      className={
+                        autoImportMode === 'image'
+                          ? 'auto-import-source-tab active'
+                          : 'auto-import-source-tab'
+                      }
+                      onClick={() =>
+                        setAutoImportMode('image')
+                      }
+                    >
+                      🖼 이미지
+                    </button>
+
+                    <button
+                      type="button"
+                      className={
+                        autoImportMode === 'text'
+                          ? 'auto-import-source-tab active'
+                          : 'auto-import-source-tab'
+                      }
+                      onClick={() =>
+                        setAutoImportMode('text')
+                      }
+                    >
+                      📝 카페 글
+                    </button>
+                  </div>
+
+                  <div className="auto-import-context">
+                    <label>
+                      기준 연도
+                      <input
+                        type="number"
+                        min="2020"
+                        max="2100"
+                        value={
+                          autoImportYear
+                        }
+                        onChange={(e) =>
+                          setAutoImportYear(
+                            e.target.value
+                          )
+                        }
+                      />
+                    </label>
+
+                    <label>
+                      기준 월
+                      <select
+                        value={
+                          autoImportMonth
+                        }
+                        onChange={(e) =>
+                          setAutoImportMonth(
+                            Number(
+                              e.target.value
+                            )
+                          )
+                        }
+                      >
+                        {Array.from(
+                          { length: 12 },
+                          (_, index) =>
+                            index + 1
+                        ).map((month) => (
+                          <option
+                            key={month}
+                            value={month}
+                          >
+                            {month}월
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+
+                  {autoImportMode ===
+                  'image' ? (
+                    <div className="auto-import-image-picker">
+                      <input
+                        ref={
+                          autoImportFileRef
+                        }
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp,image/gif"
+                        onChange={
+                          handleAutoImportImageChange
+                        }
+                        style={{
+                          display: 'none',
+                        }}
+                      />
+
+                      <button
+                        type="button"
+                        className="auto-import-secondary-button"
+                        onClick={() =>
+                          autoImportFileRef.current?.click()
+                        }
+                      >
+                        {autoImportImageName
+                          ? '이미지 다시 선택'
+                          : '스케줄표 이미지 선택'}
+                      </button>
+
+                      {autoImportImageName && (
+                        <span className="auto-import-image-name">
+                          {autoImportImageName}
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    <textarea
+                      className="auto-import-textarea"
+                      value={autoImportText}
+                      onChange={(e) =>
+                        setAutoImportText(
+                          e.target.value
+                        )
+                      }
+                      placeholder={`카페 글 내용을 그대로 붙여넣어주세요.
+
+예:
+9월 3일 천안 K-컬처박람회
+8:20PM
+천안 독립기념관 야외특설무대
+
+9월 5일 사운드플래닛페스티벌
+7:00PM
+인천 파라다이스시티`}
+                    />
+                  )}
+
+                  {autoImportError && (
+                    <p className="error-message">
+                      {autoImportError}
+                    </p>
+                  )}
+
+                  <div className="auto-import-footer">
+                    <span className="auto-import-confidence">
+                      원문에 없는 정보는 비워두도록
+                      설정되어 있어요.
+                    </span>
+
+                    <button
+                      type="button"
+                      className="auto-import-primary-button"
+                      onClick={
+                        handleAnalyzeAutoImport
+                      }
+                      disabled={
+                        autoImportLoading
+                      }
+                    >
+                      {autoImportLoading
+                        ? '분석 중...'
+                        : '✨ 일정 분석하기'}
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="auto-import-intro">
+                    찾은 일정은 저장 전에 직접
+                    수정할 수 있습니다. 중복으로
+                    보이는 일정은 자동으로 선택 해제했어요.
+                  </p>
+
+                  <div className="auto-import-review-toolbar">
+                    <span>
+                      {autoImportCandidates.length}
+                      개 일정 ·{' '}
+                      {
+                        autoImportCandidates.filter(
+                          (candidate) =>
+                            candidate.selected
+                        ).length
+                      }
+                      개 선택
+                    </span>
+
+                    <button
+                      type="button"
+                      className="auto-import-secondary-button"
+                      onClick={
+                        toggleAllAutoImportCandidates
+                      }
+                    >
+                      선택 전체 전환
+                    </button>
+                  </div>
+
+                  <div className="auto-import-candidate-list">
+                    {autoImportCandidates.map(
+                      (candidate, index) => (
+                        <div
+                          className={
+                            candidate.duplicate
+                              ? 'auto-import-candidate duplicate'
+                              : 'auto-import-candidate'
+                          }
+                          key={candidate.id}
+                        >
+                          <div className="auto-import-candidate-head">
+                            <input
+                              type="checkbox"
+                              checked={
+                                candidate.selected
+                              }
+                              onChange={() =>
+                                toggleAutoImportCandidate(
+                                  candidate.id
+                                )
+                              }
+                            />
+
+                            <span className="auto-import-candidate-number">
+                              #{index + 1}
+                            </span>
+
+                            {candidate.duplicate && (
+                              <span className="auto-import-duplicate-label">
+                                기존 일정과 중복 가능
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="auto-import-fields">
+                            <label className="auto-import-field full">
+                              <span>
+                                제목 *
+                              </span>
+                              <input
+                                value={
+                                  candidate.title
+                                }
+                                onChange={(e) =>
+                                  updateAutoImportCandidate(
+                                    candidate.id,
+                                    'title',
+                                    e.target.value
+                                  )
+                                }
+                              />
+                            </label>
+
+                            <label className="auto-import-field">
+                              <span>
+                                유형 *
+                              </span>
+                              <select
+                                value={
+                                  candidate.schedule_type
+                                }
+                                onChange={(e) =>
+                                  updateAutoImportCandidate(
+                                    candidate.id,
+                                    'schedule_type',
+                                    e.target.value
+                                  )
+                                }
+                              >
+                                {TYPE_OPTIONS.map(
+                                  (type) => (
+                                    <option
+                                      key={type}
+                                      value={type}
+                                    >
+                                      {type}
+                                    </option>
+                                  )
+                                )}
+                              </select>
+                            </label>
+
+                            <label className="auto-import-field">
+                              <span>
+                                시작 날짜 *
+                              </span>
+                              <input
+                                type="date"
+                                value={
+                                  candidate.event_date
+                                }
+                                onChange={(e) =>
+                                  updateAutoImportCandidate(
+                                    candidate.id,
+                                    'event_date',
+                                    e.target.value
+                                  )
+                                }
+                              />
+                            </label>
+
+                            <label className="auto-import-field">
+                              <span>
+                                시작 시간
+                              </span>
+                              <input
+                                type="time"
+                                value={
+                                  candidate.event_time
+                                }
+                                onChange={(e) =>
+                                  updateAutoImportCandidate(
+                                    candidate.id,
+                                    'event_time',
+                                    e.target.value
+                                  )
+                                }
+                              />
+                            </label>
+
+                            <label className="auto-import-field">
+                              <span>
+                                종료 날짜
+                              </span>
+                              <input
+                                type="date"
+                                min={
+                                  candidate.event_date ||
+                                  undefined
+                                }
+                                value={
+                                  candidate.end_date
+                                }
+                                onChange={(e) =>
+                                  updateAutoImportCandidate(
+                                    candidate.id,
+                                    'end_date',
+                                    e.target.value
+                                  )
+                                }
+                              />
+                            </label>
+
+                            <label className="auto-import-field">
+                              <span>
+                                종료 시간
+                              </span>
+                              <input
+                                type="time"
+                                value={
+                                  candidate.end_time
+                                }
+                                onChange={(e) =>
+                                  updateAutoImportCandidate(
+                                    candidate.id,
+                                    'end_time',
+                                    e.target.value
+                                  )
+                                }
+                              />
+                            </label>
+
+                            <label className="auto-import-field">
+                              <span>
+                                장소
+                              </span>
+                              <input
+                                value={
+                                  candidate.place
+                                }
+                                onChange={(e) =>
+                                  updateAutoImportCandidate(
+                                    candidate.id,
+                                    'place',
+                                    e.target.value
+                                  )
+                                }
+                              />
+                            </label>
+
+                            <label className="auto-import-field">
+                              <span>
+                                주소 / 지도
+                              </span>
+                              <input
+                                value={
+                                  candidate.address
+                                }
+                                onChange={(e) =>
+                                  updateAutoImportCandidate(
+                                    candidate.id,
+                                    'address',
+                                    e.target.value
+                                  )
+                                }
+                              />
+                            </label>
+
+                            <label className="auto-import-field full">
+                              <span>
+                                참고 사항
+                              </span>
+                              <textarea
+                                value={
+                                  candidate.details
+                                }
+                                onChange={(e) =>
+                                  updateAutoImportCandidate(
+                                    candidate.id,
+                                    'details',
+                                    e.target.value
+                                  )
+                                }
+                              />
+                            </label>
+
+                            <label className="auto-import-field">
+                              <span>
+                                참고 링크 주소
+                              </span>
+                              <input
+                                value={
+                                  candidate.related_link
+                                }
+                                onChange={(e) =>
+                                  updateAutoImportCandidate(
+                                    candidate.id,
+                                    'related_link',
+                                    e.target.value
+                                  )
+                                }
+                              />
+                            </label>
+
+                            <label className="auto-import-field">
+                              <span>
+                                링크 표시 문구
+                              </span>
+                              <input
+                                value={
+                                  candidate.related_link_text
+                                }
+                                onChange={(e) =>
+                                  updateAutoImportCandidate(
+                                    candidate.id,
+                                    'related_link_text',
+                                    e.target.value
+                                  )
+                                }
+                              />
+                            </label>
+                          </div>
+
+                          {(candidate.warning ||
+                            candidate.confidence) && (
+                            <p className="auto-import-warning">
+                              {candidate.warning ||
+                                'AI 분석 결과를 검토해주세요.'}
+                              {candidate.confidence && (
+                                <span className="auto-import-confidence">
+                                  {' '}
+                                  · 확신도:{' '}
+                                  {candidate.confidence}
+                                </span>
+                              )}
+                            </p>
+                          )}
+                        </div>
+                      )
+                    )}
+                  </div>
+
+                  {autoImportError && (
+                    <p className="error-message">
+                      {autoImportError}
+                    </p>
+                  )}
+
+                  <div className="auto-import-footer">
+                    <button
+                      type="button"
+                      className="auto-import-secondary-button"
+                      onClick={() =>
+                        setAutoImportStage('input')
+                      }
+                      disabled={
+                        autoImportSaving
+                      }
+                    >
+                      ← 다시 분석
+                    </button>
+
+                    <div className="auto-import-footer-actions">
+                      <button
+                        type="button"
+                        className="auto-import-secondary-button"
+                        onClick={closeAutoImport}
+                        disabled={
+                          autoImportSaving
+                        }
+                      >
+                        취소
+                      </button>
+
+                      <button
+                        type="button"
+                        className="auto-import-primary-button"
+                        onClick={
+                          handleSaveAutoImport
+                        }
+                        disabled={
+                          autoImportSaving
+                        }
+                      >
+                        {autoImportSaving
+                          ? '등록 중...'
+                          : '선택한 일정 등록'}
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        )}
 
       {showAuthPrompt && (
         <div
