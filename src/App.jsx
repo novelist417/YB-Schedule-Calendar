@@ -1,11 +1,12 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from './lib/supabase'
 
 const TYPE_COLORS = {
-  방송: '#5B8DEF',
-  '지역축제/행사': '#F39C5A',
-  기념일: '#E77FB5',
-  대학축제: '#7A68D8',
+  방송: '#2673C8',
+  '지역축제/행사': '#6D58D8',
+  기념일: '#D9C900',
+  대학축제: '#229B2F',
+  '콘서트/팬미팅': '#E28C29',
 }
 
 const TYPE_OPTIONS = [
@@ -13,6 +14,7 @@ const TYPE_OPTIONS = [
   '지역축제/행사',
   '기념일',
   '대학축제',
+  '콘서트/팬미팅',
 ]
 
 const EMPTY_FORM = {
@@ -35,6 +37,18 @@ const EMPTY_REQUEST_FORM = {
   details: '',
 }
 
+function getAddressHref(address) {
+  const value = String(address || '').trim()
+
+  if (!value) return ''
+
+  if (/^https?:\/\//i.test(value)) {
+    return value
+  }
+
+  return `https://map.naver.com/p/search/${encodeURIComponent(value)}`
+}
+
 const WEEKDAYS = [
   '일요일',
   '월요일',
@@ -54,6 +68,7 @@ function App() {
   const [loginError, setLoginError] = useState('')
   const [isSignupMode, setIsSignupMode] = useState(false)
   const [signupMessage, setSignupMessage] = useState('')
+  const [showAuthPrompt, setShowAuthPrompt] = useState(false)
 
   const [schedules, setSchedules] = useState([])
   const [scheduleLoadError, setScheduleLoadError] = useState('')
@@ -71,6 +86,8 @@ function App() {
   const [calendarCursor, setCalendarCursor] = useState(
     new Date()
   )
+
+  const timetableScrollRef = useRef(null)
 
   const [searchText, setSearchText] = useState('')
   const [filterType, setFilterType] = useState('all')
@@ -98,6 +115,25 @@ function App() {
   const [myRequests, setMyRequests] = useState([])
   const [allRequests, setAllRequests] = useState([])
   const [requestLoading, setRequestLoading] = useState(false)
+
+  // 스케줄표 자동 등록
+  const [showAutoImport, setShowAutoImport] = useState(false)
+  const [autoImportMode, setAutoImportMode] = useState('image')
+  const [autoImportYear, setAutoImportYear] = useState(
+    new Date().getFullYear()
+  )
+  const [autoImportMonth, setAutoImportMonth] = useState(
+    new Date().getMonth() + 1
+  )
+  const [autoImportText, setAutoImportText] = useState('')
+  const [autoImportImageData, setAutoImportImageData] = useState('')
+  const [autoImportImageName, setAutoImportImageName] = useState('')
+  const [autoImportCandidates, setAutoImportCandidates] = useState([])
+  const [autoImportStage, setAutoImportStage] = useState('input')
+  const [autoImportLoading, setAutoImportLoading] = useState(false)
+  const [autoImportSaving, setAutoImportSaving] = useState(false)
+  const [autoImportError, setAutoImportError] = useState('')
+  const autoImportFileRef = useRef(null)
 
   // 관리자 요청사항 필터
   const [requestStatusFilter, setRequestStatusFilter] =
@@ -151,6 +187,35 @@ function App() {
     }
   }, [isAdmin])
 
+  useEffect(() => {
+    if (
+      page !== 'calendar' ||
+      calendarView !== 'week'
+    ) {
+      return
+    }
+
+    const resetTimetableScroll = () => {
+      const element = timetableScrollRef.current
+
+      if (!element) return
+
+      element.scrollTop = 0
+      element.scrollLeft = 0
+    }
+
+    const frame = window.requestAnimationFrame(
+      resetTimetableScroll
+    )
+
+    return () =>
+      window.cancelAnimationFrame(frame)
+  }, [
+    page,
+    calendarView,
+    calendarCursor,
+  ])
+
   async function checkSession() {
     const { data } = await supabase.auth.getSession()
     const currentSession = data.session
@@ -198,6 +263,396 @@ function App() {
     setSchedules(data || [])
   }
 
+  // =========================
+  // 스케줄표 자동 등록
+  // =========================
+
+  function openAutoImport() {
+    const cursorYear = calendarCursor.getFullYear()
+    const cursorMonth = calendarCursor.getMonth() + 1
+
+    setAutoImportYear(cursorYear)
+    setAutoImportMonth(cursorMonth)
+    setAutoImportMode('image')
+    setAutoImportText('')
+    setAutoImportImageData('')
+    setAutoImportImageName('')
+    setAutoImportCandidates([])
+    setAutoImportStage('input')
+    setAutoImportError('')
+    setAutoImportLoading(false)
+    setAutoImportSaving(false)
+    setShowAutoImport(true)
+  }
+
+  function closeAutoImport() {
+    if (autoImportLoading || autoImportSaving) return
+
+    setShowAutoImport(false)
+    setAutoImportCandidates([])
+    setAutoImportStage('input')
+    setAutoImportError('')
+  }
+
+  function fileToDataUrl(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+
+      reader.onload = () => resolve(String(reader.result || ''))
+      reader.onerror = () =>
+        reject(new Error('이미지를 읽지 못했습니다.'))
+
+      reader.readAsDataURL(file)
+    })
+  }
+
+  async function handleAutoImportImageChange(e) {
+    const file = e.target.files?.[0]
+
+    if (!file) return
+
+    if (!file.type.startsWith('image/')) {
+      setAutoImportError(
+        'JPG, PNG, WEBP 같은 이미지 파일을 선택해주세요.'
+      )
+      return
+    }
+
+    if (file.size > 8 * 1024 * 1024) {
+      setAutoImportError(
+        '이미지는 8MB 이하로 선택해주세요.'
+      )
+      return
+    }
+
+    try {
+      setAutoImportError('')
+      const dataUrl = await fileToDataUrl(file)
+
+      setAutoImportImageData(dataUrl)
+      setAutoImportImageName(file.name)
+    } catch (error) {
+      console.error('이미지 읽기 실패:', error)
+      setAutoImportError(
+        '이미지를 읽지 못했습니다. 다시 선택해주세요.'
+      )
+    }
+  }
+
+  function isImportedScheduleDuplicate(candidate) {
+    const normalize = (value) =>
+      String(value || '')
+        .trim()
+        .toLowerCase()
+        .replace(/\\s+/g, ' ')
+
+    return schedules.some((schedule) => {
+      return (
+        normalize(schedule.title) ===
+          normalize(candidate.title) &&
+        schedule.event_date === candidate.event_date &&
+        (schedule.event_time || '') ===
+          (candidate.event_time || '') &&
+        schedule.schedule_type ===
+          candidate.schedule_type
+      )
+    })
+  }
+
+  function updateAutoImportCandidate(id, field, value) {
+    setAutoImportCandidates((prev) =>
+      prev.map((candidate) =>
+        candidate.id === id
+          ? {
+              ...candidate,
+              [field]: value,
+              duplicate: isImportedScheduleDuplicate({
+                ...candidate,
+                [field]: value,
+              }),
+            }
+          : candidate
+      )
+    )
+  }
+
+  async function handleAnalyzeAutoImport() {
+    if (!isAdmin) return
+
+    if (
+      autoImportMode === 'image' &&
+      !autoImportImageData
+    ) {
+      setAutoImportError(
+        '먼저 스케줄표 이미지를 선택해주세요.'
+      )
+      return
+    }
+
+    if (
+      autoImportMode === 'text' &&
+      !autoImportText.trim()
+    ) {
+      setAutoImportError(
+        '카페 글 내용을 붙여넣어주세요.'
+      )
+      return
+    }
+
+    setAutoImportLoading(true)
+    setAutoImportError('')
+
+    try {
+      const { data, error } =
+        await supabase.functions.invoke(
+          'import-schedules',
+          {
+            body: {
+              imageDataUrl:
+                autoImportMode === 'image'
+                  ? autoImportImageData
+                  : '',
+              text:
+                autoImportMode === 'text'
+                  ? autoImportText.trim()
+                  : '',
+              year: Number(autoImportYear),
+              month: Number(autoImportMonth),
+            },
+          }
+        )
+
+      if (error) {
+        throw new Error(
+          error.message ||
+            '스케줄표 분석에 실패했습니다.'
+        )
+      }
+
+      const imported =
+        Array.isArray(data?.schedules)
+          ? data.schedules
+          : []
+
+      if (!imported.length) {
+        throw new Error(
+          '일정을 찾지 못했습니다. 이미지나 원문 내용을 확인해주세요.'
+        )
+      }
+
+      const candidates = imported.map(
+        (schedule, index) => ({
+          id: `import-${Date.now()}-${index}`,
+          selected: !isImportedScheduleDuplicate(
+            schedule
+          ),
+          duplicate:
+            isImportedScheduleDuplicate(
+              schedule
+            ),
+          title: schedule.title || '',
+          schedule_type:
+            schedule.schedule_type ||
+            '지역축제/행사',
+          event_date:
+            schedule.event_date || '',
+          event_time:
+            schedule.event_time || '',
+          end_date:
+            schedule.end_date || '',
+          end_time:
+            schedule.end_time || '',
+          place: schedule.place || '',
+          address: schedule.address || '',
+          details: schedule.details || '',
+          related_link:
+            schedule.related_link || '',
+          related_link_text:
+            schedule.related_link_text || '',
+          confidence:
+            schedule.confidence || 'medium',
+          warning:
+            schedule.warning || '',
+          text:
+            schedule.source_text || '',
+        })
+      )
+
+      setAutoImportCandidates(candidates)
+      setAutoImportStage('review')
+    } catch (error) {
+      console.error(
+        '스케줄표 자동 분석 실패:',
+        error
+      )
+      setAutoImportError(
+        error.message ||
+          '스케줄표 분석에 실패했습니다.'
+      )
+    } finally {
+      setAutoImportLoading(false)
+    }
+  }
+
+  function toggleAutoImportCandidate(id) {
+    setAutoImportCandidates((prev) =>
+      prev.map((candidate) =>
+        candidate.id === id
+          ? {
+              ...candidate,
+              selected: !candidate.selected,
+            }
+          : candidate
+      )
+    )
+  }
+
+  function toggleAllAutoImportCandidates() {
+    setAutoImportCandidates((prev) => {
+      const selectable = prev.filter(
+        (candidate) => !candidate.duplicate
+      )
+      const shouldSelect =
+        selectable.some(
+          (candidate) => !candidate.selected
+        )
+
+      return prev.map((candidate) =>
+        candidate.duplicate
+          ? candidate
+          : {
+              ...candidate,
+              selected: shouldSelect,
+            }
+      )
+    })
+  }
+
+  async function handleSaveAutoImport() {
+    if (!isAdmin) return
+
+    const selected =
+      autoImportCandidates.filter(
+        (candidate) => candidate.selected
+      )
+
+    if (!selected.length) {
+      setAutoImportError(
+        '등록할 일정을 하나 이상 선택해주세요.'
+      )
+      return
+    }
+
+    for (const candidate of selected) {
+      if (
+        !candidate.title.trim() ||
+        !candidate.event_date
+      ) {
+        setAutoImportError(
+          '제목과 시작 날짜가 없는 일정이 있습니다. 확인해주세요.'
+        )
+        return
+      }
+
+      if (
+        candidate.end_date &&
+        candidate.end_date <
+          candidate.event_date
+      ) {
+        setAutoImportError(
+          `"${candidate.title}"의 종료 날짜가 시작 날짜보다 빠릅니다.`
+        )
+        return
+      }
+
+      const effectiveEndDate =
+        candidate.end_date ||
+        (candidate.end_time
+          ? candidate.event_date
+          : '')
+
+      if (
+        effectiveEndDate ===
+          candidate.event_date &&
+        candidate.event_time &&
+        candidate.end_time &&
+        candidate.end_time <
+          candidate.event_time
+      ) {
+        setAutoImportError(
+          `"${candidate.title}"의 종료 시간이 시작 시간보다 빠릅니다.`
+        )
+        return
+      }
+    }
+
+    setAutoImportSaving(true)
+    setAutoImportError('')
+
+    const payloads = selected.map(
+      (candidate) => ({
+        title: candidate.title.trim(),
+        schedule_type:
+          candidate.schedule_type,
+        event_date:
+          candidate.event_date,
+        event_time:
+          candidate.event_time || null,
+        end_date:
+          candidate.end_date ||
+          (candidate.end_time
+            ? candidate.event_date
+            : null),
+        end_time:
+          candidate.end_time || null,
+        place:
+          candidate.place.trim() || null,
+        address:
+          candidate.address.trim() || null,
+        details:
+          candidate.details.trim() || null,
+        related_link:
+          candidate.related_link.trim() ||
+          null,
+        related_link_text:
+          candidate.related_link_text.trim() ||
+          null,
+        updated_at:
+          new Date().toISOString(),
+      })
+    )
+
+    const { error } = await supabase
+      .from('schedules')
+      .insert(payloads)
+
+    if (error) {
+      console.error(
+        '자동 등록 저장 실패:',
+        error
+      )
+      setAutoImportError(
+        `일정 등록에 실패했습니다.\n${error.message}`
+      )
+      setAutoImportSaving(false)
+      return
+    }
+
+    await loadSchedules()
+
+    const savedCount = selected.length
+
+    setAutoImportSaving(false)
+    setShowAutoImport(false)
+    setAutoImportCandidates([])
+    setAutoImportStage('input')
+    setAutoImportError('')
+
+    alert(
+      `${savedCount}개의 일정이 등록되었습니다.`
+    )
+  }
+
   async function handleLogin(e) {
     e.preventDefault()
 
@@ -212,7 +667,10 @@ function App() {
 
     if (error) {
       setLoginError(error.message)
+      return
     }
+
+    setShowAuthPrompt(false)
   }
 
   async function handleSignup(e) {
@@ -250,6 +708,7 @@ function App() {
       setSignupMessage(
         '회원가입이 완료되었습니다.'
       )
+      setShowAuthPrompt(false)
     } else {
       setSignupMessage(
         '회원가입이 완료되었습니다.'
@@ -687,12 +1146,54 @@ function App() {
     )
   }
 
-  function handleEventClick(
-    schedule
+  async function handleEventClick(
+    schedule,
+    dateString = schedule?.event_date
   ) {
     if (!schedule) return
 
+    const targetDate =
+      dateString || schedule.event_date
+
+    const daySchedules =
+      schedules
+        .filter((item) =>
+          isScheduleOnDate(
+            item,
+            targetDate
+          )
+        )
+        .sort((a, b) =>
+          (
+            a.event_time ||
+            '99:99'
+          ).localeCompare(
+            b.event_time ||
+              '99:99'
+          )
+        )
+
+    setSelectedDate(targetDate)
+    setSelectedSchedules(daySchedules)
     setSelectedSchedule(schedule)
+
+    await loadMemos(
+      daySchedules.map(
+        (item) => item.id
+      )
+    )
+  }
+
+  function openAuthPrompt() {
+    setLoginError('')
+    setSignupMessage('')
+    setShowAuthPrompt(true)
+  }
+
+  function closeAuthPrompt() {
+    setShowAuthPrompt(false)
+    setLoginError('')
+    setSignupMessage('')
   }
 
   function closeScheduleOverlay() {
@@ -1114,7 +1615,7 @@ function App() {
       day,
     ] = dateString.split('-')
 
-    return `${year}.${month}.${day}`
+    return `${year}.${month}.${day}.`
   }
 
   function formatRequestDate(
@@ -1513,6 +2014,22 @@ function App() {
     weekSchedules
       .filter(
         (schedule) =>
+          !schedule.event_time &&
+          schedule.schedule_type !==
+            '기념일'
+      )
+      .sort((a, b) =>
+        a.event_date.localeCompare(
+          b.event_date
+        )
+      )
+
+  const untimedAnniversarySchedules =
+    weekSchedules
+      .filter(
+        (schedule) =>
+          schedule.schedule_type ===
+            '기념일' &&
           !schedule.event_time
       )
       .sort((a, b) =>
@@ -1526,20 +2043,6 @@ function App() {
       (schedule) =>
         !!schedule.event_time
     )
-
-  function getHourFromTime(
-    time
-  ) {
-    if (!time) return null
-
-    const hour = Number(
-      time.split(':')[0]
-    )
-
-    return Number.isNaN(hour)
-      ? null
-      : hour
-  }
 
   function getMinutesFromTime(
     time
@@ -1571,6 +2074,10 @@ function App() {
 
   const weekStartHour = 6
   const weekEndHour = 23
+  const weekStartMinutes =
+    weekStartHour * 60
+  const weekEndMinutes =
+    (weekEndHour + 1) * 60
 
   const weekTimeSlots =
     Array.from(
@@ -1584,7 +2091,7 @@ function App() {
         weekStartHour + index
     )
 
-  function getScheduleHourRange(
+  function getScheduleTimeRange(
     schedule,
     dateString
   ) {
@@ -1617,17 +2124,26 @@ function App() {
     }
 
     if (dateString === endDate) {
-      if (endMinutes !== null) {
-        rangeEnd = endMinutes
-      }
+      rangeEnd =
+        endMinutes !== null
+          ? endMinutes
+          : 24 * 60
     }
 
-    if (
-      startDate === endDate &&
-      endMinutes !== null
-    ) {
-      rangeStart = startMinutes
-      rangeEnd = endMinutes
+    if (startDate === endDate) {
+      if (endMinutes === null) {
+        rangeEnd = Math.min(
+          startMinutes + 60,
+          24 * 60
+        )
+      } else if (
+        rangeEnd <= rangeStart
+      ) {
+        rangeEnd = Math.min(
+          rangeStart + 60,
+          24 * 60
+        )
+      }
     }
 
     return {
@@ -1636,54 +2152,66 @@ function App() {
     }
   }
 
-  function scheduleOccupiesHour(
-    schedule,
-    dateString,
-    hour
+  function getTimedSchedulesForDate(
+    dateString
   ) {
-    if (
-      !isScheduleOnDate(
-        schedule,
-        dateString
+    return timedWeekSchedules
+      .filter((schedule) =>
+        isScheduleOnDate(
+          schedule,
+          dateString
+        )
       )
-    ) {
-      return false
-    }
-
-    const range =
-      getScheduleHourRange(
-        schedule,
-        dateString
+      .sort((a, b) =>
+        (
+          a.event_time ||
+          '99:99'
+        ).localeCompare(
+          b.event_time ||
+            '99:99'
+        )
       )
+  }
 
-    if (!range) {
-      return false
-    }
-
-    const hourStart =
-      hour * 60
-
-    const hourEnd =
-      hourStart + 60
-
-    return (
-      range.start < hourEnd &&
-      range.end > hourStart
+  function getAnniversariesForDate(
+    dateString
+  ) {
+    return untimedAnniversarySchedules.filter(
+      (schedule) =>
+        isScheduleOnDate(
+          schedule,
+          dateString
+        )
     )
   }
 
-  function getSchedulesForHour(
-    dateString,
-    hour
+  async function handleWeekBlankClick(
+    dateString
   ) {
-    return timedWeekSchedules.filter(
-      (schedule) =>
-        scheduleOccupiesHour(
-          schedule,
-          dateString,
-          hour
+    const anniversaries =
+      getAnniversariesForDate(
+        dateString
+      )
+
+    if (anniversaries.length === 1) {
+      await handleEventClick(
+        anniversaries[0],
+        dateString
+      )
+    } else if (
+      anniversaries.length > 1
+    ) {
+      setSelectedDate(dateString)
+      setSelectedSchedules(
+        anniversaries
+      )
+      setSelectedSchedule(null)
+      await loadMemos(
+        anniversaries.map(
+          (schedule) => schedule.id
         )
-    )
+      )
+    }
   }
 
   // =========================
@@ -1719,6 +2247,666 @@ function App() {
 
   return (
     <div className="app">
+      <style>{`
+        .yb-logo-mark {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 42px;
+          height: 42px;
+          flex: 0 0 42px;
+          border-radius: 9px;
+          background: #7b202d;
+          color: #fff;
+          font-size: 18px;
+          font-weight: 900;
+          font-style: normal;
+          letter-spacing: -1.5px;
+          line-height: 1;
+        }
+
+        .yb-logo-y,
+        .yb-logo-b {
+          display: inline-block;
+          transform: none;
+        }
+
+        .yb-logo-b {
+          margin-left: 1px;
+        }
+
+        .logo-title {
+          font-weight: 800;
+          letter-spacing: -0.4px;
+        }
+
+        .timetable-body {
+          position: relative;
+        }
+
+        .timetable-row {
+          height: 72px !important;
+          min-height: 72px !important;
+        }
+
+        .timetable-events-layer {
+          position: absolute;
+          inset: 0;
+          display: grid;
+          grid-template-columns: 70px repeat(7, minmax(98px, 1fr));
+          pointer-events: none;
+          z-index: 5;
+          overflow: hidden;
+        }
+
+        .timetable-day-event-layer {
+          position: relative;
+          min-width: 0;
+          height: 100%;
+          padding: 0 4px;
+        }
+
+        .timetable-event {
+          position: absolute;
+          left: 4px;
+          right: 4px;
+          margin: 0;
+          min-height: 24px;
+          padding: 5px 6px 5px 8px;
+          overflow: hidden;
+          border: 0;
+          border-left: 3px solid var(--event-color, #999);
+          border-radius: 7px;
+          z-index: 2;
+          background: color-mix(
+            in srgb,
+            var(--event-color, #999) 18%,
+            #181818
+          );
+          color: #fff;
+          text-align: left;
+          cursor: pointer;
+          pointer-events: auto;
+          box-sizing: border-box;
+        }
+
+        .timetable-event:hover {
+          filter: brightness(0.97);
+        }
+
+        .timetable-event-time {
+          display: block;
+          margin-bottom: 2px;
+          color: #c0c0c0;
+          font-size: 10px;
+          font-weight: 700;
+          line-height: 1.2;
+        }
+
+        .timetable-event-title {
+          display: -webkit-box;
+          overflow: hidden;
+          color: #fff;
+          font-size: 12px;
+          font-weight: 700;
+          line-height: 1.3;
+          -webkit-box-orient: vertical;
+          -webkit-line-clamp: 3;
+        }
+
+        .timetable-anniversary {
+          position: absolute;
+          inset: 0;
+          border: 0;
+          border-radius: 0;
+          background: rgba(255, 227, 0, 0.055);
+          color: #fff;
+          pointer-events: none;
+          box-sizing: border-box;
+          z-index: 0;
+        }
+
+        .timetable-anniversary span,
+        .timetable-anniversary strong {
+          display: none;
+        }
+
+        .timetable-anniversary-badge {
+          display: inline-flex !important;
+          align-items: center;
+          margin-top: 5px;
+          padding: 3px 7px;
+          border: 1px solid rgba(255, 227, 0, 0.65);
+          border-radius: 999px;
+          background: rgba(255, 227, 0, 0.16);
+          color: #FFE300 !important;
+          font-size: 9px !important;
+          font-weight: 800;
+        }
+
+        .list-item-date {
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          gap: 3px;
+          flex: 0 0 120px;
+          min-width: 0;
+        }
+
+        .list-item-date-text {
+          font-size: 13px;
+          font-weight: 800;
+          line-height: 1.2;
+          white-space: nowrap;
+        }
+
+        .list-item-date-mobile {
+          display: none;
+        }
+
+        .list-item-time-text {
+          color: #777;
+          font-size: 11px;
+          line-height: 1.2;
+          white-space: normal;
+        }
+
+        .schedule-detail {
+          padding-top: 2px;
+        }
+
+        .address-link {
+          color: #d7d7d7;
+          text-decoration: none;
+          line-height: 1.45;
+          word-break: break-word;
+          cursor: pointer;
+        }
+
+        .address-link:hover {
+          color: #ffffff;
+          text-decoration: underline;
+          text-underline-offset: 3px;
+        }
+
+        .schedule-detail > p {
+          margin: 8px 0;
+          color: #888;
+          text-align: center;
+        }
+
+        .schedule-selection-list {
+          display: grid;
+          gap: 9px;
+        }
+
+        .schedule-selection-item {
+          display: grid;
+          grid-template-columns: 9px minmax(0, 1fr) auto;
+          align-items: center;
+          gap: 10px;
+          width: 100%;
+          padding: 14px 13px;
+          border: 1px solid #353535;
+          border-radius: 13px;
+          background: #202020;
+          color: #f4f4f4;
+          text-align: left;
+          box-shadow: 0 2px 12px rgba(0,0,0,0.18);
+          cursor: pointer;
+          box-sizing: border-box;
+          transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+        }
+
+        .schedule-selection-item:hover {
+          background: #282828;
+          border-color: #454545;
+          transform: translateY(-1px);
+        }
+
+        .selection-type-dot {
+          width: 8px;
+          height: 34px;
+          border-radius: 99px;
+        }
+
+        .selection-main {
+          display: grid;
+          gap: 3px;
+          min-width: 0;
+        }
+
+        .selection-type {
+          color: #a8a8a8;
+          font-size: 10px;
+          font-weight: 700;
+        }
+
+        .selection-main strong {
+          overflow: hidden;
+          font-size: 14px;
+          line-height: 1.35;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .selection-time {
+          color: #9a9a9a;
+          font-size: 11px;
+        }
+
+        .selection-arrow {
+          color: #8d8d8d;
+          font-size: 22px;
+        }
+
+        .auth-sheet {
+          max-width: 460px;
+        }
+
+        .auth-prompt-text {
+          margin: 0 0 18px;
+          color: #666;
+          font-size: 13px;
+          line-height: 1.6;
+        }
+
+        .auth-form {
+          display: grid;
+          gap: 9px;
+        }
+
+        .auth-form input {
+          width: 100%;
+          box-sizing: border-box;
+          padding: 12px 13px;
+          border: 1px solid #ddd;
+          border-radius: 9px;
+          font: inherit;
+        }
+
+        .auth-form > button[type='submit'] {
+          padding: 12px;
+          border: 0;
+          border-radius: 9px;
+          background: #171717;
+          color: #fff;
+          font-weight: 700;
+          cursor: pointer;
+        }
+
+        .login-required-button {
+          width: 100%;
+          padding: 11px 12px;
+          border: 1px dashed #d5d5d5;
+          border-radius: 9px;
+          background: #fafafa;
+          color: #777;
+          font-size: 12px;
+          cursor: pointer;
+        }
+
+        .admin-list-actions {
+          display: flex;
+          align-items: center;
+          justify-content: flex-end;
+          gap: 8px;
+          flex-wrap: wrap;
+        }
+
+        .auto-import-button {
+          border: 1px solid #5b4650;
+          border-radius: 10px;
+          background: #241d20;
+          color: #f0dce2;
+          padding: 10px 13px;
+          font: inherit;
+          font-size: 12px;
+          font-weight: 800;
+          cursor: pointer;
+          transition: background 0.15s ease, border-color 0.15s ease;
+        }
+
+        .auto-import-button:hover {
+          background: #302327;
+          border-color: #775865;
+        }
+
+        .auto-import-sheet {
+          max-width: 900px;
+        }
+
+        .auto-import-intro {
+          margin: 0 0 14px;
+          color: #8f8f8f;
+          font-size: 12px;
+          line-height: 1.55;
+        }
+
+        .auto-import-source-tabs {
+          display: flex;
+          gap: 7px;
+          margin-bottom: 12px;
+        }
+
+        .auto-import-source-tab {
+          border: 1px solid #353535;
+          border-radius: 9px;
+          background: #1b1b1b;
+          color: #999;
+          padding: 8px 11px;
+          font: inherit;
+          font-size: 11px;
+          font-weight: 800;
+          cursor: pointer;
+        }
+
+        .auto-import-source-tab.active {
+          border-color: #7b202d;
+          background: #2a1b20;
+          color: #f4e6ea;
+        }
+
+        .auto-import-context {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 9px;
+          margin-bottom: 12px;
+        }
+
+        .auto-import-context label {
+          display: grid;
+          gap: 5px;
+          color: #aaa;
+          font-size: 11px;
+          font-weight: 700;
+        }
+
+        .auto-import-context input,
+        .auto-import-context select,
+        .auto-import-textarea {
+          width: 100%;
+          box-sizing: border-box;
+          border: 1px solid #363636;
+          border-radius: 9px;
+          background: #181818;
+          color: #f4f4f4;
+          padding: 10px 11px;
+          font: inherit;
+        }
+
+        .auto-import-textarea {
+          min-height: 180px;
+          resize: vertical;
+          line-height: 1.55;
+        }
+
+        .auto-import-image-picker {
+          display: grid;
+          gap: 9px;
+          padding: 16px;
+          border: 1px dashed #464646;
+          border-radius: 12px;
+          background: #191919;
+        }
+
+        .auto-import-image-name {
+          color: #999;
+          font-size: 11px;
+          word-break: break-all;
+        }
+
+        .auto-import-review-toolbar {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+          margin-bottom: 10px;
+          color: #999;
+          font-size: 11px;
+        }
+
+        .auto-import-candidate-list {
+          display: grid;
+          gap: 9px;
+          max-height: 52vh;
+          overflow-y: auto;
+          padding-right: 2px;
+        }
+
+        .auto-import-candidate {
+          border: 1px solid #343434;
+          border-radius: 12px;
+          background: #1d1d1d;
+          padding: 11px;
+        }
+
+        .auto-import-candidate.duplicate {
+          border-color: #51464a;
+          opacity: 0.7;
+        }
+
+        .auto-import-candidate-head {
+          display: grid;
+          grid-template-columns: auto minmax(0, 1fr) auto;
+          align-items: center;
+          gap: 9px;
+          margin-bottom: 9px;
+        }
+
+        .auto-import-candidate-head input[type='checkbox'] {
+          width: 16px;
+          height: 16px;
+          accent-color: #7b202d;
+        }
+
+        .auto-import-candidate-number {
+          color: #777;
+          font-size: 10px;
+          font-weight: 800;
+        }
+
+        .auto-import-duplicate-label {
+          color: #d1a6b0;
+          font-size: 10px;
+          font-weight: 800;
+        }
+
+        .auto-import-fields {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 7px;
+        }
+
+        .auto-import-field {
+          display: grid;
+          gap: 4px;
+        }
+
+        .auto-import-field.full {
+          grid-column: 1 / -1;
+        }
+
+        .auto-import-field span {
+          color: #777;
+          font-size: 9px;
+          font-weight: 700;
+        }
+
+        .auto-import-field input,
+        .auto-import-field select,
+        .auto-import-field textarea {
+          width: 100%;
+          box-sizing: border-box;
+          border: 1px solid #333;
+          border-radius: 7px;
+          background: #151515;
+          color: #f3f3f3;
+          padding: 8px 9px;
+          font: inherit;
+          font-size: 11px;
+        }
+
+        .auto-import-field textarea {
+          min-height: 52px;
+          resize: vertical;
+        }
+
+        .auto-import-warning {
+          margin: 8px 0 0;
+          padding: 7px 9px;
+          border-radius: 7px;
+          background: #29221d;
+          color: #d0ad8f;
+          font-size: 10px;
+          line-height: 1.45;
+        }
+
+        .auto-import-confidence {
+          color: #777;
+          font-size: 9px;
+        }
+
+        .auto-import-footer {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+          margin-top: 12px;
+        }
+
+        .auto-import-footer-actions {
+          display: flex;
+          gap: 7px;
+        }
+
+        .auto-import-secondary-button {
+          border: 1px solid #373737;
+          border-radius: 9px;
+          background: #1b1b1b;
+          color: #aaa;
+          padding: 10px 13px;
+          font: inherit;
+          font-size: 11px;
+          font-weight: 800;
+          cursor: pointer;
+        }
+
+        .auto-import-primary-button {
+          border: 1px solid #7b202d;
+          border-radius: 9px;
+          background: #7b202d;
+          color: #fff;
+          padding: 10px 13px;
+          font: inherit;
+          font-size: 11px;
+          font-weight: 800;
+          cursor: pointer;
+        }
+
+        .auto-import-primary-button:disabled,
+        .auto-import-secondary-button:disabled,
+        .auto-import-button:disabled {
+          opacity: 0.5;
+          cursor: default;
+        }
+
+        @media (max-width: 640px) {
+          .logo-title {
+            display: inline;
+            font-size: 11px;
+            white-space: nowrap;
+            letter-spacing: -0.6px;
+          }
+
+          .yb-logo-mark {
+            width: 38px;
+            height: 38px;
+            flex-basis: 38px;
+            border-radius: 10px;
+            font-size: 16px;
+          }
+
+          .admin-list-actions {
+            width: 100%;
+            justify-content: stretch;
+          }
+
+          .admin-list-actions > button {
+            flex: 1 1 0;
+          }
+
+          .auto-import-context {
+            grid-template-columns: 1fr 1fr;
+          }
+
+          .auto-import-fields {
+            grid-template-columns: 1fr;
+          }
+
+          .auto-import-field.full {
+            grid-column: auto;
+          }
+
+          .auto-import-footer {
+            align-items: stretch;
+            flex-direction: column;
+          }
+
+          .auto-import-footer-actions {
+            width: 100%;
+          }
+
+          .auto-import-footer-actions > button {
+            flex: 1 1 0;
+          }
+
+          .list-item-date {
+            flex-basis: 82px;
+          }
+
+          .list-item-date-desktop {
+            display: none;
+          }
+
+          .list-item-date-mobile {
+            display: block;
+            font-size: 12px;
+          }
+
+          .list-item-time-text {
+            font-size: 10px;
+          }
+
+          .timetable-events-layer {
+            left: 0;
+            right: 0;
+            grid-template-columns: 58px repeat(7, minmax(92px, 1fr));
+          }
+
+          .timetable-row {
+            height: 68px !important;
+            min-height: 68px !important;
+          }
+
+          .timetable-event {
+            left: 2px;
+            right: 2px;
+            padding: 4px 4px 4px 6px;
+            border-left-width: 2px;
+            border-radius: 5px;
+          }
+
+          .timetable-event-time {
+            font-size: 9px;
+          }
+
+          .timetable-event-title {
+            font-size: 10px;
+          }
+
+        }
+      `}</style>
       <header className="header">
         <div
           className="logo"
@@ -1729,11 +2917,19 @@ function App() {
             cursor: 'pointer',
           }}
         >
-          <span className="logo-mark">
-            YB
+          <span
+            className="logo-mark yb-logo-mark"
+            aria-label="YB"
+          >
+            <span className="yb-logo-y">
+              Y
+            </span>
+            <span className="yb-logo-b">
+              B
+            </span>
           </span>
 
-          <span>
+          <span className="logo-title">
             YB Schedule Calendar
           </span>
         </div>
@@ -1790,6 +2986,16 @@ function App() {
             </nav>
           )}
 
+          {!session && (
+            <button
+              className="nav-button"
+              type="button"
+              onClick={openAuthPrompt}
+            >
+              요청사항
+            </button>
+          )}
+
           {isAdmin && (
             <span className="admin-badge">
               ADMIN
@@ -1808,80 +3014,6 @@ function App() {
       </header>
 
       <main className="main">
-        {!session && (
-          <section className="login-section">
-            <h2>
-              {isSignupMode
-                ? '회원가입'
-                : '로그인'}
-            </h2>
-
-            <form
-              onSubmit={
-                isSignupMode
-                  ? handleSignup
-                  : handleLogin
-              }
-            >
-              <input
-                type="email"
-                placeholder="이메일"
-                value={email}
-                onChange={(e) =>
-                  setEmail(
-                    e.target.value
-                  )
-                }
-              />
-
-              <input
-                type="password"
-                placeholder="비밀번호"
-                value={password}
-                onChange={(e) =>
-                  setPassword(
-                    e.target.value
-                  )
-                }
-              />
-
-              <button type="submit">
-                {isSignupMode
-                  ? '회원가입'
-                  : '로그인'}
-              </button>
-
-              {loginError && (
-                <p className="error-message">
-                  {loginError}
-                </p>
-              )}
-
-              {signupMessage && (
-                <p className="success-message">
-                  {signupMessage}
-                </p>
-              )}
-
-              <button
-                type="button"
-                className="auth-switch-button"
-                onClick={() => {
-                  setIsSignupMode(
-                    (prev) => !prev
-                  )
-
-                  setLoginError('')
-                  setSignupMessage('')
-                }}
-              >
-                {isSignupMode
-                  ? '이미 계정이 있어요 → 로그인'
-                  : '처음 오셨나요? → 회원가입'}
-              </button>
-            </form>
-          </section>
-        )}
 
         {page === 'list' &&
         isAdmin ? (
@@ -1900,14 +3032,24 @@ function App() {
                 </p>
               </div>
 
-              <button
-                className="add-schedule-button"
-                onClick={
-                  openNewScheduleForm
-                }
-              >
-                + 일정 추가
-              </button>
+              <div className="admin-list-actions">
+                <button
+                  className="auto-import-button"
+                  type="button"
+                  onClick={openAutoImport}
+                >
+                  ✨ 스케줄표 자동 등록
+                </button>
+
+                <button
+                  className="add-schedule-button"
+                  onClick={
+                    openNewScheduleForm
+                  }
+                >
+                  + 일정 추가
+                </button>
+              </div>
             </div>
 
             <div className="schedule-list">
@@ -1933,9 +3075,30 @@ function App() {
                       key={schedule.id}
                     >
                       <div className="list-item-date">
-                        {formatScheduleDateTime(
-                          schedule
-                        )}
+                        <span className="list-item-date-text list-item-date-desktop">
+                          {formatListDate(
+                            schedule.event_date
+                          )}
+                        </span>
+                        <span className="list-item-date-text list-item-date-mobile">
+                          {schedule.event_date
+                            ? `${schedule.event_date.slice(
+                                2,
+                                4
+                              )}.${schedule.event_date.slice(
+                                5,
+                                7
+                              )}.${schedule.event_date.slice(
+                                8,
+                                10
+                              )}.`
+                            : ''}
+                        </span>
+                        <span className="list-item-time-text">
+                          {formatScheduleTimeRange(
+                            schedule
+                          )}
+                        </span>
                       </div>
 
                       <div className="list-item-main">
@@ -2656,18 +3819,17 @@ function App() {
                     <div className="untimed-title">
                       시간 미정
                     </div>
-
                     <div className="untimed-list">
                       {untimedWeekSchedules.map(
                         (schedule) => (
                           <button
+                            type="button"
                             className="untimed-event"
-                            key={
-                              schedule.id
-                            }
+                            key={schedule.id}
                             onClick={() =>
                               handleEventClick(
-                                schedule
+                                schedule,
+                                schedule.event_date
                               )
                             }
                           >
@@ -2676,34 +3838,17 @@ function App() {
                               style={{
                                 backgroundColor:
                                   TYPE_COLORS[
-                                    schedule
-                                      .schedule_type
-                                  ] ||
-                                  '#999',
+                                    schedule.schedule_type
+                                  ] || '#999',
                               }}
                             />
-
                             <span className="untimed-date">
-                              {
-                                WEEKDAYS[
-                                  new Date(
-                                    `${schedule.event_date}T00:00:00`
-                                  ).getDay()
-                                ]
-                              }{' '}
-                              {Number(
-                                schedule.event_date.slice(
-                                  8,
-                                  10
-                                )
+                              {formatListDate(
+                                schedule.event_date
                               )}
-                              일
                             </span>
-
                             <span className="untimed-name">
-                              {
-                                schedule.title
-                              }
+                              {schedule.title}
                             </span>
                           </button>
                         )
@@ -2712,58 +3857,60 @@ function App() {
                   </div>
                 )}
 
-                <div className="timetable-scroll">
+                <div ref={timetableScrollRef} className="timetable-scroll">
                   <div className="timetable">
                     <div className="timetable-header">
                       <div className="time-column-head" />
+                      {weekDates.map((date) => {
+                        const dateString =
+                          toDateString(date)
+                        const isToday =
+                          dateString ===
+                          toDateString(today)
+                        const anniversaries =
+                          getAnniversariesForDate(
+                            dateString
+                          )
 
-                      {weekDates.map(
-                        (date) => {
-                          const dateString =
-                            toDateString(
-                              date
-                            )
-
-                          const isToday =
-                            dateString ===
-                            toDateString(
-                              today
-                            )
-
-                          return (
-                            <button
-                              className={`timetable-day-head ${
+                        return (
+                          <button
+                            type="button"
+                            className={
+                              `timetable-day-head ${
                                 isToday
                                   ? 'today'
                                   : ''
-                              }`}
-                              key={
+                              }`
+                            }
+                            key={dateString}
+                            onClick={() =>
+                              handleDateStringClick(
                                 dateString
+                              )
+                            }
+                          >
+                            <span>
+                              {
+                                WEEKDAYS[
+                                  date.getDay()
+                                ]
                               }
-                              onClick={() =>
-                                handleDateStringClick(
-                                  dateString
-                                )
-                              }
-                            >
-                              <span>
-                                {
-                                  WEEKDAYS[
-                                    date.getDay()
-                                  ]
-                                }
+                            </span>
+                            <strong>
+                              {date.getMonth() +
+                                1}
+                              .
+                              {date.getDate()}
+                            </strong>
+                            {anniversaries.length >
+                              0 && (
+                              <span className="timetable-anniversary-badge">
+                                기념일
                               </span>
-
-                              <strong>
-                                {date.getMonth() +
-                                  1}
-                                .
-                                {date.getDate()}
-                              </strong>
-                            </button>
-                          )
-                        }
-                      )}
+                            )}
+                          </button>
+                        )
+                      })}
                     </div>
 
                     <div className="timetable-body">
@@ -2783,77 +3930,158 @@ function App() {
                                 )}:00`
                               )}
                             </div>
-
                             {weekDates.map(
                               (date) => {
                                 const dateString =
                                   toDateString(
                                     date
                                   )
-
-                                const cellSchedules =
-                                  getSchedulesForHour(
-                                    dateString,
-                                    hour
-                                  )
-
                                 return (
                                   <div
                                     className="timetable-cell"
                                     key={`${dateString}-${hour}`}
-                                  >
-                                    {cellSchedules.map(
-                                      (
-                                        schedule
-                                      ) => (
-                                        <button
-                                          className="timetable-event"
-                                          key={
-                                            schedule.id
-                                          }
-                                          onClick={() =>
-                                            handleEventClick(
-                                              schedule
-                                            )
-                                          }
-                                          style={{
-                                            borderLeftColor:
-                                              TYPE_COLORS[
-                                                schedule
-                                                  .schedule_type
-                                              ] ||
-                                              '#999',
-                                          }}
-                                        >
-                                          <span className="timetable-event-time">
-                                            {schedule.event_time?.slice(
-                                              0,
-                                              5
-                                            )}
-                                          </span>
-
-                                          <span className="timetable-event-title">
-                                            {
-                                              schedule.title
-                                            }
-                                          </span>
-                                        </button>
+                                    onClick={() =>
+                                      handleWeekBlankClick(
+                                        dateString
                                       )
-                                    )}
-                                  </div>
+                                    }
+                                  />
                                 )
                               }
                             )}
                           </div>
                         )
                       )}
+
+                      <div className="timetable-events-layer">
+                        {weekDates.map(
+                          (date, dayIndex) => {
+                            const dateString =
+                              toDateString(date)
+                            const daySchedules =
+                              getTimedSchedulesForDate(
+                                dateString
+                              )
+                            const anniversaries =
+                              getAnniversariesForDate(
+                                dateString
+                              )
+
+                            return (
+                              <div
+                                className="timetable-day-event-layer"
+                                key={dateString}
+                                style={{
+                                  gridColumn:
+                                    dayIndex + 2,
+                                }}
+                              >
+                                {anniversaries.length > 0 && (
+                                  <div
+                                    className="timetable-anniversary"
+                                    aria-hidden="true"
+                                  />
+                                )}
+
+                                {daySchedules.map(
+                                  (schedule) => {
+                                    const range =
+                                      getScheduleTimeRange(
+                                        schedule,
+                                        dateString
+                                      )
+
+                                    if (!range) {
+                                      return null
+                                    }
+
+                                    const visibleStart =
+                                      Math.max(
+                                        range.start,
+                                        weekStartMinutes
+                                      )
+                                    const visibleEnd =
+                                      Math.min(
+                                        range.end,
+                                        weekEndMinutes
+                                      )
+
+                                    if (
+                                      visibleEnd <=
+                                      visibleStart
+                                    ) {
+                                      return null
+                                    }
+
+                                    const top =
+                                      ((visibleStart -
+                                        weekStartMinutes) /
+                                        (weekEndMinutes -
+                                          weekStartMinutes)) *
+                                      100
+                                    const height =
+                                      ((visibleEnd -
+                                        visibleStart) /
+                                        (weekEndMinutes -
+                                          weekStartMinutes)) *
+                                      100
+                                    const typeColor =
+                                      TYPE_COLORS[
+                                        schedule.schedule_type
+                                      ] || '#999'
+
+                                    return (
+                                      <button
+                                        type="button"
+                                        className="timetable-event"
+                                        key={schedule.id}
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          handleEventClick(
+                                            schedule,
+                                            dateString
+                                          )
+                                        }}
+                                        style={{
+                                          top: `${top}%`,
+                                          height: `${height}%`,
+                                          borderLeftColor:
+                                            typeColor,
+                                          '--event-color':
+                                            typeColor,
+                                        }}
+                                      >
+                                        <span className="timetable-event-time">
+                                          {schedule.event_time?.slice(
+                                            0,
+                                            5
+                                          )}
+                                          {schedule.end_time
+                                            ? ` ~ ${schedule.end_time.slice(
+                                                0,
+                                                5
+                                              )}`
+                                            : ''}
+                                        </span>
+                                        <span className="timetable-event-title">
+                                          {schedule.title}
+                                        </span>
+                                      </button>
+                                    )
+                                  }
+                                )}
+                              </div>
+                            )
+                          }
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                {timedWeekSchedules.length ===
-                  0 &&
-                  untimedWeekSchedules.length ===
+                {timedWeekSchedules.length === 0 &&
+                  untimedWeekSchedules.length === 0 &&
+                  untimedAnniversarySchedules.length ===
                     0 && (
                     <div className="week-no-results">
                       이 주에는 표시할 일정이
@@ -2888,7 +4116,8 @@ function App() {
                           key={schedule.id}
                           onClick={() =>
                             handleEventClick(
-                              schedule
+                              schedule,
+                              schedule.event_date
                             )
                           }
                         >
@@ -3038,7 +4267,8 @@ function App() {
                           key={schedule.id}
                           onClick={() =>
                             handleEventClick(
-                              schedule
+                              schedule,
+                              schedule.event_date
                             )
                           }
                         >
@@ -3141,11 +4371,16 @@ function App() {
                         주소
                       </strong>
 
-                      <span>
-                        {
+                      <a
+                        className="address-link"
+                        href={getAddressHref(
                           selectedSchedule.address
-                        }
-                      </span>
+                        )}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        {selectedSchedule.address}
+                      </a>
                     </div>
                   )}
 
@@ -3183,8 +4418,9 @@ function App() {
                     </div>
                   )}
 
-                  {session?.user && (
-                    <div className="memo-section">
+                  <div className="memo-section">
+                    {session?.user ? (
+                      <>
                       <div className="memo-heading">
                         <div>
                           <strong>
@@ -3237,37 +4473,19 @@ function App() {
                         )}
                       </div>
 
-                      {memos[
-                        selectedSchedule.id
-                      ] &&
-                      editingMemoId !==
-                        selectedSchedule.id ? (
+                      {memos[selectedSchedule.id] && editingMemoId !== selectedSchedule.id ? (
                         <div className="memo-view">
-                          {
-                            memos[
-                              selectedSchedule.id
-                            ].content
-                          }
+                          {memos[selectedSchedule.id].content}
                         </div>
                       ) : (
                         <div className="memo-editor">
                           <textarea
-                            value={
-                              memoText[
-                                selectedSchedule.id
-                              ] || ''
-                            }
+                            value={memoText[selectedSchedule.id] || ''}
                             onChange={(e) =>
-                              setMemoText(
-                                (
-                                  prev
-                                ) => ({
-                                  ...prev,
-                                  [selectedSchedule.id]:
-                                    e.target
-                                      .value,
-                                })
-                              )
+                              setMemoText((prev) => ({
+                                ...prev,
+                                [selectedSchedule.id]: e.target.value,
+                              }))
                             }
                             placeholder="이 일정에 대한 메모를 남겨보세요."
                             rows="2"
@@ -3277,24 +4495,27 @@ function App() {
                             type="button"
                             className="memo-save-button"
                             onClick={() =>
-                              handleSaveMemo(
-                                selectedSchedule.id
-                              )
+                              handleSaveMemo(selectedSchedule.id)
                             }
-                            disabled={
-                              memoSaving ===
-                              selectedSchedule.id
-                            }
+                            disabled={memoSaving === selectedSchedule.id}
                           >
-                            {memoSaving ===
-                            selectedSchedule.id
+                            {memoSaving === selectedSchedule.id
                               ? '저장 중...'
                               : '저장'}
                           </button>
                         </div>
                       )}
-                    </div>
-                  )}
+                      </>
+                    ) : (
+                      <button
+                        type="button"
+                        className="login-required-button"
+                        onClick={openAuthPrompt}
+                      >
+                        로그인하면 이 일정에 개인 메모를 남길 수 있어요
+                      </button>
+                    )}
+                  </div>
 
                   {isAdmin && (
                     <div className="admin-actions">
@@ -3323,6 +4544,658 @@ function App() {
                 </div>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {showAutoImport &&
+        isAdmin && (
+          <div
+            className="overlay"
+            onClick={closeAutoImport}
+          >
+            <div
+              className="bottom-sheet auto-import-sheet"
+              onClick={(e) =>
+                e.stopPropagation()
+              }
+            >
+              <div className="sheet-handle" />
+
+              <div className="sheet-header">
+                <h2>
+                  ✨ 스케줄표 자동 등록
+                </h2>
+
+                <button
+                  type="button"
+                  className="close-button"
+                  onClick={closeAutoImport}
+                  disabled={
+                    autoImportLoading ||
+                    autoImportSaving
+                  }
+                >
+                  ×
+                </button>
+              </div>
+
+              {autoImportStage === 'input' ? (
+                <>
+                  <p className="auto-import-intro">
+                    스케줄표 이미지를 올리거나
+                    카페 글 내용을 붙여넣으면 AI가
+                    일정을 읽어냅니다. 바로 저장하지
+                    않고 먼저 검토할 수 있어요.
+                  </p>
+
+                  <div className="auto-import-source-tabs">
+                    <button
+                      type="button"
+                      className={
+                        autoImportMode === 'image'
+                          ? 'auto-import-source-tab active'
+                          : 'auto-import-source-tab'
+                      }
+                      onClick={() =>
+                        setAutoImportMode('image')
+                      }
+                    >
+                      🖼 이미지
+                    </button>
+
+                    <button
+                      type="button"
+                      className={
+                        autoImportMode === 'text'
+                          ? 'auto-import-source-tab active'
+                          : 'auto-import-source-tab'
+                      }
+                      onClick={() =>
+                        setAutoImportMode('text')
+                      }
+                    >
+                      📝 카페 글
+                    </button>
+                  </div>
+
+                  <div className="auto-import-context">
+                    <label>
+                      기준 연도
+                      <input
+                        type="number"
+                        min="2020"
+                        max="2100"
+                        value={
+                          autoImportYear
+                        }
+                        onChange={(e) =>
+                          setAutoImportYear(
+                            e.target.value
+                          )
+                        }
+                      />
+                    </label>
+
+                    <label>
+                      기준 월
+                      <select
+                        value={
+                          autoImportMonth
+                        }
+                        onChange={(e) =>
+                          setAutoImportMonth(
+                            Number(
+                              e.target.value
+                            )
+                          )
+                        }
+                      >
+                        {Array.from(
+                          { length: 12 },
+                          (_, index) =>
+                            index + 1
+                        ).map((month) => (
+                          <option
+                            key={month}
+                            value={month}
+                          >
+                            {month}월
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+
+                  {autoImportMode ===
+                  'image' ? (
+                    <div className="auto-import-image-picker">
+                      <input
+                        ref={
+                          autoImportFileRef
+                        }
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp,image/gif"
+                        onChange={
+                          handleAutoImportImageChange
+                        }
+                        style={{
+                          display: 'none',
+                        }}
+                      />
+
+                      <button
+                        type="button"
+                        className="auto-import-secondary-button"
+                        onClick={() =>
+                          autoImportFileRef.current?.click()
+                        }
+                      >
+                        {autoImportImageName
+                          ? '이미지 다시 선택'
+                          : '스케줄표 이미지 선택'}
+                      </button>
+
+                      {autoImportImageName && (
+                        <span className="auto-import-image-name">
+                          {autoImportImageName}
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    <textarea
+                      className="auto-import-textarea"
+                      value={autoImportText}
+                      onChange={(e) =>
+                        setAutoImportText(
+                          e.target.value
+                        )
+                      }
+                      placeholder={`카페 글 내용을 그대로 붙여넣어주세요.
+
+예:
+9월 3일 천안 K-컬처박람회
+8:20PM
+천안 독립기념관 야외특설무대
+
+9월 5일 사운드플래닛페스티벌
+7:00PM
+인천 파라다이스시티`}
+                    />
+                  )}
+
+                  {autoImportError && (
+                    <p className="error-message">
+                      {autoImportError}
+                    </p>
+                  )}
+
+                  <div className="auto-import-footer">
+                    <span className="auto-import-confidence">
+                      원문에 없는 정보는 비워두도록
+                      설정되어 있어요.
+                    </span>
+
+                    <button
+                      type="button"
+                      className="auto-import-primary-button"
+                      onClick={
+                        handleAnalyzeAutoImport
+                      }
+                      disabled={
+                        autoImportLoading
+                      }
+                    >
+                      {autoImportLoading
+                        ? '분석 중...'
+                        : '✨ 일정 분석하기'}
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="auto-import-intro">
+                    찾은 일정은 저장 전에 직접
+                    수정할 수 있습니다. 중복으로
+                    보이는 일정은 자동으로 선택 해제했어요.
+                  </p>
+
+                  <div className="auto-import-review-toolbar">
+                    <span>
+                      {autoImportCandidates.length}
+                      개 일정 ·{' '}
+                      {
+                        autoImportCandidates.filter(
+                          (candidate) =>
+                            candidate.selected
+                        ).length
+                      }
+                      개 선택
+                    </span>
+
+                    <button
+                      type="button"
+                      className="auto-import-secondary-button"
+                      onClick={
+                        toggleAllAutoImportCandidates
+                      }
+                    >
+                      선택 전체 전환
+                    </button>
+                  </div>
+
+                  <div className="auto-import-candidate-list">
+                    {autoImportCandidates.map(
+                      (candidate, index) => (
+                        <div
+                          className={
+                            candidate.duplicate
+                              ? 'auto-import-candidate duplicate'
+                              : 'auto-import-candidate'
+                          }
+                          key={candidate.id}
+                        >
+                          <div className="auto-import-candidate-head">
+                            <input
+                              type="checkbox"
+                              checked={
+                                candidate.selected
+                              }
+                              onChange={() =>
+                                toggleAutoImportCandidate(
+                                  candidate.id
+                                )
+                              }
+                            />
+
+                            <span className="auto-import-candidate-number">
+                              #{index + 1}
+                            </span>
+
+                            {candidate.duplicate && (
+                              <span className="auto-import-duplicate-label">
+                                기존 일정과 중복 가능
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="auto-import-fields">
+                            <label className="auto-import-field full">
+                              <span>
+                                제목 *
+                              </span>
+                              <input
+                                value={
+                                  candidate.title
+                                }
+                                onChange={(e) =>
+                                  updateAutoImportCandidate(
+                                    candidate.id,
+                                    'title',
+                                    e.target.value
+                                  )
+                                }
+                              />
+                            </label>
+
+                            <label className="auto-import-field">
+                              <span>
+                                유형 *
+                              </span>
+                              <select
+                                value={
+                                  candidate.schedule_type
+                                }
+                                onChange={(e) =>
+                                  updateAutoImportCandidate(
+                                    candidate.id,
+                                    'schedule_type',
+                                    e.target.value
+                                  )
+                                }
+                              >
+                                {TYPE_OPTIONS.map(
+                                  (type) => (
+                                    <option
+                                      key={type}
+                                      value={type}
+                                    >
+                                      {type}
+                                    </option>
+                                  )
+                                )}
+                              </select>
+                            </label>
+
+                            <label className="auto-import-field">
+                              <span>
+                                시작 날짜 *
+                              </span>
+                              <input
+                                type="date"
+                                value={
+                                  candidate.event_date
+                                }
+                                onChange={(e) =>
+                                  updateAutoImportCandidate(
+                                    candidate.id,
+                                    'event_date',
+                                    e.target.value
+                                  )
+                                }
+                              />
+                            </label>
+
+                            <label className="auto-import-field">
+                              <span>
+                                시작 시간
+                              </span>
+                              <input
+                                type="time"
+                                value={
+                                  candidate.event_time
+                                }
+                                onChange={(e) =>
+                                  updateAutoImportCandidate(
+                                    candidate.id,
+                                    'event_time',
+                                    e.target.value
+                                  )
+                                }
+                              />
+                            </label>
+
+                            <label className="auto-import-field">
+                              <span>
+                                종료 날짜
+                              </span>
+                              <input
+                                type="date"
+                                min={
+                                  candidate.event_date ||
+                                  undefined
+                                }
+                                value={
+                                  candidate.end_date
+                                }
+                                onChange={(e) =>
+                                  updateAutoImportCandidate(
+                                    candidate.id,
+                                    'end_date',
+                                    e.target.value
+                                  )
+                                }
+                              />
+                            </label>
+
+                            <label className="auto-import-field">
+                              <span>
+                                종료 시간
+                              </span>
+                              <input
+                                type="time"
+                                value={
+                                  candidate.end_time
+                                }
+                                onChange={(e) =>
+                                  updateAutoImportCandidate(
+                                    candidate.id,
+                                    'end_time',
+                                    e.target.value
+                                  )
+                                }
+                              />
+                            </label>
+
+                            <label className="auto-import-field">
+                              <span>
+                                장소
+                              </span>
+                              <input
+                                value={
+                                  candidate.place
+                                }
+                                onChange={(e) =>
+                                  updateAutoImportCandidate(
+                                    candidate.id,
+                                    'place',
+                                    e.target.value
+                                  )
+                                }
+                              />
+                            </label>
+
+                            <label className="auto-import-field">
+                              <span>
+                                주소 / 지도
+                              </span>
+                              <input
+                                value={
+                                  candidate.address
+                                }
+                                onChange={(e) =>
+                                  updateAutoImportCandidate(
+                                    candidate.id,
+                                    'address',
+                                    e.target.value
+                                  )
+                                }
+                              />
+                            </label>
+
+                            <label className="auto-import-field full">
+                              <span>
+                                참고 사항
+                              </span>
+                              <textarea
+                                value={
+                                  candidate.details
+                                }
+                                onChange={(e) =>
+                                  updateAutoImportCandidate(
+                                    candidate.id,
+                                    'details',
+                                    e.target.value
+                                  )
+                                }
+                              />
+                            </label>
+
+                            <label className="auto-import-field">
+                              <span>
+                                참고 링크 주소
+                              </span>
+                              <input
+                                value={
+                                  candidate.related_link
+                                }
+                                onChange={(e) =>
+                                  updateAutoImportCandidate(
+                                    candidate.id,
+                                    'related_link',
+                                    e.target.value
+                                  )
+                                }
+                              />
+                            </label>
+
+                            <label className="auto-import-field">
+                              <span>
+                                링크 표시 문구
+                              </span>
+                              <input
+                                value={
+                                  candidate.related_link_text
+                                }
+                                onChange={(e) =>
+                                  updateAutoImportCandidate(
+                                    candidate.id,
+                                    'related_link_text',
+                                    e.target.value
+                                  )
+                                }
+                              />
+                            </label>
+                          </div>
+
+                          {(candidate.warning ||
+                            candidate.confidence) && (
+                            <p className="auto-import-warning">
+                              {candidate.warning ||
+                                'AI 분석 결과를 검토해주세요.'}
+                              {candidate.confidence && (
+                                <span className="auto-import-confidence">
+                                  {' '}
+                                  · 확신도:{' '}
+                                  {candidate.confidence}
+                                </span>
+                              )}
+                            </p>
+                          )}
+                        </div>
+                      )
+                    )}
+                  </div>
+
+                  {autoImportError && (
+                    <p className="error-message">
+                      {autoImportError}
+                    </p>
+                  )}
+
+                  <div className="auto-import-footer">
+                    <button
+                      type="button"
+                      className="auto-import-secondary-button"
+                      onClick={() =>
+                        setAutoImportStage('input')
+                      }
+                      disabled={
+                        autoImportSaving
+                      }
+                    >
+                      ← 다시 분석
+                    </button>
+
+                    <div className="auto-import-footer-actions">
+                      <button
+                        type="button"
+                        className="auto-import-secondary-button"
+                        onClick={closeAutoImport}
+                        disabled={
+                          autoImportSaving
+                        }
+                      >
+                        취소
+                      </button>
+
+                      <button
+                        type="button"
+                        className="auto-import-primary-button"
+                        onClick={
+                          handleSaveAutoImport
+                        }
+                        disabled={
+                          autoImportSaving
+                        }
+                      >
+                        {autoImportSaving
+                          ? '등록 중...'
+                          : '선택한 일정 등록'}
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
+      {showAuthPrompt && (
+        <div
+          className="overlay"
+          onClick={closeAuthPrompt}
+        >
+          <div
+            className="bottom-sheet auth-sheet"
+            onClick={(e) =>
+              e.stopPropagation()
+            }
+          >
+            <div className="sheet-handle" />
+            <div className="sheet-header">
+              <h2>
+                {isSignupMode
+                  ? '회원가입'
+                  : '로그인'}
+              </h2>
+              <button
+                type="button"
+                className="close-button"
+                onClick={closeAuthPrompt}
+              >
+                ×
+              </button>
+            </div>
+            <p className="auth-prompt-text">
+              일정은 로그인 없이 자유롭게 볼 수 있어요.<br />
+              개인 메모나 요청사항을 이용하려면 로그인해주세요.
+            </p>
+            <form
+              className="auth-form"
+              onSubmit={
+                isSignupMode
+                  ? handleSignup
+                  : handleLogin
+              }
+            >
+              <input
+                type="email"
+                placeholder="이메일"
+                value={email}
+                onChange={(e) =>
+                  setEmail(e.target.value)
+                }
+              />
+              <input
+                type="password"
+                placeholder="비밀번호"
+                value={password}
+                onChange={(e) =>
+                  setPassword(e.target.value)
+                }
+              />
+              <button type="submit">
+                {isSignupMode
+                  ? '회원가입'
+                  : '로그인'}
+              </button>
+              {loginError && (
+                <p className="error-message">
+                  {loginError}
+                </p>
+              )}
+              {signupMessage && (
+                <p className="success-message">
+                  {signupMessage}
+                </p>
+              )}
+              <button
+                type="button"
+                className="auth-switch-button"
+                onClick={() => {
+                  setIsSignupMode(
+                    (prev) => !prev
+                  )
+                  setLoginError('')
+                  setSignupMessage('')
+                }}
+              >
+                {isSignupMode
+                  ? '이미 계정이 있어요 → 로그인'
+                  : '처음 오셨나요? → 회원가입'}
+              </button>
+            </form>
           </div>
         </div>
       )}
@@ -3402,6 +5275,10 @@ function App() {
 
                     <option value="대학축제">
                       대학축제
+                    </option>
+
+                    <option value="콘서트/팬미팅">
+                      콘서트/팬미팅
                     </option>
                   </select>
                 </label>
