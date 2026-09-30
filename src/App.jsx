@@ -38,6 +38,17 @@ const EMPTY_REQUEST_FORM = {
   details: '',
 }
 
+function hexToRgba(hex, alpha = 0.16) {
+  const value = String(hex || '').replace('#', '')
+  if (value.length !== 6) return `rgba(255, 255, 255, ${alpha})`
+
+  const r = parseInt(value.slice(0, 2), 16)
+  const g = parseInt(value.slice(2, 4), 16)
+  const b = parseInt(value.slice(4, 6), 16)
+
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`
+}
+
 function getAddressHref(address) {
   const value = String(address || '').trim()
 
@@ -2417,14 +2428,31 @@ function App() {
 
         .event {
           min-width: 0;
+          display: flex;
+          align-items: center;
+          gap: 3px;
+        }
+
+        .event-label {
+          display: inline-flex;
+          align-items: center;
+          min-width: 0;
+          max-width: 100%;
         }
 
         .event-title {
-          display: block;
+          display: inline-block;
           min-width: 0;
+          max-width: 100%;
+          box-sizing: border-box;
           overflow: hidden;
+          padding: 2px 6px;
+          border-radius: 6px;
+          color: #f0f0f0;
+          line-height: 1.25;
           text-overflow: ellipsis;
           white-space: nowrap;
+          background: rgba(255, 255, 255, 0.06);
         }
 
         .event-attendance {
@@ -2434,7 +2462,7 @@ function App() {
           justify-content: center;
           width: 14px;
           height: 14px;
-          margin-left: 3px;
+          margin-left: 0;
           border-radius: 50%;
           font-size: 9px;
           font-weight: 800;
@@ -3226,6 +3254,35 @@ function App() {
 
           .timetable-event-title {
             font-size: 10px;
+          }
+
+          /* 모바일 월간 달력: 일정 태그가 칸 밖으로 잘리지 않도록 */
+          .calendar-day .events {
+            min-width: 0;
+            overflow: hidden;
+          }
+
+          .calendar-day .event {
+            max-width: 100%;
+            min-width: 0;
+          }
+
+          .calendar-day .event-label {
+            max-width: calc(100% - 17px);
+          }
+
+          .calendar-day .event-title {
+            max-width: 100%;
+            padding: 2px 5px;
+            border-radius: 5px;
+            font-size: 10px;
+            line-height: 1.25;
+          }
+
+          .calendar-day .event-attendance {
+            width: 13px;
+            height: 13px;
+            font-size: 8px;
           }
 
         }
@@ -4152,45 +4209,51 @@ function App() {
                                         schedule.id
                                       }
                                     >
-                                      <span
-                                        className="event-dot"
-                                        style={{
-                                          backgroundColor:
-                                            TYPE_COLORS[
-                                              schedule
-                                                .schedule_type
-                                            ] ||
-                                            '#999',
-                                        }}
-                                      />
-
-                                      <span className="event-title">
-                                        {
-                                          schedule.short_title || schedule.title
-                                        }
+                                      <span className="event-label">
+                                        <span
+                                          className="event-title"
+                                          style={{
+                                            backgroundColor: hexToRgba(
+                                              TYPE_COLORS[
+                                                schedule.schedule_type
+                                              ] || '#999',
+                                              0.16
+                                            ),
+                                            border: `1px solid ${hexToRgba(
+                                              TYPE_COLORS[
+                                                schedule.schedule_type
+                                              ] || '#999',
+                                              0.22
+                                            )}`,
+                                          }}
+                                        >
+                                          {
+                                            schedule.short_title || schedule.title
+                                          }
+                                        </span>
                                       </span>
-                                       {session?.user &&
-                                         attendanceStatus[
-                                           schedule.id
-                                         ] && (
-                                           <span
-                                             className={`event-attendance ${
-                                               attendanceStatus[
-                                                 schedule.id
-                                               ]
-                                             }`}
-                                           >
-                                             {attendanceStatus[
-                                               schedule.id
-                                             ] === 'attend'
-                                               ? '✓'
-                                               : attendanceStatus[
-                                                     schedule.id
-                                                   ] === 'maybe'
-                                                 ? '?'
-                                                 : '×'}
-                                           </span>
-                                         )}
+                                      {session?.user &&
+                                        attendanceStatus[
+                                          schedule.id
+                                        ] && (
+                                          <span
+                                            className={`event-attendance ${
+                                              attendanceStatus[
+                                                schedule.id
+                                              ]
+                                            }`}
+                                          >
+                                            {attendanceStatus[
+                                              schedule.id
+                                            ] === 'attend'
+                                              ? '✓'
+                                              : attendanceStatus[
+                                                    schedule.id
+                                                  ] === 'maybe'
+                                                ? '?'
+                                                : '×'}
+                                          </span>
+                                        )}
                                     </div>
                                   )
                                 )}
