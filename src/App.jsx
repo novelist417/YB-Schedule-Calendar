@@ -19,6 +19,7 @@ const TYPE_OPTIONS = [
 
 const EMPTY_FORM = {
   title: '',
+  short_title: '',
   schedule_type: '방송',
   event_date: '',
   event_time: '',
@@ -108,6 +109,7 @@ function App() {
   const [memoText, setMemoText] = useState({})
   const [editingMemoId, setEditingMemoId] = useState(null)
   const [memoSaving, setMemoSaving] = useState(null)
+  const [attendanceStatus, setAttendanceStatus] = useState({})
 
   // 요청사항
   const [showRequestForm, setShowRequestForm] = useState(false)
@@ -192,6 +194,7 @@ function App() {
           setProfile(null)
           setMemos({})
           setMemoText({})
+          setAttendanceStatus({})
           setEditingMemoId(null)
           setMyRequests([])
           setAllRequests([])
@@ -214,6 +217,20 @@ function App() {
       setMyRequests([])
     }
   }, [session?.user?.id])
+
+  useEffect(() => {
+    if (session?.user && schedules.length) {
+      loadMemos(
+        schedules.map(
+          (schedule) => schedule.id
+        )
+      )
+    } else if (!session?.user) {
+      setMemos({})
+      setMemoText({})
+      setAttendanceStatus({})
+    }
+  }, [session?.user?.id, schedules])
 
   useEffect(() => {
     if (isAdmin) {
@@ -487,6 +504,7 @@ function App() {
               schedule
             ),
           title: schedule.title || '',
+          short_title: schedule.short_title || '',
           schedule_type:
             schedule.schedule_type ||
             '지역축제/행사',
@@ -628,6 +646,7 @@ function App() {
     const payloads = selected.map(
       (candidate) => ({
         title: candidate.title.trim(),
+        short_title: candidate.short_title.trim() || null,
         schedule_type:
           candidate.schedule_type,
         event_date:
@@ -763,6 +782,7 @@ function App() {
     setSelectedSchedule(null)
     setMemos({})
     setMemoText({})
+    setAttendanceStatus({})
     setEditingMemoId(null)
     setMyRequests([])
     setAllRequests([])
@@ -782,6 +802,7 @@ function App() {
 
     setForm({
       title: schedule.title || '',
+      short_title: schedule.short_title || '',
       schedule_type:
         schedule.schedule_type || '방송',
       event_date: schedule.event_date || '',
@@ -873,6 +894,7 @@ function App() {
 
     const payload = {
       title: form.title.trim(),
+      short_title: form.short_title.trim() || null,
       schedule_type: form.schedule_type,
       event_date: form.event_date,
       event_time: form.event_time || null,
@@ -972,6 +994,7 @@ function App() {
     ) {
       setMemos({})
       setMemoText({})
+      setAttendanceStatus({})
       setEditingMemoId(null)
       return
     }
@@ -994,15 +1017,19 @@ function App() {
 
     const memoMap = {}
     const textMap = {}
+    const attendanceMap = {}
 
     ;(data || []).forEach((memo) => {
       memoMap[memo.schedule_id] = memo
       textMap[memo.schedule_id] =
-        memo.content
+        memo.content || ''
+      attendanceMap[memo.schedule_id] =
+        memo.attendance_status || null
     })
 
     setMemos(memoMap)
     setMemoText(textMap)
+    setAttendanceStatus(attendanceMap)
     setEditingMemoId(null)
   }
 
@@ -1014,29 +1041,40 @@ function App() {
     const content = (
       memoText[scheduleId] || ''
     ).trim()
+    const status =
+      attendanceStatus[scheduleId] || null
+    const existingMemo = memos[scheduleId]
 
-    if (!content) return
+    if (!content && !status && !existingMemo) {
+      return
+    }
 
     setMemoSaving(scheduleId)
-
-    const existingMemo =
-      memos[scheduleId]
 
     let result
 
     if (existingMemo) {
-      result = await supabase
-        .from('memos')
-        .update({
-          content,
-          updated_at:
-            new Date().toISOString(),
-        })
-        .eq('id', existingMemo.id)
-        .eq(
-          'user_id',
-          session.user.id
-        )
+      if (!content && !status) {
+        result = await supabase
+          .from('memos')
+          .delete()
+          .eq('id', existingMemo.id)
+          .eq('user_id', session.user.id)
+      } else {
+        result = await supabase
+          .from('memos')
+          .update({
+            content,
+            attendance_status: status,
+            updated_at:
+              new Date().toISOString(),
+          })
+          .eq('id', existingMemo.id)
+          .eq(
+            'user_id',
+            session.user.id
+          )
+      }
     } else {
       result = await supabase
         .from('memos')
@@ -1044,17 +1082,18 @@ function App() {
           user_id: session.user.id,
           schedule_id: scheduleId,
           content,
+          attendance_status: status,
         })
     }
 
     if (result.error) {
       console.error(
-        '메모 저장 실패:',
+        '내 메모 저장 실패:',
         result.error
       )
 
       alert(
-        `메모 저장에 실패했습니다.\n${result.error.message}`
+        `내 메모 저장에 실패했습니다.\n${result.error.message}`
       )
 
       setMemoSaving(null)
@@ -1081,7 +1120,7 @@ function App() {
     if (!memo) return
 
     const confirmed = window.confirm(
-      '이 메모를 삭제할까요?'
+      '이 일정의 참석 여부와 메모를 모두 삭제할까요?'
     )
 
     if (!confirmed) return
@@ -1097,12 +1136,12 @@ function App() {
 
     if (error) {
       console.error(
-        '메모 삭제 실패:',
+        '내 메모 삭제 실패:',
         error
       )
 
       alert(
-        `메모 삭제에 실패했습니다.\n${error.message}`
+        `내 메모 삭제에 실패했습니다.\n${error.message}`
       )
 
       return
@@ -2302,6 +2341,71 @@ function App() {
           object-fit: contain;
         }
 
+        .form-help-text {
+          display: block;
+          margin-top: 5px;
+          color: #888;
+          font-size: 11px;
+          line-height: 1.4;
+        }
+
+        .attendance-section {
+          margin-top: 16px;
+          padding: 14px 0 2px;
+          border-top: 1px solid #292020;
+        }
+
+        .attendance-label {
+          display: block;
+          margin-bottom: 9px;
+          color: #aaa;
+          font-size: 12px;
+          font-weight: 700;
+        }
+
+        .attendance-options {
+          display: flex;
+          gap: 8px;
+          flex-wrap: wrap;
+        }
+
+        .attendance-option {
+          min-height: 38px;
+          padding: 8px 13px;
+          border: 1px solid #383030;
+          border-radius: 999px;
+          background: #171313;
+          color: #b9b0b0;
+          font-size: 12px;
+          font-weight: 700;
+          cursor: pointer;
+          transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+        }
+
+        .attendance-option > span {
+          display: inline-flex;
+          width: 18px;
+          height: 18px;
+          align-items: center;
+          justify-content: center;
+          margin-right: 4px;
+          border-radius: 50%;
+          background: #292323;
+          color: #aaa;
+          font-size: 11px;
+        }
+
+        .attendance-option.active {
+          border-color: #d8a3ad;
+          background: #28191d;
+          color: #fff;
+        }
+
+        .attendance-option.active > span {
+          background: #d8a3ad;
+          color: #171313;
+        }
+
         .calendar-day .date-number {
           display: inline-flex !important;
           align-items: center !important;
@@ -2309,6 +2413,47 @@ function App() {
           box-sizing: border-box !important;
           padding: 0 !important;
           line-height: 1 !important;
+        }
+
+        .event {
+          min-width: 0;
+        }
+
+        .event-title {
+          display: block;
+          min-width: 0;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .event-attendance {
+          display: inline-flex;
+          flex: 0 0 auto;
+          align-items: center;
+          justify-content: center;
+          width: 14px;
+          height: 14px;
+          margin-left: 3px;
+          border-radius: 50%;
+          font-size: 9px;
+          font-weight: 800;
+          line-height: 1;
+        }
+
+        .event-attendance.attend {
+          background: rgba(255, 255, 255, 0.16);
+          color: #fff;
+        }
+
+        .event-attendance.maybe {
+          background: rgba(255, 255, 255, 0.1);
+          color: #ccc;
+        }
+
+        .event-attendance.decline {
+          background: rgba(255, 255, 255, 0.08);
+          color: #aaa;
         }
 
         .calendar-day.today .date-number {
@@ -4021,9 +4166,31 @@ function App() {
 
                                       <span className="event-title">
                                         {
-                                          schedule.title
+                                          schedule.short_title || schedule.title
                                         }
                                       </span>
+                                       {session?.user &&
+                                         attendanceStatus[
+                                           schedule.id
+                                         ] && (
+                                           <span
+                                             className={`event-attendance ${
+                                               attendanceStatus[
+                                                 schedule.id
+                                               ]
+                                             }`}
+                                           >
+                                             {attendanceStatus[
+                                               schedule.id
+                                             ] === 'attend'
+                                               ? '✓'
+                                               : attendanceStatus[
+                                                     schedule.id
+                                                   ] === 'maybe'
+                                                 ? '?'
+                                                 : '×'}
+                                           </span>
+                                         )}
                                     </div>
                                   )
                                 )}
@@ -4076,8 +4243,24 @@ function App() {
                               )}
                             </span>
                             <span className="untimed-name">
-                              {schedule.title}
+                              {schedule.short_title || schedule.title}
                             </span>
+                             {session?.user &&
+                               attendanceStatus[
+                                 schedule.id
+                               ] && (
+                                 <span className="event-attendance">
+                                   {attendanceStatus[
+                                     schedule.id
+                                   ] === 'attend'
+                                     ? '✓'
+                                     : attendanceStatus[
+                                           schedule.id
+                                         ] === 'maybe'
+                                       ? '?'
+                                       : '×'}
+                                 </span>
+                               )}
                           </button>
                         )
                       )}
@@ -4292,8 +4475,24 @@ function App() {
                                             : ''}
                                         </span>
                                         <span className="timetable-event-title">
-                                          {schedule.title}
+                                          {schedule.short_title || schedule.title}
                                         </span>
+                                           {session?.user &&
+                                             attendanceStatus[
+                                               schedule.id
+                                             ] && (
+                                               <span className="event-attendance">
+                                                 {attendanceStatus[
+                                                   schedule.id
+                                                 ] === 'attend'
+                                                   ? '✓'
+                                                   : attendanceStatus[
+                                                         schedule.id
+                                                       ] === 'maybe'
+                                                     ? '?'
+                                                     : '×'}
+                                               </span>
+                                             )}
                                       </button>
                                     )
                                   }
@@ -4386,7 +4585,7 @@ function App() {
                           <div className="agenda-main">
                             <strong>
                               {
-                                schedule.title
+                                schedule.short_title || schedule.title
                               }
                             </strong>
 
@@ -4525,7 +4724,7 @@ function App() {
 
                             <strong>
                               {
-                                schedule.title
+                                schedule.short_title || schedule.title
                               }
                             </strong>
 
@@ -4659,90 +4858,154 @@ function App() {
                   <div className="memo-section">
                     {session?.user ? (
                       <>
-                      <div className="memo-heading">
-                        <div>
-                          <strong>
-                            내 메모
-                          </strong>
+                        <div className="memo-heading">
+                          <div>
+                            <strong>
+                              내 메모
+                            </strong>
 
-                          <span>
-                            로그인한 계정에서만 볼 수 있어요.
-                          </span>
-                        </div>
-
-                        {memos[
-                          selectedSchedule.id
-                        ] && (
-                          <div className="memo-actions">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setEditingMemoId(
-                                  selectedSchedule.id
-                                )
-
-                                setMemoText(
-                                  (
-                                    prev
-                                  ) => ({
-                                    ...prev,
-                                    [selectedSchedule.id]:
-                                      memos[
-                                        selectedSchedule.id
-                                      ].content,
-                                  })
-                                )
-                              }}
-                            >
-                              ✏️
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() =>
-                                handleDeleteMemo(
-                                  selectedSchedule.id
-                                )
-                              }
-                            >
-                              🗑️
-                            </button>
+                            <span>
+                              로그인한 계정에서만 볼 수 있어요.
+                            </span>
                           </div>
-                        )}
-                      </div>
 
-                      {memos[selectedSchedule.id] && editingMemoId !== selectedSchedule.id ? (
-                        <div className="memo-view">
-                          {memos[selectedSchedule.id].content}
+                          {memos[
+                            selectedSchedule.id
+                          ] && (
+                            <div className="memo-actions">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEditingMemoId(
+                                    selectedSchedule.id
+                                  )
+
+                                  setMemoText(
+                                    (prev) => ({
+                                      ...prev,
+                                      [selectedSchedule.id]:
+                                        memos[
+                                          selectedSchedule.id
+                                        ].content || '',
+                                    })
+                                  )
+                                }}
+                              >
+                                ✏️
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleDeleteMemo(
+                                    selectedSchedule.id
+                                  )
+                                }
+                              >
+                                🗑️
+                              </button>
+                            </div>
+                          )}
                         </div>
-                      ) : (
+
+                        <div className="attendance-section">
+                          <span className="attendance-label">
+                            참석 여부
+                          </span>
+
+                          <div className="attendance-options">
+                            {[
+                              {
+                                value: 'attend',
+                                label: '참석',
+                                icon: '✓',
+                              },
+                              {
+                                value: 'maybe',
+                                label: '미정',
+                                icon: '?',
+                              },
+                              {
+                                value: 'decline',
+                                label: '불참',
+                                icon: '×',
+                              },
+                            ].map((option) => {
+                              const active =
+                                attendanceStatus[
+                                  selectedSchedule.id
+                                ] === option.value
+
+                              return (
+                                <button
+                                  key={option.value}
+                                  type="button"
+                                  className={`attendance-option ${
+                                    active
+                                      ? 'active'
+                                      : ''
+                                  }`}
+                                  onClick={() =>
+                                    setAttendanceStatus(
+                                      (prev) => ({
+                                        ...prev,
+                                        [selectedSchedule.id]:
+                                          active
+                                            ? null
+                                            : option.value,
+                                      })
+                                    )
+                                  }
+                                >
+                                  <span>
+                                    {option.icon}
+                                  </span>
+                                  {option.label}
+                                </button>
+                              )
+                            })}
+                          </div>
+                        </div>
+
                         <div className="memo-editor">
                           <textarea
-                            value={memoText[selectedSchedule.id] || ''}
+                            value={
+                              memoText[
+                                selectedSchedule.id
+                              ] || ''
+                            }
                             onChange={(e) =>
-                              setMemoText((prev) => ({
-                                ...prev,
-                                [selectedSchedule.id]: e.target.value,
-                              }))
+                              setMemoText(
+                                (prev) => ({
+                                  ...prev,
+                                  [selectedSchedule.id]:
+                                    e.target.value,
+                                })
+                              )
                             }
                             placeholder="이 일정에 대한 메모를 남겨보세요."
-                            rows="2"
+                            rows="3"
                           />
 
                           <button
                             type="button"
                             className="memo-save-button"
                             onClick={() =>
-                              handleSaveMemo(selectedSchedule.id)
+                              handleSaveMemo(
+                                selectedSchedule.id
+                              )
                             }
-                            disabled={memoSaving === selectedSchedule.id}
+                            disabled={
+                              memoSaving ===
+                              selectedSchedule.id
+                            }
                           >
-                            {memoSaving === selectedSchedule.id
+                            {memoSaving ===
+                            selectedSchedule.id
                               ? '저장 중...'
                               : '저장'}
                           </button>
                         </div>
-                      )}
                       </>
                     ) : (
                       <button
@@ -4750,7 +5013,7 @@ function App() {
                         className="login-required-button"
                         onClick={openAuthPrompt}
                       >
-                        로그인하면 이 일정에 개인 메모를 남길 수 있어요
+                        로그인하면 이 일정에 참석 여부와 개인 메모를 남길 수 있어요
                       </button>
                     )}
                   </div>
@@ -5073,6 +5336,25 @@ function App() {
                                     e.target.value
                                   )
                                 }
+                              />
+                            </label>
+
+                            <label className="auto-import-field full">
+                              <span>
+                                달력용 짧은 제목
+                              </span>
+                              <input
+                                value={
+                                  candidate.short_title || ''
+                                }
+                                onChange={(e) =>
+                                  updateAutoImportCandidate(
+                                    candidate.id,
+                                    'short_title',
+                                    e.target.value
+                                  )
+                                }
+                                placeholder="예: 중앙대 축제 (비워두면 정식 제목 사용)"
                               />
                             </label>
 
@@ -5486,6 +5768,21 @@ function App() {
                     }
                     placeholder="예: 중앙대학교 축제"
                   />
+                </label>
+
+                <label>
+                  달력용 짧은 제목
+                  <input
+                    name="short_title"
+                    value={form.short_title}
+                    onChange={
+                      handleFormChange
+                    }
+                    placeholder="예: 중앙대 축제"
+                  />
+                  <span className="form-help-text">
+                    비워두면 정식 제목을 달력에 표시합니다.
+                  </span>
                 </label>
 
                 <label>
