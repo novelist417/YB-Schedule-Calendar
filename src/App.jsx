@@ -2430,63 +2430,67 @@ function App() {
           position: relative;
           width: 100%;
           min-width: 0;
-          display: block;
+          height: 18px;
+          min-height: 18px;
+          display: flex;
+          align-items: stretch;
+          overflow: hidden;
         }
 
         .event-label {
           display: block;
+          flex: 1 1 auto;
           width: 100%;
           min-width: 0;
-          max-width: 100%;
+          max-width: none;
         }
 
         .event-title {
-          display: block;
+          display: flex;
+          align-items: center;
           width: 100%;
           min-width: 0;
-          max-width: 100%;
+          max-width: none;
+          height: 18px;
           box-sizing: border-box;
           overflow: hidden;
-          padding: 3px 7px;
-          padding-right: 28px;
-          border-radius: 6px;
+          padding: 0 6px;
+          border-radius: 0;
+          border: 0 !important;
           color: #f5f5f5;
-          line-height: 1.25;
+          line-height: 18px;
           text-overflow: ellipsis;
           white-space: nowrap;
-          background: rgba(255, 255, 255, 0.06);
         }
 
         .event-attendance {
           position: absolute;
-          top: 50%;
-          right: 6px;
-          transform: translateY(-50%);
+          top: 0;
+          right: 4px;
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          width: 15px;
-          height: 15px;
-          border-radius: 50%;
+          min-width: 12px;
+          height: 18px;
+          padding: 0 2px;
+          border-radius: 0;
+          background: transparent !important;
           font-size: 9px;
           font-weight: 800;
-          line-height: 1;
+          line-height: 18px;
           z-index: 1;
         }
 
         .event-attendance.attend {
-          background: rgba(255, 255, 255, 0.16);
-          color: #fff;
+          color: #ffffff;
         }
 
         .event-attendance.maybe {
-          background: rgba(255, 255, 255, 0.1);
-          color: #ccc;
+          color: #eeeeee;
         }
 
         .event-attendance.decline {
-          background: rgba(255, 255, 255, 0.08);
-          color: #aaa;
+          color: #bdbdbd;
         }
 
         .calendar-day.today .date-number {
@@ -3261,39 +3265,61 @@ function App() {
             font-size: 10px;
           }
 
-          /* 모바일 월간 달력: 일정 태그가 칸 밖으로 잘리지 않도록 */
+          /* 모바일 월간 달력: 일정은 날짜 칸 전체 폭을 사용하고 여러 개가 겹치지 않게 */
+          .calendar-day {
+            overflow: hidden;
+          }
+
           .calendar-day .events {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            width: calc(100% + 20px);
+            margin-left: -10px;
+            margin-right: -10px;
             min-width: 0;
             overflow: hidden;
           }
 
           .calendar-day .event {
+            flex: 0 0 17px;
             width: 100%;
-            max-width: 100%;
+            max-width: none;
             min-width: 0;
+            height: 17px;
+            min-height: 17px;
+            overflow: hidden;
           }
 
           .calendar-day .event-label {
+            flex: 1 1 auto;
             width: 100%;
-            max-width: 100%;
+            max-width: none;
+            min-width: 0;
           }
 
           .calendar-day .event-title {
             display: block;
             width: 100%;
-            max-width: 100%;
-            padding: 3px 6px;
-            padding-right: 25px;
-            border-radius: 5px;
+            max-width: none;
+            height: 17px;
+            padding: 0 7px;
+            border-radius: 0;
             font-size: 11px;
-            line-height: 1.25;
+            line-height: 17px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
           }
 
           .calendar-day .event-attendance {
-            right: 5px;
-            width: 13px;
-            height: 13px;
-            font-size: 8px;
+            top: 0;
+            right: 4px;
+            min-width: 12px;
+            height: 17px;
+            padding: 0 2px;
+            font-size: 9px;
+            line-height: 17px;
           }
 
         }
@@ -4228,14 +4254,8 @@ function App() {
                                               TYPE_COLORS[
                                                 schedule.schedule_type
                                               ] || '#999',
-                                              0.27
+                                              0.42
                                             ),
-                                            border: `1px solid ${hexToRgba(
-                                              TYPE_COLORS[
-                                                schedule.schedule_type
-                                              ] || '#999',
-                                              0.38
-                                            )}`,
                                           }}
                                         >
                                           {
@@ -4262,7 +4282,7 @@ function App() {
                                                     schedule.id
                                                   ] === 'maybe'
                                                 ? '?'
-                                                : '×'}
+                                                : '–'}
                                           </span>
                                         )}
                                     </div>
