@@ -2427,28 +2427,30 @@ function App() {
         }
 
         .event {
+          position: relative;
+          width: 100%;
           min-width: 0;
-          display: flex;
-          align-items: center;
-          gap: 3px;
+          display: block;
         }
 
         .event-label {
-          display: inline-flex;
-          align-items: center;
+          display: block;
+          width: 100%;
           min-width: 0;
           max-width: 100%;
         }
 
         .event-title {
-          display: inline-block;
+          display: block;
+          width: 100%;
           min-width: 0;
           max-width: 100%;
           box-sizing: border-box;
           overflow: hidden;
-          padding: 2px 6px;
+          padding: 3px 7px;
+          padding-right: 28px;
           border-radius: 6px;
-          color: #f0f0f0;
+          color: #f5f5f5;
           line-height: 1.25;
           text-overflow: ellipsis;
           white-space: nowrap;
@@ -2456,17 +2458,20 @@ function App() {
         }
 
         .event-attendance {
+          position: absolute;
+          top: 50%;
+          right: 6px;
+          transform: translateY(-50%);
           display: inline-flex;
-          flex: 0 0 auto;
           align-items: center;
           justify-content: center;
-          width: 14px;
-          height: 14px;
-          margin-left: 0;
+          width: 15px;
+          height: 15px;
           border-radius: 50%;
           font-size: 9px;
           font-weight: 800;
           line-height: 1;
+          z-index: 1;
         }
 
         .event-attendance.attend {
@@ -3263,23 +3268,29 @@ function App() {
           }
 
           .calendar-day .event {
+            width: 100%;
             max-width: 100%;
             min-width: 0;
           }
 
           .calendar-day .event-label {
-            max-width: calc(100% - 17px);
+            width: 100%;
+            max-width: 100%;
           }
 
           .calendar-day .event-title {
+            display: block;
+            width: 100%;
             max-width: 100%;
-            padding: 2px 5px;
+            padding: 3px 6px;
+            padding-right: 25px;
             border-radius: 5px;
-            font-size: 10px;
+            font-size: 11px;
             line-height: 1.25;
           }
 
           .calendar-day .event-attendance {
+            right: 5px;
             width: 13px;
             height: 13px;
             font-size: 8px;
@@ -4217,13 +4228,13 @@ function App() {
                                               TYPE_COLORS[
                                                 schedule.schedule_type
                                               ] || '#999',
-                                              0.16
+                                              0.27
                                             ),
                                             border: `1px solid ${hexToRgba(
                                               TYPE_COLORS[
                                                 schedule.schedule_type
                                               ] || '#999',
-                                              0.22
+                                              0.38
                                             )}`,
                                           }}
                                         >
