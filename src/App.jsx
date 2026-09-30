@@ -1111,10 +1111,38 @@ function App() {
       return
     }
 
+    // 일정별 상태를 각각 유지합니다. 다른 일정의 참석 여부를
+    // 다시 읽는 과정에서 덮어쓰지 않도록 현재 상태를 먼저 반영합니다.
+    if (!content && !status) {
+      setMemos((prev) => {
+        const next = { ...prev }
+        delete next[scheduleId]
+        return next
+      })
+      setMemoText((prev) => {
+        const next = { ...prev }
+        delete next[scheduleId]
+        return next
+      })
+      setAttendanceStatus((prev) => {
+        const next = { ...prev }
+        delete next[scheduleId]
+        return next
+      })
+    } else {
+      setMemoText((prev) => ({
+        ...prev,
+        [scheduleId]: content,
+      }))
+      setAttendanceStatus((prev) => ({
+        ...prev,
+        [scheduleId]: status,
+      }))
+    }
+
+    // DB 값도 전체 일정 기준으로 동기화하여 1번/2번 일정의 상태를 모두 보존합니다.
     await loadMemos(
-      selectedSchedules.map(
-        (schedule) => schedule.id
-      )
+      schedules.map((schedule) => schedule.id)
     )
 
     setEditingMemoId(null)
@@ -2465,32 +2493,44 @@ function App() {
 
         .event-attendance {
           position: absolute;
-          top: 0;
+          top: 1px;
           right: 4px;
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          min-width: 12px;
-          height: 18px;
-          padding: 0 2px;
-          border-radius: 0;
-          background: transparent !important;
-          font-size: 9px;
-          font-weight: 800;
-          line-height: 18px;
-          z-index: 1;
+          width: 16px;
+          min-width: 16px;
+          height: 16px;
+          box-sizing: border-box;
+          border: 1.5px solid rgba(255, 255, 255, 0.9);
+          border-radius: 50%;
+          background: #171313 !important;
+          color: #fff;
+          font-size: 11px;
+          font-weight: 900;
+          line-height: 1;
+          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
+          box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+          z-index: 3;
         }
 
         .event-attendance.attend {
-          color: #ffffff;
+          background: #198754 !important;
+          color: #fff;
         }
 
         .event-attendance.maybe {
-          color: #eeeeee;
+          background: #b77900 !important;
+          color: #fff;
         }
 
         .event-attendance.decline {
-          color: #bdbdbd;
+          background: #b23b3b !important;
+          color: #fff;
+        }
+
+        .event-title {
+          padding-right: 28px;
         }
 
         .calendar-day.today .date-number {
@@ -3315,11 +3355,14 @@ function App() {
           .calendar-day .event-attendance {
             top: 0;
             right: 4px;
-            min-width: 12px;
-            height: 17px;
-            padding: 0 2px;
-            font-size: 9px;
-            line-height: 17px;
+            width: 15px;
+            min-width: 15px;
+            height: 15px;
+            font-size: 10px;
+          }
+
+          .calendar-day .event-title {
+            padding-right: 26px;
           }
 
         }
@@ -5002,6 +5045,7 @@ function App() {
                           )}
                         </div>
 
+                        {selectedSchedule.schedule_type !== '기념일' && (
                         <div className="attendance-section">
                           <span className="attendance-label">
                             참석 여부
@@ -5060,6 +5104,7 @@ function App() {
                             })}
                           </div>
                         </div>
+                        )}
 
                         <div className="memo-editor">
                           <textarea
@@ -5107,7 +5152,9 @@ function App() {
                         className="login-required-button"
                         onClick={openAuthPrompt}
                       >
-                        로그인하면 이 일정에 참석 여부와 개인 메모를 남길 수 있어요
+                        {selectedSchedule.schedule_type === '기념일'
+                          ? '로그인하면 이 일정에 개인 메모를 남길 수 있어요'
+                          : '로그인하면 이 일정에 참석 여부와 개인 메모를 남길 수 있어요'}
                       </button>
                     )}
                   </div>
