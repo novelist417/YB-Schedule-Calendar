@@ -1844,8 +1844,6 @@ function App() {
     )
   }
 
-  const today = new Date()
-
   const currentYear =
     calendarCursor.getFullYear()
 
@@ -3079,12 +3077,20 @@ function App() {
             </span>
           )}
 
-          {session && (
+          {session ? (
             <button
               className="header-button"
               onClick={handleLogout}
             >
               로그아웃
+            </button>
+          ) : (
+            <button
+              className="header-button"
+              type="button"
+              onClick={openAuthPrompt}
+            >
+              로그인
             </button>
           )}
         </div>
