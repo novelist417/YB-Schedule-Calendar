@@ -92,6 +92,9 @@ function App() {
   const [searchText, setSearchText] = useState('')
   const [filterType, setFilterType] = useState('all')
 
+  const [scheduleListFilter, setScheduleListFilter] =
+    useState('upcoming')
+
   const [showForm, setShowForm] = useState(false)
   const [editingSchedule, setEditingSchedule] = useState(null)
   const [form, setForm] = useState(EMPTY_FORM)
@@ -140,6 +143,37 @@ function App() {
     useState('pending')
 
   const isAdmin = profile?.role === 'admin'
+
+  const today = new Date()
+  const todayDateString = `${today.getFullYear()}-${String(
+    today.getMonth() + 1
+  ).padStart(2, '0')}-${String(
+    today.getDate()
+  ).padStart(2, '0')}`
+
+  function isPastSchedule(schedule) {
+    const scheduleEndDate =
+      schedule.end_date || schedule.event_date
+
+    return Boolean(
+      scheduleEndDate &&
+        scheduleEndDate < todayDateString
+    )
+  }
+
+  const scheduleListSchedules = useMemo(() => {
+    if (scheduleListFilter === 'past') {
+      return schedules.filter(isPastSchedule)
+    }
+
+    if (scheduleListFilter === 'all') {
+      return schedules
+    }
+
+    return schedules.filter(
+      (schedule) => !isPastSchedule(schedule)
+    )
+  }, [schedules, scheduleListFilter, todayDateString])
 
   useEffect(() => {
     checkSession()
@@ -408,11 +442,11 @@ function App() {
           'import-schedules',
           {
             body: {
-              imageDataUrl:
+              image_data_url:
                 autoImportMode === 'image'
                   ? autoImportImageData
                   : '',
-              text:
+              source_text:
                 autoImportMode === 'text'
                   ? autoImportText.trim()
                   : '',
@@ -473,7 +507,7 @@ function App() {
             schedule.confidence || 'medium',
           warning:
             schedule.warning || '',
-          text:
+          source_text:
             schedule.source_text || '',
         })
       )
@@ -2554,6 +2588,49 @@ function App() {
           flex-wrap: wrap;
         }
 
+        .schedule-list-toolbar {
+          display: flex;
+          align-items: center;
+          gap: 9px;
+          margin: 0 0 14px;
+          padding: 0 2px;
+        }
+
+        .schedule-list-filter-label {
+          color: #8f8f8f;
+          font-size: 12px;
+          font-weight: 700;
+        }
+
+        .schedule-list-filter {
+          min-height: 36px;
+          padding: 0 32px 0 11px;
+          border: 1px solid #353535;
+          border-radius: 9px;
+          background: #1b1b1b;
+          color: #f1f1f1;
+          font-size: 12px;
+          font-weight: 700;
+          cursor: pointer;
+        }
+
+        .schedule-list-count {
+          color: #777;
+          font-size: 11px;
+        }
+
+        @media (max-width: 700px) {
+          .schedule-list-toolbar {
+            gap: 7px;
+            margin-bottom: 11px;
+          }
+
+          .schedule-list-filter {
+            min-height: 34px;
+            max-width: 170px;
+          }
+        }
+
         .auto-import-button {
           border: 1px solid #5b4650;
           border-radius: 10px;
@@ -3052,8 +3129,37 @@ function App() {
               </div>
             </div>
 
+            <div className="schedule-list-toolbar">
+              <div className="schedule-list-filter-label">
+                일정 보기
+              </div>
+
+              <select
+                className="schedule-list-filter"
+                value={scheduleListFilter}
+                onChange={(e) =>
+                  setScheduleListFilter(e.target.value)
+                }
+                aria-label="일정목록 표시 범위"
+              >
+                <option value="upcoming">
+                  지나간 일정 숨김
+                </option>
+                <option value="past">
+                  지난 일정만 보기
+                </option>
+                <option value="all">
+                  전체 일정 보기
+                </option>
+              </select>
+
+              <span className="schedule-list-count">
+                {scheduleListSchedules.length}개
+              </span>
+            </div>
+
             <div className="schedule-list">
-              {schedules.length ===
+              {scheduleListSchedules.length ===
               0 ? (
                 <div className="empty-list">
                   {scheduleLoadError ? (
@@ -3064,11 +3170,15 @@ function App() {
                       {scheduleLoadError}
                     </>
                   ) : (
-                    '등록된 일정이 없습니다.'
+                    scheduleListFilter === 'upcoming'
+                      ? '지나간 일정을 제외하면 표시할 일정이 없습니다.'
+                      : scheduleListFilter === 'past'
+                        ? '지난 일정이 없습니다.'
+                        : '등록된 일정이 없습니다.'
                   )}
                 </div>
               ) : (
-                schedules.map(
+                scheduleListSchedules.map(
                   (schedule) => (
                     <div
                       className="schedule-list-item"
@@ -3601,14 +3711,24 @@ function App() {
               </div>
 
               {isAdmin && (
-                <button
-                  className="add-schedule-button"
-                  onClick={
-                    openNewScheduleForm
-                  }
-                >
-                  + 일정 추가
-                </button>
+                <>
+                  <button
+                    className="auto-import-button"
+                    type="button"
+                    onClick={openAutoImport}
+                  >
+                    ✨ 스케줄표로 일정 추가
+                  </button>
+
+                  <button
+                    className="add-schedule-button"
+                    onClick={
+                      openNewScheduleForm
+                    }
+                  >
+                    + 일정 추가
+                  </button>
+                </>
               )}
             </div>
 
