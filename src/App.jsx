@@ -332,13 +332,13 @@ function App() {
   // 스케줄표 자동 등록
   // =========================
 
-  function openAutoImport() {
+  function openAutoImport(mode = 'image') {
     const cursorYear = calendarCursor.getFullYear()
     const cursorMonth = calendarCursor.getMonth() + 1
 
     setAutoImportYear(cursorYear)
     setAutoImportMonth(cursorMonth)
-    setAutoImportMode('image')
+    setAutoImportMode(mode)
     setAutoImportText('')
     setAutoImportImageData('')
     setAutoImportImageName('')
@@ -350,29 +350,28 @@ function App() {
     setShowAutoImport(true)
   }
 
-  function openCafeImport() {
-    const cursorYear = calendarCursor.getFullYear()
-    const cursorMonth = calendarCursor.getMonth() + 1
-    setAutoImportYear(cursorYear)
-    setAutoImportMonth(cursorMonth)
-    setAutoImportMode('text')
-    setAutoImportText('')
-    setAutoImportImageData('')
-    setAutoImportImageName('')
-    setAutoImportCandidates([])
-    setAutoImportStage('input')
-    setAutoImportError('')
-    setAutoImportLoading(false)
-    setAutoImportSaving(false)
-    setShowAutoImport(true)
+  function openAddMenu() {
+    setShowAddMenu(true)
+  }
+
+  function closeAddMenu() {
     setShowAddMenu(false)
   }
 
-  function handleAddMenu(action) {
+  function handleAddMenuChoice(choice) {
     setShowAddMenu(false)
-    if (action === 'schedule') openNewScheduleForm()
-    if (action === 'sheet') openAutoImport()
-    if (action === 'cafe') openCafeImport()
+
+    if (choice === 'schedule') {
+      openNewScheduleForm()
+      return
+    }
+
+    if (choice === 'cafe') {
+      openAutoImport('text')
+      return
+    }
+
+    openAutoImport('image')
   }
 
   function closeAutoImport() {
@@ -828,7 +827,6 @@ function App() {
   }
 
   function openNewScheduleForm() {
-    setShowAddMenu(false)
     setEditingSchedule(null)
     setForm(EMPTY_FORM)
     setFormError('')
@@ -1026,30 +1024,23 @@ function App() {
   // =========================
 
   async function loadMemos(scheduleIds) {
-    if (
-      !session?.user ||
-      !scheduleIds?.length
-    ) {
-      setMemos({})
-      setMemoText({})
-      setAttendanceStatus({})
-      setEditingMemoId(null)
+    if (!session?.user || !scheduleIds?.length) {
       return
     }
 
-    const { data, error } =
-      await supabase
-        .from('memos')
-        .select('*')
-        .eq('user_id', session.user.id)
-        .in('schedule_id', scheduleIds)
+    const ids = [...new Set(scheduleIds)]
+
+    const { data, error } = await supabase
+      .from('memos')
+      .select('*')
+      .eq('user_id', session.user.id)
+      .in('schedule_id', ids)
 
     if (error) {
       console.error(
         '메모 조회 실패:',
         error
       )
-
       return
     }
 
@@ -1059,15 +1050,33 @@ function App() {
 
     ;(data || []).forEach((memo) => {
       memoMap[memo.schedule_id] = memo
-      textMap[memo.schedule_id] =
-        memo.content || ''
+      textMap[memo.schedule_id] = memo.content || ''
       attendanceMap[memo.schedule_id] =
         memo.attendance_status || null
     })
 
-    setMemos((prev) => ({ ...prev, ...memoMap }))
-    setMemoText((prev) => ({ ...prev, ...textMap }))
-    setAttendanceStatus((prev) => ({ ...prev, ...attendanceMap }))
+    // 조회한 일정만 갱신하고, 다른 일정의 상태는 그대로 유지한다.
+    setMemos((prev) => {
+      const next = { ...prev }
+      ids.forEach((id) => delete next[id])
+      Object.assign(next, memoMap)
+      return next
+    })
+
+    setMemoText((prev) => {
+      const next = { ...prev }
+      ids.forEach((id) => delete next[id])
+      Object.assign(next, textMap)
+      return next
+    })
+
+    setAttendanceStatus((prev) => {
+      const next = { ...prev }
+      ids.forEach((id) => delete next[id])
+      Object.assign(next, attendanceMap)
+      return next
+    })
+
     setEditingMemoId(null)
   }
 
@@ -1138,38 +1147,10 @@ function App() {
       return
     }
 
-    // 일정별 상태를 각각 유지합니다. 다른 일정의 참석 여부를
-    // 다시 읽는 과정에서 덮어쓰지 않도록 현재 상태를 먼저 반영합니다.
-    if (!content && !status) {
-      setMemos((prev) => {
-        const next = { ...prev }
-        delete next[scheduleId]
-        return next
-      })
-      setMemoText((prev) => {
-        const next = { ...prev }
-        delete next[scheduleId]
-        return next
-      })
-      setAttendanceStatus((prev) => {
-        const next = { ...prev }
-        delete next[scheduleId]
-        return next
-      })
-    } else {
-      setMemoText((prev) => ({
-        ...prev,
-        [scheduleId]: content,
-      }))
-      setAttendanceStatus((prev) => ({
-        ...prev,
-        [scheduleId]: status,
-      }))
-    }
-
-    // DB 값도 전체 일정 기준으로 동기화하여 1번/2번 일정의 상태를 모두 보존합니다.
     await loadMemos(
-      schedules.map((schedule) => schedule.id)
+      selectedSchedules.map(
+        (schedule) => schedule.id
+      )
     )
 
     setEditingMemoId(null)
@@ -2520,44 +2501,32 @@ function App() {
 
         .event-attendance {
           position: absolute;
-          top: 1px;
+          top: 0;
           right: 4px;
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          width: 16px;
-          min-width: 16px;
-          height: 16px;
-          box-sizing: border-box;
-          border: 1.5px solid rgba(255, 255, 255, 0.9);
-          border-radius: 50%;
-          background: #171313 !important;
-          color: #fff;
-          font-size: 11px;
-          font-weight: 900;
-          line-height: 1;
-          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
-          box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
-          z-index: 3;
+          min-width: 12px;
+          height: 18px;
+          padding: 0 2px;
+          border-radius: 0;
+          background: transparent !important;
+          font-size: 9px;
+          font-weight: 800;
+          line-height: 18px;
+          z-index: 1;
         }
 
         .event-attendance.attend {
-          background: #198754 !important;
-          color: #fff;
+          color: #ffffff;
         }
 
         .event-attendance.maybe {
-          background: #b77900 !important;
-          color: #fff;
+          color: #eeeeee;
         }
 
         .event-attendance.decline {
-          background: #b23b3b !important;
-          color: #fff;
-        }
-
-        .event-title {
-          padding-right: 28px;
+          color: #bdbdbd;
         }
 
         .calendar-day.today .date-number {
@@ -3333,25 +3302,6 @@ function App() {
           }
 
           /* 모바일 월간 달력: 일정은 날짜 칸 전체 폭을 사용하고 여러 개가 겹치지 않게 */
-          .add-menu-wrap { position: relative; }
-          .add-schedule-menu {
-            position: absolute;
-            top: calc(100% + 6px);
-            right: 0;
-            z-index: 50;
-            min-width: 150px;
-            padding: 4px;
-            background: #fff;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            box-shadow: 0 8px 20px rgba(0,0,0,.12);
-          }
-          .add-schedule-menu button {
-            display: block; width: 100%; padding: 9px 10px; border: 0;
-            background: transparent; text-align: left; cursor: pointer; white-space: nowrap;
-          }
-          .add-schedule-menu button:hover { background: #f5f5f5; }
-
           .calendar-day {
             overflow: hidden;
           }
@@ -3368,17 +3318,13 @@ function App() {
           }
 
           .calendar-day .event {
-            position: relative;
-            display: flex;
-            align-items: center;
-            flex: 0 0 20px;
+            flex: 0 0 17px;
             width: 100%;
             max-width: none;
             min-width: 0;
-            height: 20px;
-            min-height: 20px;
+            height: 17px;
+            min-height: 17px;
             overflow: hidden;
-            cursor: pointer;
           }
 
           .calendar-day .event-label {
@@ -3392,36 +3338,307 @@ function App() {
             display: block;
             width: 100%;
             max-width: none;
-            height: 20px;
+            height: 17px;
             padding: 0 7px;
             border-radius: 0;
             font-size: 11px;
-            line-height: 20px;
+            line-height: 17px;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
           }
 
           .calendar-day .event-attendance {
-            position: absolute;
-            top: 2px;
-            right: 3px;
-            z-index: 2;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 16px;
-            min-width: 16px;
-            height: 16px;
-            padding: 0;
-            font-size: 10px;
-            line-height: 16px;
-            font-weight: 700;
-            box-sizing: border-box;
+            top: 0;
+            right: 4px;
+            min-width: 12px;
+            height: 17px;
+            padding: 0 2px;
+            font-size: 9px;
+            line-height: 17px;
           }
 
         }
-      `}</style>
+      `}
+        /* ===== 2026-10 calendar/mobile fixes ===== */
+
+        .add-menu-wrap {
+          position: relative;
+          flex: 0 0 auto;
+        }
+
+        .add-menu {
+          position: absolute;
+          top: calc(100% + 6px);
+          right: 0;
+          z-index: 30;
+          display: grid;
+          min-width: 150px;
+          padding: 5px;
+          border: 1px solid #3b3b3b;
+          background: #1b1b1b;
+          box-shadow: 0 10px 24px rgba(0, 0, 0, 0.28);
+        }
+
+        .add-menu button {
+          width: 100%;
+          min-height: 38px;
+          padding: 8px 11px;
+          border: 0;
+          background: transparent;
+          color: #f3f3f3;
+          text-align: left;
+          font: inherit;
+          font-size: 12px;
+          cursor: pointer;
+        }
+
+        .add-menu button:hover,
+        .add-menu button:focus-visible {
+          background: #2a2a2a;
+          outline: none;
+        }
+
+        .calendar-day .event {
+          position: relative !important;
+          display: flex !important;
+          align-items: stretch !important;
+          width: 100% !important;
+          min-width: 0 !important;
+          height: 20px !important;
+          min-height: 20px !important;
+          flex: 0 0 20px !important;
+          overflow: hidden !important;
+          cursor: pointer;
+        }
+
+        .calendar-day .event-label {
+          display: block !important;
+          width: 100% !important;
+          min-width: 0 !important;
+          max-width: none !important;
+          flex: 1 1 100% !important;
+          overflow: hidden !important;
+        }
+
+        .calendar-day .event-title {
+          display: block !important;
+          width: 100% !important;
+          min-width: 0 !important;
+          max-width: none !important;
+          height: 20px !important;
+          box-sizing: border-box !important;
+          padding: 0 5px !important;
+          font-size: 11px !important;
+          line-height: 20px !important;
+          white-space: nowrap !important;
+          overflow: hidden !important;
+          text-overflow: ellipsis !important;
+          border-radius: 0 !important;
+        }
+
+        .calendar-day .event-attendance {
+          position: absolute !important;
+          top: 0 !important;
+          right: 1px !important;
+          z-index: 3 !important;
+          width: 14px !important;
+          min-width: 14px !important;
+          height: 20px !important;
+          padding: 0 !important;
+          background: rgba(20, 20, 20, 0.72) !important;
+          font-size: 10px !important;
+          line-height: 20px !important;
+          text-align: center !important;
+          border-radius: 0 !important;
+          pointer-events: none !important;
+        }
+
+        .timetable-event {
+          min-width: 0 !important;
+          overflow: hidden !important;
+          box-sizing: border-box !important;
+        }
+
+        .timetable-event-time {
+          display: block !important;
+          overflow: hidden !important;
+          white-space: nowrap !important;
+          text-overflow: ellipsis !important;
+        }
+
+        .timetable-event-title {
+          display: block !important;
+          width: 100% !important;
+          min-width: 0 !important;
+          max-width: 100% !important;
+          overflow: hidden !important;
+          white-space: nowrap !important;
+          text-overflow: ellipsis !important;
+          -webkit-line-clamp: unset !important;
+          font-size: 11px !important;
+          line-height: 1.25 !important;
+        }
+
+        .timetable-event .event-attendance {
+          position: absolute !important;
+          right: 3px !important;
+          top: 3px !important;
+          min-width: 14px !important;
+          width: 14px !important;
+          height: 14px !important;
+          line-height: 14px !important;
+          background: rgba(20, 20, 20, 0.82) !important;
+          pointer-events: none !important;
+        }
+
+        .calendar-header {
+          position: relative !important;
+        }
+
+        .calendar-title-row {
+          display: flex !important;
+          align-items: center !important;
+          justify-content: space-between !important;
+          gap: 8px !important;
+          min-width: 0 !important;
+        }
+
+        .calendar-navigation {
+          display: flex !important;
+          align-items: center !important;
+          min-width: 0 !important;
+          flex: 1 1 auto !important;
+          gap: 4px !important;
+        }
+
+        .calendar-navigation h1 {
+          min-width: 0 !important;
+          flex: 1 1 auto !important;
+          margin: 0 !important;
+          overflow: hidden !important;
+          white-space: nowrap !important;
+          text-overflow: ellipsis !important;
+          text-align: center !important;
+          font-size: 18px !important;
+        }
+
+        .calendar-view-select {
+          flex: 0 0 auto !important;
+          width: auto !important;
+          min-width: 72px !important;
+        }
+
+        .calendar-header > .add-menu-wrap {
+          margin-top: 8px;
+          display: flex;
+          justify-content: flex-end;
+        }
+
+        .calendar-header > .add-menu-wrap .add-schedule-button {
+          width: auto;
+          min-width: 92px;
+        }
+
+        .schedule-detail .detail-location {
+          display: grid;
+          gap: 3px;
+          min-width: 0;
+        }
+
+        .schedule-detail .detail-location-place {
+          font-weight: 700;
+        }
+
+        .schedule-detail .detail-location-address {
+          color: #aaa;
+          font-size: 12px;
+          line-height: 1.45;
+          word-break: break-word;
+        }
+
+        @media (max-width: 640px) {
+          .calendar-title-row {
+            align-items: center !important;
+            gap: 5px !important;
+          }
+
+          .calendar-navigation {
+            gap: 2px !important;
+          }
+
+          .calendar-navigation h1 {
+            font-size: 16px !important;
+          }
+
+          .calendar-view-select {
+            min-width: 68px !important;
+            min-height: 34px !important;
+          }
+
+          .calendar-header > .add-menu-wrap {
+            width: 100%;
+            margin-top: 7px;
+          }
+
+          .calendar-header > .add-menu-wrap .add-schedule-button {
+            width: 100%;
+          }
+
+          .add-menu-wrap {
+            width: 100%;
+          }
+
+          .add-menu {
+            left: 0;
+            right: 0;
+            min-width: 0;
+            width: 100%;
+          }
+
+          .calendar-day .events {
+            width: calc(100% + 18px) !important;
+            margin-left: -9px !important;
+            margin-right: -9px !important;
+            gap: 2px !important;
+          }
+
+          .calendar-day .event {
+            height: 20px !important;
+            min-height: 20px !important;
+            flex-basis: 20px !important;
+          }
+
+          .calendar-day .event-title {
+            padding-left: 4px !important;
+            padding-right: 4px !important;
+          }
+
+          .calendar-day .event-attendance {
+            right: 1px !important;
+          }
+
+          .timetable-events-layer {
+            grid-template-columns: 58px repeat(7, minmax(92px, 1fr)) !important;
+            min-width: 702px !important;
+          }
+
+          .timetable-event {
+            left: 1px !important;
+            right: 1px !important;
+            padding: 3px 4px 3px 5px !important;
+          }
+
+          .timetable-event-title {
+            font-size: 11px !important;
+          }
+
+          .admin-list-actions {
+            width: 100%;
+          }
+        }
+
+      </style>
       <header className="header">
         <div
           className="logo"
@@ -3554,22 +3771,38 @@ function App() {
                 </p>
               </div>
 
-              <div className="admin-list-actions add-menu-wrap">
-                  <button
-                    className="add-schedule-button"
-                    type="button"
-                    onClick={() => setShowAddMenu((prev) => !prev)}
-                  >
-                    + 일정 추가
-                  </button>
-                  {showAddMenu && (
-                    <div className="add-schedule-menu">
-                      <button type="button" onClick={() => handleAddMenu('sheet')}>스케줄표</button>
-                      <button type="button" onClick={() => handleAddMenu('cafe')}>팬카페 글 삽입</button>
-                      <button type="button" onClick={() => handleAddMenu('schedule')}>직접 입력</button>
-                    </div>
-                  )}
-                </div>
+              <div className="add-menu-wrap">
+                <button
+                  type="button"
+                  className="add-schedule-button"
+                  onClick={openAddMenu}
+                >
+                  + 일정 추가
+                </button>
+
+                {showAddMenu && (
+                  <div className="add-menu" role="menu">
+                    <button
+                      type="button"
+                      onClick={() => handleAddMenuChoice('schedule')}
+                    >
+                      직접 입력
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleAddMenuChoice('image')}
+                    >
+                      스케줄표
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleAddMenuChoice('cafe')}
+                    >
+                      팬카페 글 삽입
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="schedule-list-toolbar">
@@ -4154,19 +4387,35 @@ function App() {
               </div>
 
               {isAdmin && (
-                <div className="admin-list-actions add-menu-wrap">
+                <div className="add-menu-wrap">
                   <button
-                    className="add-schedule-button"
                     type="button"
-                    onClick={() => setShowAddMenu((prev) => !prev)}
+                    className="add-schedule-button"
+                    onClick={openAddMenu}
                   >
                     + 일정 추가
                   </button>
+
                   {showAddMenu && (
-                    <div className="add-schedule-menu">
-                      <button type="button" onClick={() => handleAddMenu('sheet')}>스케줄표</button>
-                      <button type="button" onClick={() => handleAddMenu('cafe')}>팬카페 글 삽입</button>
-                      <button type="button" onClick={() => handleAddMenu('schedule')}>직접 입력</button>
+                    <div className="add-menu" role="menu">
+                      <button
+                        type="button"
+                        onClick={() => handleAddMenuChoice('schedule')}
+                      >
+                        직접 입력
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleAddMenuChoice('image')}
+                      >
+                        스케줄표
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleAddMenuChoice('cafe')}
+                      >
+                        팬카페 글 삽입
+                      </button>
                     </div>
                   )}
                 </div>
@@ -4339,6 +4588,33 @@ function App() {
                                       key={
                                         schedule.id
                                       }
+                                      role="button"
+                                      tabIndex={0}
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        handleEventClick(
+                                          schedule,
+                                          `${currentYear}-${String(
+                                            currentMonth + 1
+                                          ).padStart(2, '0')}-${String(
+                                            day
+                                          ).padStart(2, '0')}`
+                                        )
+                                      }}
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Enter' || e.key === ' ') {
+                                          e.preventDefault()
+                                          e.stopPropagation()
+                                          handleEventClick(
+                                            schedule,
+                                            `${currentYear}-${String(
+                                              currentMonth + 1
+                                            ).padStart(2, '0')}-${String(
+                                              day
+                                            ).padStart(2, '0')}`
+                                          )
+                                        }
+                                      }}
                                     >
                                       <span className="event-label">
                                         <span
@@ -4433,6 +4709,22 @@ function App() {
                             <span className="untimed-name">
                               {schedule.short_title || schedule.title}
                             </span>
+                             {session?.user &&
+                               attendanceStatus[
+                                 schedule.id
+                               ] && (
+                                 <span className="event-attendance">
+                                   {attendanceStatus[
+                                     schedule.id
+                                   ] === 'attend'
+                                     ? '✓'
+                                     : attendanceStatus[
+                                           schedule.id
+                                         ] === 'maybe'
+                                       ? '?'
+                                       : '×'}
+                                 </span>
+                               )}
                           </button>
                         )
                       )}
@@ -4756,9 +5048,7 @@ function App() {
 
                           <div className="agenda-main">
                             <strong>
-                              {
-                                schedule.title
-                              }
+                              {schedule.title}
                             </strong>
 
                             <span>
@@ -4954,22 +5244,35 @@ function App() {
                     </span>
                   </div>
 
-                  {(selectedSchedule.place || selectedSchedule.address) && (
+                  {(selectedSchedule.place ||
+                    selectedSchedule.address) && (
                     <div className="detail-row">
-                      <strong>장소</strong>
-                      <span>
+                      <strong>
+                        장소
+                      </strong>
+
+                      <a
+                        className="place-link detail-location"
+                        href={getAddressHref(
+                          selectedSchedule.address ||
+                            selectedSchedule.place
+                        )}
+                        target="_blank"
+                        rel="noreferrer"
+                        title="지도로 보기"
+                      >
                         {selectedSchedule.place && (
-                          <a className="place-link" href={getAddressHref(selectedSchedule.address || selectedSchedule.place)} target="_blank" rel="noreferrer">
+                          <span className="detail-location-place">
                             {selectedSchedule.place}
-                          </a>
+                          </span>
                         )}
-                        {selectedSchedule.place && selectedSchedule.address ? ' · ' : ''}
+
                         {selectedSchedule.address && (
-                          <a className="address-link" href={getAddressHref(selectedSchedule.address)} target="_blank" rel="noreferrer">
+                          <span className="detail-location-address">
                             {selectedSchedule.address}
-                          </a>
+                          </span>
                         )}
-                      </span>
+                      </a>
                     </div>
                   )}
 
@@ -5060,7 +5363,6 @@ function App() {
                           )}
                         </div>
 
-                        {selectedSchedule.schedule_type !== '기념일' && (
                         <div className="attendance-section">
                           <span className="attendance-label">
                             참석 여부
@@ -5119,7 +5421,6 @@ function App() {
                             })}
                           </div>
                         </div>
-                        )}
 
                         <div className="memo-editor">
                           <textarea
@@ -5167,9 +5468,7 @@ function App() {
                         className="login-required-button"
                         onClick={openAuthPrompt}
                       >
-                        {selectedSchedule.schedule_type === '기념일'
-                          ? '로그인하면 이 일정에 개인 메모를 남길 수 있어요'
-                          : '로그인하면 이 일정에 참석 여부와 개인 메모를 남길 수 있어요'}
+                        로그인하면 이 일정에 참석 여부와 개인 메모를 남길 수 있어요
                       </button>
                     )}
                   </div>
