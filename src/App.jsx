@@ -2490,7 +2490,7 @@ function App() {
         }
 
         .calendar-day .event-title {
-          padding: 2px 6px 2px 3px !important;
+          padding: 2px 20px 2px 3px !important;
           border-radius: 5px !important;
           background: color-mix(in srgb, var(--event-color, #777) 24%, #202020) !important;
           border-left: 3px solid var(--event-color, #777) !important;
@@ -2516,24 +2516,27 @@ function App() {
 
         .attendance-icon {
           position: absolute;
-          top: 1px;
-          right: 2px;
+          top: 50%;
+          right: 3px;
           z-index: 5;
-          width: 17px;
-          height: 17px;
+          width: 13px;
+          height: 13px;
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          border-radius: 5px;
-          background: #111;
+          transform: translateY(-50%);
+          border-radius: 50%;
           color: #fff;
-          border: 1px solid rgba(255,255,255,.55);
-          font-size: 11px;
+          font-size: 9px;
           font-weight: 900;
           line-height: 1;
-          box-shadow: 0 1px 4px rgba(0,0,0,.45);
+          box-shadow: 0 1px 3px rgba(0,0,0,.35);
           pointer-events: none;
         }
+
+        .attendance-icon.attendance-참석 { background: #28a86b; }
+        .attendance-icon.attendance-미정 { background: #d69a27; }
+        .attendance-icon.attendance-불참 { background: #d24b5a; }
 
         .attendance-section {
           margin: 12px 0 16px;
@@ -4373,7 +4376,7 @@ function App() {
                                       </span>
                                       {attendanceStatuses[schedule.id] && (
                                         <span
-                                          className="attendance-icon"
+                                          className={'attendance-icon attendance-' + attendanceStatuses[schedule.id]}
                                           aria-label={'참석 여부: ' + attendanceStatuses[schedule.id]}
                                           title={'참석 여부: ' + attendanceStatuses[schedule.id]}
                                         >
