@@ -5050,34 +5050,6 @@ function App() {
                     </div>
                   )}
 
-                  <div className="attendance-section">
-                    <div className="attendance-heading">
-                      <strong>참석 여부</strong>
-                      <span>이 일정에 대한 내 참석 상태</span>
-                    </div>
-                    <div className="attendance-buttons">
-                      {['참석', '미정', '불참'].map((status) => (
-                        <button
-                          type="button"
-                          key={status}
-                          className={attendanceStatuses[selectedSchedule.id] === status ? 'attendance-button active' : 'attendance-button'}
-                          onClick={() => handleAttendanceChange(selectedSchedule.id, status)}
-                        >
-                          {getAttendanceIcon(status)} {status}
-                        </button>
-                      ))}
-                      {attendanceStatuses[selectedSchedule.id] && (
-                        <button
-                          type="button"
-                          className="attendance-reset-button"
-                          onClick={() => handleAttendanceChange(selectedSchedule.id, null)}
-                        >
-                          선택 해제
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
                   <div className="memo-section">
                     {session?.user ? (
                       <>
@@ -5175,6 +5147,34 @@ function App() {
                         로그인하면 이 일정에 개인 메모를 남길 수 있어요
                       </button>
                     )}
+                  </div>
+
+                  <div className="attendance-section">
+                    <div className="attendance-heading">
+                      <strong>참석 여부</strong>
+                      <span>이 일정에 대한 내 참석 상태</span>
+                    </div>
+                    <div className="attendance-buttons">
+                      {['참석', '미정', '불참'].map((status) => (
+                        <button
+                          type="button"
+                          key={status}
+                          className={attendanceStatuses[selectedSchedule.id] === status ? 'attendance-button active' : 'attendance-button'}
+                          onClick={() => handleAttendanceChange(selectedSchedule.id, status)}
+                        >
+                          {getAttendanceIcon(status)} {status}
+                        </button>
+                      ))}
+                      {attendanceStatuses[selectedSchedule.id] && (
+                        <button
+                          type="button"
+                          className="attendance-reset-button"
+                          onClick={() => handleAttendanceChange(selectedSchedule.id, null)}
+                        >
+                          선택 해제
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   {isAdmin && (
