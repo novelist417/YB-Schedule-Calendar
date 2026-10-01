@@ -2524,7 +2524,7 @@ function App() {
 
         .attendance-icon {
           position: absolute !important;
-          left: 0 !important;
+          left: -4px !important;
           top: 50% !important;
           transform: translateY(-50%) !important;
           z-index: 3 !important;
@@ -2984,14 +2984,14 @@ function App() {
           }
 
           .calendar-day .event-title-row:has(.attendance-icon) .event-title {
-            padding-left: 2px !important;
+            padding-left: 0 !important;
           }
 
           .calendar-day .attendance-icon {
             width: 8px !important;
             height: 8px !important;
             font-size: 5px !important;
-            left: 0 !important;
+            left: -4px !important;
           }
 
           .schedule-list-toolbar {
