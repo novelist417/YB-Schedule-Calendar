@@ -2361,10 +2361,10 @@ function App() {
         .calendar-day .event {
           display: flex !important;
           align-items: center !important;
-          width: 100% !important;
+          width: calc(100% + 6px) !important;
           min-width: 0 !important;
           gap: 0 !important;
-          margin: 0 0 2px !important;
+          margin: 0 0 2px -6px !important;
           padding: 0 !important;
           overflow: hidden !important;
         }
@@ -2375,8 +2375,10 @@ function App() {
 
         .calendar-day .event-title {
           display: block !important;
+          flex: 1 1 auto !important;
           width: 100% !important;
           min-width: 0 !important;
+          max-width: none !important;
           margin-top: 0 !important;
           margin-bottom: 2px !important;
           font-size: 14px !important;
@@ -2384,7 +2386,7 @@ function App() {
           color: #fff !important;
           white-space: nowrap !important;
           overflow: hidden !important;
-          text-overflow: ellipsis !important;
+          text-overflow: clip !important;
         }
 
         .calendar-day .event-title {
