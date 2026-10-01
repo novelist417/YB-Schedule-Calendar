@@ -2466,7 +2466,16 @@ function App() {
           gap: 0 !important;
           margin: 0 !important;
           padding: 0 !important;
-          overflow: hidden !important;
+          overflow: visible !important;
+        }
+
+        .calendar-day .event-title-row {
+          display: flex !important;
+          align-items: center !important;
+          flex: 1 1 auto !important;
+          width: 100% !important;
+          min-width: 0 !important;
+          gap: 3px !important;
         }
 
         .calendar-day .event-dot {
@@ -2490,7 +2499,7 @@ function App() {
         }
 
         .calendar-day .event-title {
-          padding: 2px 20px 2px 3px !important;
+          padding: 2px 3px 2px 3px !important;
           border-radius: 5px !important;
           background: color-mix(in srgb, var(--event-color, #777) 24%, #202020) !important;
           border-left: 3px solid var(--event-color, #777) !important;
@@ -2515,19 +2524,16 @@ function App() {
         }
 
         .attendance-icon {
-          position: absolute;
-          top: 50%;
-          right: 3px;
-          z-index: 5;
-          width: 13px;
-          height: 13px;
+          position: static;
+          flex: 0 0 12px;
+          width: 12px;
+          height: 12px;
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          transform: translateY(-50%);
           border-radius: 50%;
           color: #fff;
-          font-size: 9px;
+          font-size: 8px;
           font-weight: 900;
           line-height: 1;
           box-shadow: 0 1px 3px rgba(0,0,0,.35);
@@ -4363,26 +4369,28 @@ function App() {
                                         }}
                                       />
 
-                                      <span
-                                        className="event-title"
-                                        style={{
-                                          '--event-color':
-                                            TYPE_COLORS[
-                                              schedule.schedule_type
-                                            ] || '#999',
-                                        }}
-                                      >
-                                        {schedule.calendar_title || schedule.title}
-                                      </span>
-                                      {attendanceStatuses[schedule.id] && (
+                                      <div className="event-title-row">
+                                        {attendanceStatuses[schedule.id] && (
+                                          <span
+                                            className={'attendance-icon attendance-' + attendanceStatuses[schedule.id]}
+                                            aria-label={'참석 여부: ' + attendanceStatuses[schedule.id]}
+                                            title={'참석 여부: ' + attendanceStatuses[schedule.id]}
+                                          >
+                                            {getAttendanceIcon(attendanceStatuses[schedule.id])}
+                                          </span>
+                                        )}
                                         <span
-                                          className={'attendance-icon attendance-' + attendanceStatuses[schedule.id]}
-                                          aria-label={'참석 여부: ' + attendanceStatuses[schedule.id]}
-                                          title={'참석 여부: ' + attendanceStatuses[schedule.id]}
+                                          className="event-title"
+                                          style={{
+                                            '--event-color':
+                                              TYPE_COLORS[
+                                                schedule.schedule_type
+                                              ] || '#999',
+                                          }}
                                         >
-                                          {getAttendanceIcon(attendanceStatuses[schedule.id])}
+                                          {schedule.calendar_title || schedule.title}
                                         </span>
-                                      )}
+                                      </div>
                                     </div>
                                   )
                                 )}
