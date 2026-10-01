@@ -5016,25 +5016,6 @@ function App() {
                     </div>
                   )}
 
-                  {selectedSchedule.address && (
-                    <div className="detail-row">
-                      <strong>
-                        주소
-                      </strong>
-
-                      <a
-                        className="address-link"
-                        href={getAddressHref(
-                          selectedSchedule.address
-                        )}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        {selectedSchedule.address}
-                      </a>
-                    </div>
-                  )}
-
                   {selectedSchedule.details && (
                     <div className="detail-section">
                       <strong>
