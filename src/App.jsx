@@ -2470,12 +2470,11 @@ function App() {
         }
 
         .calendar-day .event-title-row {
-          display: flex !important;
-          align-items: center !important;
+          position: relative !important;
+          display: block !important;
           flex: 1 1 auto !important;
           width: 100% !important;
           min-width: 0 !important;
-          gap: 3px !important;
         }
 
         .calendar-day .event-dot {
@@ -2524,20 +2523,24 @@ function App() {
         }
 
         .attendance-icon {
-          position: static;
-          flex: 0 0 12px;
-          width: 12px;
-          height: 12px;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          border-radius: 50%;
-          color: #fff;
-          font-size: 8px;
-          font-weight: 900;
-          line-height: 1;
-          box-shadow: 0 1px 3px rgba(0,0,0,.35);
-          pointer-events: none;
+          position: absolute !important;
+          left: 0 !important;
+          top: 50% !important;
+          transform: translateY(-50%) !important;
+          z-index: 3 !important;
+          width: 9px !important;
+          height: 9px !important;
+          display: inline-flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          border-radius: 50% !important;
+          color: #fff !important;
+          font-size: 6px !important;
+          font-weight: 900 !important;
+          line-height: 1 !important;
+          box-shadow: 0 1px 2px rgba(0,0,0,.4) !important;
+          border: 1px solid rgba(255,255,255,.5) !important;
+          pointer-events: none !important;
         }
 
         .attendance-icon.attendance-참석 { background: #28a86b; }
@@ -2976,9 +2979,19 @@ function App() {
           .calendar-day .event-title {
             font-size: 11px !important;
             line-height: 1.05 !important;
-            padding-top: 2px !important;
-            padding-bottom: 2px !important;
+            padding: 2px 2px 2px 2px !important;
             text-overflow: clip !important;
+          }
+
+          .calendar-day .event-title-row:has(.attendance-icon) .event-title {
+            padding-left: 2px !important;
+          }
+
+          .calendar-day .attendance-icon {
+            width: 8px !important;
+            height: 8px !important;
+            font-size: 5px !important;
+            left: 0 !important;
           }
 
           .schedule-list-toolbar {
