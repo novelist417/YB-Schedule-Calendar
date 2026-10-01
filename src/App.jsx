@@ -3359,7 +3359,6 @@ function App() {
           }
 
         }
-      `}
         /* ===== 2026-10 calendar/mobile fixes ===== */
 
         .add-menu-wrap {
@@ -3638,6 +3637,8 @@ function App() {
           }
         }
 
+
+      `}
       </style>
       <header className="header">
         <div
