@@ -2516,20 +2516,22 @@ function App() {
 
         .attendance-icon {
           position: absolute;
-          top: 0;
+          top: 1px;
           right: 2px;
-          z-index: 3;
-          width: 14px;
-          height: 14px;
+          z-index: 5;
+          width: 17px;
+          height: 17px;
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          border-radius: 50%;
-          background: rgba(20,20,20,.88);
+          border-radius: 5px;
+          background: #111;
           color: #fff;
-          font-size: 9px;
+          border: 1px solid rgba(255,255,255,.55);
+          font-size: 11px;
           font-weight: 900;
           line-height: 1;
+          box-shadow: 0 1px 4px rgba(0,0,0,.45);
           pointer-events: none;
         }
 
@@ -4925,33 +4927,7 @@ function App() {
                     {selectedSchedule.title}
                   </h3>
 
-                  <div className="attendance-section">
-                    <div className="attendance-heading">
-                      <strong>참석 여부</strong>
-                      <span>이 일정에 대한 내 참석 상태</span>
-                    </div>
-                    <div className="attendance-buttons">
-                      {['참석', '미정', '불참'].map((status) => (
-                        <button
-                          type="button"
-                          key={status}
-                          className={attendanceStatuses[selectedSchedule.id] === status ? 'attendance-button active' : 'attendance-button'}
-                          onClick={() => handleAttendanceChange(selectedSchedule.id, status)}
-                        >
-                          {getAttendanceIcon(status)} {status}
-                        </button>
-                      ))}
-                      {attendanceStatuses[selectedSchedule.id] && (
-                        <button
-                          type="button"
-                          className="attendance-reset-button"
-                          onClick={() => handleAttendanceChange(selectedSchedule.id, null)}
-                        >
-                          선택 해제
-                        </button>
-                      )}
-                    </div>
-                  </div>
+                  
 
                   <div className="detail-row">
                     <strong>
@@ -5037,6 +5013,34 @@ function App() {
                       </a>
                     </div>
                   )}
+
+                  <div className="attendance-section">
+                    <div className="attendance-heading">
+                      <strong>참석 여부</strong>
+                      <span>이 일정에 대한 내 참석 상태</span>
+                    </div>
+                    <div className="attendance-buttons">
+                      {['참석', '미정', '불참'].map((status) => (
+                        <button
+                          type="button"
+                          key={status}
+                          className={attendanceStatuses[selectedSchedule.id] === status ? 'attendance-button active' : 'attendance-button'}
+                          onClick={() => handleAttendanceChange(selectedSchedule.id, status)}
+                        >
+                          {getAttendanceIcon(status)} {status}
+                        </button>
+                      ))}
+                      {attendanceStatuses[selectedSchedule.id] && (
+                        <button
+                          type="button"
+                          className="attendance-reset-button"
+                          onClick={() => handleAttendanceChange(selectedSchedule.id, null)}
+                        >
+                          선택 해제
+                        </button>
+                      )}
+                    </div>
+                  </div>
 
                   <div className="memo-section">
                     {session?.user ? (
