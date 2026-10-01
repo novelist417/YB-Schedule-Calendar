@@ -200,8 +200,13 @@ function App() {
       (_event, newSession) => {
         setSession(newSession)
 
+        // Supabase 인증 콜백 안에서 즉시 DB 조회를 실행하면
+        // 인증 상태 변경과 DB 요청이 서로 잠기는 경우가 있어
+        // 프로필 조회는 다음 tick으로 넘긴다.
         if (newSession?.user) {
-          loadProfile(newSession.user.id)
+          setTimeout(() => {
+            loadProfile(newSession.user.id)
+          }, 0)
         } else {
           setProfile(null)
           setMemos({})
@@ -244,10 +249,10 @@ function App() {
     }
   }, [session?.user?.id, schedules])
 
+  // 관리자 요청사항은 '요청사항' 페이지에 들어갈 때만 조회한다.
+  // 로그인 직후 전체 요청사항을 조회하면서 달력 렌더링이 막히지 않도록 한다.
   useEffect(() => {
-    if (isAdmin) {
-      loadAllRequests()
-    } else {
+    if (!isAdmin) {
       setAllRequests([])
     }
   }, [isAdmin])
@@ -3531,7 +3536,6 @@ function App() {
           .add-menu {
             min-width: 150px;
           }
-        }
 
       `}</style>
       <header className="header">
