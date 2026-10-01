@@ -2320,6 +2320,35 @@ function App() {
           left: 10px !important;
         }
 
+        .calendar-day .event {
+          display: flex !important;
+          align-items: center !important;
+          width: 100% !important;
+          min-width: 0 !important;
+          gap: 0 !important;
+          margin: 0 0 2px !important;
+          padding: 0 !important;
+          overflow: hidden !important;
+        }
+
+        .calendar-day .event-dot {
+          display: none !important;
+        }
+
+        .calendar-day .event-title {
+          display: block !important;
+          width: 100% !important;
+          min-width: 0 !important;
+          margin-top: 0 !important;
+          margin-bottom: 2px !important;
+          font-size: 14px !important;
+          line-height: 1.3 !important;
+          color: #fff !important;
+          white-space: nowrap !important;
+          overflow: hidden !important;
+          text-overflow: ellipsis !important;
+        }
+
         .address-link,
         .place-link {
           color: #fff !important;
@@ -2716,6 +2745,10 @@ function App() {
         }
 
         @media (max-width: 700px) {
+          .calendar-day .event-title {
+            font-size: 11px !important;
+          }
+
           .schedule-list-toolbar {
             gap: 7px;
             margin-bottom: 11px;
