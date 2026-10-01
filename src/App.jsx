@@ -2471,6 +2471,10 @@ function App() {
 
         .calendar-day .event-title-row {
           position: relative !important;
+          background: color-mix(in srgb, var(--event-color, #777) 24%, #202020) !important;
+          border-radius: 5px !important;
+          border-left: 3px solid var(--event-color, #777) !important;
+          box-sizing: border-box !important;
           display: block !important;
           flex: 1 1 auto !important;
           width: 100% !important;
@@ -2498,10 +2502,10 @@ function App() {
         }
 
         .calendar-day .event-title {
-          padding: 2px 3px 2px 3px !important;
-          border-radius: 5px !important;
-          background: color-mix(in srgb, var(--event-color, #777) 24%, #202020) !important;
-          border-left: 3px solid var(--event-color, #777) !important;
+          padding: 2px 3px 2px 10px !important;
+          border-radius: 0 !important;
+          background: transparent !important;
+          border-left: 0 !important;
           box-sizing: border-box !important;
         }
 
@@ -2524,7 +2528,7 @@ function App() {
 
         .attendance-icon {
           position: absolute !important;
-          left: -4px !important;
+          left: 0px !important;
           top: 50% !important;
           transform: translateY(-50%) !important;
           z-index: 3 !important;
@@ -2984,14 +2988,14 @@ function App() {
           }
 
           .calendar-day .event-title-row:has(.attendance-icon) .event-title {
-            padding-left: 0 !important;
+            padding-left: 10px !important;
           }
 
           .calendar-day .attendance-icon {
             width: 8px !important;
             height: 8px !important;
             font-size: 5px !important;
-            left: -4px !important;
+            left: 3px !important;
           }
 
           .schedule-list-toolbar {
