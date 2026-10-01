@@ -19,6 +19,7 @@ const TYPE_OPTIONS = [
 
 const EMPTY_FORM = {
   title: '',
+  calendar_title: '',
   schedule_type: '방송',
   event_date: '',
   event_time: '',
@@ -105,6 +106,7 @@ function App() {
 
   // 개인 메모
   const [memos, setMemos] = useState({})
+  const [attendanceStatuses, setAttendanceStatuses] = useState({})
   const [memoText, setMemoText] = useState({})
   const [editingMemoId, setEditingMemoId] = useState(null)
   const [memoSaving, setMemoSaving] = useState(null)
@@ -189,11 +191,13 @@ function App() {
 
         if (newSession?.user) {
           loadProfile(newSession.user.id)
+          loadAttendanceStatuses(newSession.user.id)
         } else {
           setProfile(null)
           setMemos({})
           setMemoText({})
           setEditingMemoId(null)
+          setAttendanceStatuses({})
           setMyRequests([])
           setAllRequests([])
           setEditingRequest(null)
@@ -261,6 +265,7 @@ function App() {
 
     if (currentSession?.user) {
       await loadProfile(currentSession.user.id)
+      await loadAttendanceStatuses(currentSession.user.id)
     }
   }
 
@@ -298,6 +303,90 @@ function App() {
     }
 
     setSchedules(data || [])
+  }
+
+  async function loadAttendanceStatuses(userId = session?.user?.id) {
+    if (!userId) {
+      setAttendanceStatuses({})
+      return
+    }
+
+    const { data, error } = await supabase
+      .from('schedule_attendance')
+      .select('schedule_id, status')
+      .eq('user_id', userId)
+
+    if (error) {
+      console.warn('참석 여부 조회 실패:', error)
+      setAttendanceStatuses({})
+      return
+    }
+
+    const map = {}
+    ;(data || []).forEach((row) => {
+      map[row.schedule_id] = row.status
+    })
+    setAttendanceStatuses(map)
+  }
+
+  async function handleAttendanceChange(scheduleId, status) {
+    if (!session?.user) {
+      openAuthPrompt()
+      return
+    }
+
+    const userId = session.user.id
+
+    if (!status) {
+      const { error } = await supabase
+        .from('schedule_attendance')
+        .delete()
+        .eq('schedule_id', scheduleId)
+        .eq('user_id', userId)
+
+      if (error) {
+        console.error('참석 여부 삭제 실패:', error)
+        alert(`참석 여부 저장에 실패했습니다.\n${error.message}`)
+        return
+      }
+
+      setAttendanceStatuses((prev) => {
+        const next = { ...prev }
+        delete next[scheduleId]
+        return next
+      })
+      return
+    }
+
+    const { error } = await supabase
+      .from('schedule_attendance')
+      .upsert(
+        {
+          schedule_id: scheduleId,
+          user_id: userId,
+          status,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'schedule_id,user_id' }
+      )
+
+    if (error) {
+      console.error('참석 여부 저장 실패:', error)
+      alert(`참석 여부 저장에 실패했습니다.\n${error.message}`)
+      return
+    }
+
+    setAttendanceStatuses((prev) => ({
+      ...prev,
+      [scheduleId]: status,
+    }))
+  }
+
+  function getAttendanceIcon(status) {
+    if (status === '참석') return '✓'
+    if (status === '미정') return '?'
+    if (status === '불참') return '×'
+    return ''
   }
 
   // =========================
@@ -525,6 +614,7 @@ function App() {
               schedule
             ),
           title: schedule.title || '',
+          calendar_title: schedule.calendar_title || '',
           schedule_type:
             schedule.schedule_type ||
             '지역축제/행사',
@@ -666,6 +756,7 @@ function App() {
     const payloads = selected.map(
       (candidate) => ({
         title: candidate.title.trim(),
+        calendar_title: candidate.calendar_title?.trim() || null,
         schedule_type:
           candidate.schedule_type,
         event_date:
@@ -802,6 +893,7 @@ function App() {
     setMemos({})
     setMemoText({})
     setEditingMemoId(null)
+    setAttendanceStatuses({})
     setMyRequests([])
     setAllRequests([])
     setEditingRequest(null)
@@ -820,6 +912,7 @@ function App() {
 
     setForm({
       title: schedule.title || '',
+      calendar_title: schedule.calendar_title || '',
       schedule_type:
         schedule.schedule_type || '방송',
       event_date: schedule.event_date || '',
@@ -911,6 +1004,7 @@ function App() {
 
     const payload = {
       title: form.title.trim(),
+      calendar_title: form.calendar_title.trim() || null,
       schedule_type: form.schedule_type,
       event_date: form.event_date,
       event_time: form.event_time || null,
@@ -2358,13 +2452,19 @@ function App() {
           left: 10px !important;
         }
 
+        .calendar-day .events {
+          overflow: visible !important;
+          min-height: 0 !important;
+        }
+
         .calendar-day .event {
+          position: relative !important;
           display: flex !important;
           align-items: center !important;
           width: calc(100% + 6px) !important;
           min-width: 0 !important;
           gap: 0 !important;
-          margin: 0 0 2px -6px !important;
+          margin: 0 !important;
           padding: 0 !important;
           overflow: hidden !important;
         }
@@ -2380,9 +2480,9 @@ function App() {
           min-width: 0 !important;
           max-width: none !important;
           margin-top: 0 !important;
-          margin-bottom: 2px !important;
+          margin-bottom: 0 !important;
           font-size: 14px !important;
-          line-height: 1.3 !important;
+          line-height: 1.15 !important;
           color: #fff !important;
           white-space: nowrap !important;
           overflow: hidden !important;
@@ -2390,7 +2490,7 @@ function App() {
         }
 
         .calendar-day .event-title {
-          padding: 3px 6px !important;
+          padding: 2px 6px 2px 3px !important;
           border-radius: 5px !important;
           background: color-mix(in srgb, var(--event-color, #777) 24%, #202020) !important;
           border-left: 3px solid var(--event-color, #777) !important;
@@ -2413,6 +2513,60 @@ function App() {
           color: #fff !important;
           text-decoration-color: #aaa !important;
         }
+
+        .attendance-icon {
+          position: absolute;
+          top: 0;
+          right: 2px;
+          z-index: 3;
+          width: 14px;
+          height: 14px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 50%;
+          background: rgba(20,20,20,.88);
+          color: #fff;
+          font-size: 9px;
+          font-weight: 900;
+          line-height: 1;
+          pointer-events: none;
+        }
+
+        .attendance-section {
+          margin: 12px 0 16px;
+          padding: 10px 11px;
+          border: 1px solid #333;
+          border-radius: 11px;
+          background: #1b1b1b;
+        }
+
+        .attendance-heading {
+          display: flex;
+          align-items: baseline;
+          justify-content: space-between;
+          gap: 8px;
+          margin-bottom: 8px;
+        }
+
+        .attendance-heading strong { font-size: 12px; }
+        .attendance-heading span { color: #777; font-size: 10px; }
+        .attendance-buttons { display: flex; flex-wrap: wrap; gap: 6px; }
+        .attendance-button,
+        .attendance-reset-button {
+          border: 1px solid #3a3a3a;
+          border-radius: 8px;
+          background: #151515;
+          color: #aaa;
+          padding: 7px 9px;
+          font: inherit;
+          font-size: 11px;
+          font-weight: 800;
+          cursor: pointer;
+        }
+        .attendance-button.active { border-color: #7b202d; background: #2a1b20; color: #fff; }
+        .attendance-reset-button { color: #777; }
+        .form-help { display: block; margin-top: 4px; color: #777; font-size: 10px; line-height: 1.4; }
 
         .agenda-item.past {
           opacity: 0.48;
@@ -2793,8 +2947,27 @@ function App() {
         }
 
         @media (max-width: 700px) {
+          .calendar-day .events {
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 1px !important;
+            max-height: 42px !important;
+            overflow: visible !important;
+          }
+
+          .calendar-day .event {
+            min-height: 20px !important;
+            height: 20px !important;
+            flex: 0 0 20px !important;
+            margin: 0 !important;
+          }
+
           .calendar-day .event-title {
             font-size: 11px !important;
+            line-height: 1.05 !important;
+            padding-top: 2px !important;
+            padding-bottom: 2px !important;
+            text-overflow: clip !important;
           }
 
           .schedule-list-toolbar {
@@ -4194,8 +4367,17 @@ function App() {
                                             ] || '#999',
                                         }}
                                       >
-                                        {schedule.title}
+                                        {schedule.calendar_title || schedule.title}
                                       </span>
+                                      {attendanceStatuses[schedule.id] && (
+                                        <span
+                                          className="attendance-icon"
+                                          aria-label={'참석 여부: ' + attendanceStatuses[schedule.id]}
+                                          title={'참석 여부: ' + attendanceStatuses[schedule.id]}
+                                        >
+                                          {getAttendanceIcon(attendanceStatuses[schedule.id])}
+                                        </span>
+                                      )}
                                     </div>
                                   )
                                 )}
@@ -4743,6 +4925,34 @@ function App() {
                     {selectedSchedule.title}
                   </h3>
 
+                  <div className="attendance-section">
+                    <div className="attendance-heading">
+                      <strong>참석 여부</strong>
+                      <span>이 일정에 대한 내 참석 상태</span>
+                    </div>
+                    <div className="attendance-buttons">
+                      {['참석', '미정', '불참'].map((status) => (
+                        <button
+                          type="button"
+                          key={status}
+                          className={attendanceStatuses[selectedSchedule.id] === status ? 'attendance-button active' : 'attendance-button'}
+                          onClick={() => handleAttendanceChange(selectedSchedule.id, status)}
+                        >
+                          {getAttendanceIcon(status)} {status}
+                        </button>
+                      ))}
+                      {attendanceStatuses[selectedSchedule.id] && (
+                        <button
+                          type="button"
+                          className="attendance-reset-button"
+                          onClick={() => handleAttendanceChange(selectedSchedule.id, null)}
+                        >
+                          선택 해제
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
                   <div className="detail-row">
                     <strong>
                       일시
@@ -5232,7 +5442,7 @@ function App() {
                           <div className="auto-import-fields">
                             <label className="auto-import-field full">
                               <span>
-                                제목 *
+                                전체 제목 *
                               </span>
                               <input
                                 value={
@@ -5245,6 +5455,23 @@ function App() {
                                     e.target.value
                                   )
                                 }
+                              />
+                            </label>
+
+                            <label className="auto-import-field full">
+                              <span>
+                                달력에 표시할 일정명
+                              </span>
+                              <input
+                                value={candidate.calendar_title || ''}
+                                onChange={(e) =>
+                                  updateAutoImportCandidate(
+                                    candidate.id,
+                                    'calendar_title',
+                                    e.target.value
+                                  )
+                                }
+                                placeholder="비워두면 전체 제목 표시"
                               />
                             </label>
 
@@ -5658,6 +5885,19 @@ function App() {
                     }
                     placeholder="예: 중앙대학교 축제"
                   />
+                </label>
+
+                <label>
+                  달력에 표시할 일정명
+                  <input
+                    name="calendar_title"
+                    value={form.calendar_title}
+                    onChange={handleFormChange}
+                    placeholder="예: 중대 축제"
+                  />
+                  <small className="form-help">
+                    비워두면 전체 제목이 달력에 표시됩니다. Agenda에서는 항상 전체 제목이 표시됩니다.
+                  </small>
                 </label>
 
                 <label>
