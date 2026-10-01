@@ -384,7 +384,43 @@ function App() {
         .replace(/\\s+/g, ' ')
 
     return schedules.some((schedule) => {
-      return (
+      function renderAddScheduleMenu() {
+    return (
+      <div className="add-schedule-menu">
+        <button
+          className="add-schedule-button"
+          type="button"
+          onClick={() => setShowAddScheduleMenu((prev) => !prev)}
+        >
+          + 일정 추가 <span className="add-schedule-chevron">⌄</span>
+        </button>
+        {showAddScheduleMenu && (
+          <div className="add-schedule-menu-panel">
+            <button
+              type="button"
+              onClick={() => {
+                setShowAddScheduleMenu(false)
+                openNewScheduleForm()
+              }}
+            >
+              직접 일정 추가
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setShowAddScheduleMenu(false)
+                openAutoImport()
+              }}
+            >
+              스케줄표로 일정 추가
+            </button>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  return (
         normalize(schedule.title) ===
           normalize(candidate.title) &&
         schedule.event_date === candidate.event_date &&
@@ -3986,22 +4022,6 @@ function App() {
                           today.getMonth() &&
                         currentYear ===
                           today.getFullYear()
-
-                      function renderAddScheduleMenu() {
-    return (
-      <div className="add-schedule-menu">
-        <button className="add-schedule-button" type="button" onClick={() => setShowAddScheduleMenu((prev) => !prev)}>
-          + 일정 추가 <span className="add-schedule-chevron">⌄</span>
-        </button>
-        {showAddScheduleMenu && (
-          <div className="add-schedule-menu-panel">
-            <button type="button" onClick={() => { setShowAddScheduleMenu(false); openNewScheduleForm() }}>직접 일정 추가</button>
-            <button type="button" onClick={() => { setShowAddScheduleMenu(false); openAutoImport() }}>스케줄표로 일정 추가</button>
-          </div>
-        )}
-      </div>
-    )
-  }
 
   return (
                         <button
