@@ -3177,6 +3177,107 @@ function App() {
           }
 
         }
+
+        /* =========================================================
+           관리자 모바일 UI 최종 보정
+           ========================================================= */
+        @media (max-width: 700px) {
+          .calendar-header {
+            min-width: 0 !important;
+            align-items: flex-start !important;
+            gap: 8px !important;
+          }
+
+          .calendar-header > .calendar-title-row {
+            min-width: 0 !important;
+            flex: 1 1 auto !important;
+          }
+
+          .calendar-header > .admin-list-actions {
+            width: auto !important;
+            min-width: 0 !important;
+            flex: 0 0 auto !important;
+            justify-content: flex-end !important;
+          }
+
+          .calendar-header > .admin-list-actions .add-schedule-menu {
+            width: auto !important;
+            min-width: 0 !important;
+            flex: 0 0 auto !important;
+          }
+
+          .calendar-header > .admin-list-actions .add-schedule-button {
+            width: auto !important;
+            max-width: 100% !important;
+            min-width: 0 !important;
+            padding: 8px 10px !important;
+            white-space: nowrap !important;
+            box-sizing: border-box !important;
+          }
+
+          .schedule-view-sheet {
+            align-self: center !important;
+            width: calc(100% - 20px) !important;
+            max-width: 620px !important;
+            max-height: 86vh !important;
+            margin: auto !important;
+            padding: 10px 15px 20px !important;
+            border-radius: 18px !important;
+            box-sizing: border-box !important;
+            overflow-x: hidden !important;
+            overflow-y: auto !important;
+          }
+
+          .schedule-view-sheet .schedule-detail,
+          .schedule-view-sheet .schedule-selection-list,
+          .schedule-view-sheet .schedule-item {
+            width: 100% !important;
+            max-width: 100% !important;
+            min-width: 0 !important;
+            box-sizing: border-box !important;
+          }
+
+          .schedule-view-sheet .schedule-item {
+            padding: 14px !important;
+            overflow: hidden !important;
+          }
+
+          .schedule-view-sheet .schedule-item h3 {
+            max-width: 100% !important;
+            overflow-wrap: anywhere !important;
+            word-break: break-word !important;
+          }
+
+          .schedule-view-sheet .detail-row {
+            min-width: 0 !important;
+            align-items: flex-start !important;
+          }
+
+          .schedule-view-sheet .detail-row strong {
+            flex: 0 0 46px !important;
+          }
+
+          .schedule-view-sheet .detail-row > span,
+          .schedule-view-sheet .detail-row > a {
+            min-width: 0 !important;
+            max-width: 100% !important;
+            overflow-wrap: anywhere !important;
+            word-break: break-word !important;
+          }
+
+          .schedule-view-sheet .address-link,
+          .schedule-view-sheet .place-link,
+          .schedule-view-sheet .reference-link {
+            overflow-wrap: anywhere !important;
+            word-break: break-word !important;
+          }
+
+          .schedule-view-sheet .memo-section,
+          .schedule-view-sheet .memo-editor {
+            min-width: 0 !important;
+            max-width: 100% !important;
+          }
+        }
       `}</style>
       <header className="header">
         <div
@@ -4500,7 +4601,7 @@ function App() {
           }}
         >
           <div
-            className="bottom-sheet"
+            className="bottom-sheet schedule-view-sheet"
             onClick={(e) =>
               e.stopPropagation()
             }
