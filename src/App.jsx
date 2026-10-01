@@ -84,6 +84,7 @@ function App() {
 
   const [page, setPage] = useState('calendar')
   const [calendarView, setCalendarView] = useState('month')
+  const [showAddScheduleMenu, setShowAddScheduleMenu] = useState(false)
 
   const [calendarCursor, setCalendarCursor] = useState(
     new Date()
@@ -139,7 +140,6 @@ function App() {
   const [autoImportSaving, setAutoImportSaving] = useState(false)
   const [autoImportError, setAutoImportError] = useState('')
   const autoImportFileRef = useRef(null)
-  const [showAddScheduleMenu, setShowAddScheduleMenu] = useState(false)
 
   // 관리자 요청사항 필터
   const [requestStatusFilter, setRequestStatusFilter] =
@@ -2336,6 +2336,12 @@ function App() {
           display: none !important;
         }
 
+
+        .add-schedule-menu-wrap { position: relative; display: inline-block; }
+        .add-schedule-menu { position: absolute; top: calc(100% + 6px); right: 0; z-index: 100; min-width: 170px; padding: 5px; background: #202020; border: 1px solid #3a3a3a; border-radius: 10px; box-shadow: 0 12px 28px rgba(0,0,0,.35); }
+        .add-schedule-menu button { display: block; width: 100%; padding: 9px 10px; border: 0; border-radius: 7px; background: transparent; color: #fff; text-align: left; cursor: pointer; font-size: 12px; font-weight: 700; }
+        .add-schedule-menu button:hover { background: #303030; }
+
         .calendar-day .event-title {
           display: block !important;
           width: 100% !important;
@@ -2345,17 +2351,12 @@ function App() {
           font-size: 14px !important;
           line-height: 1.3 !important;
           color: #fff !important;
+          padding: 2px 5px !important;
+          border-radius: 4px !important;
+          box-sizing: border-box !important;
           white-space: nowrap !important;
           overflow: hidden !important;
           text-overflow: ellipsis !important;
-        }
-
-        .calendar-day .event-title {
-          padding: 3px 6px !important;
-          border-radius: 5px !important;
-          background: color-mix(in srgb, var(--event-color, #777) 24%, #202020) !important;
-          border-left: 3px solid var(--event-color, #777) !important;
-          box-sizing: border-box !important;
         }
 
         .address-link,
@@ -2769,12 +2770,6 @@ function App() {
           }
         }
 
-        .add-schedule-menu { position: relative; flex: 0 0 auto; }
-        .add-schedule-chevron { display: inline-block; margin-left: 4px; opacity: .75; }
-        .add-schedule-menu-panel { position: absolute; top: calc(100% + 6px); right: 0; z-index: 30; min-width: 170px; padding: 5px; border: 1px solid #383838; border-radius: 10px; background: #1b1b1b; box-shadow: 0 10px 24px rgba(0,0,0,.28); }
-        .add-schedule-menu-panel button { display: block; width: 100%; padding: 9px 10px; border: 0; border-radius: 7px; background: transparent; color: #eee; text-align: left; font: inherit; font-size: 12px; cursor: pointer; }
-        .add-schedule-menu-panel button:hover { background: #2a2a2a; }
-
         .auto-import-button {
           border: 1px solid #5b4650;
           border-radius: 10px;
@@ -3066,10 +3061,6 @@ function App() {
             flex: 1 1 0;
           }
 
-          .admin-list-actions .add-schedule-menu { flex: 1 1 0; }
-          .admin-list-actions .add-schedule-menu > .add-schedule-button { width: 100%; }
-          .add-schedule-menu-panel { left: 0; right: auto; }
-
           .auto-import-context {
             grid-template-columns: 1fr 1fr;
           }
@@ -3274,7 +3265,17 @@ function App() {
               </div>
 
               <div className="admin-list-actions">
-                {renderAddScheduleMenu()}
+                <div className="add-schedule-menu-wrap">
+                  <button className="add-schedule-button" type="button" onClick={() => setShowAddScheduleMenu((prev) => !prev)}>
+                    + 일정 추가 ▾
+                  </button>
+                  {showAddScheduleMenu && (
+                    <div className="add-schedule-menu">
+                      <button type="button" onClick={() => { setShowAddScheduleMenu(false); openNewScheduleForm() }}>직접 일정 추가</button>
+                      <button type="button" onClick={() => { setShowAddScheduleMenu(false); openAutoImport() }}>스케줄표로 일정 추가</button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -3861,7 +3862,17 @@ function App() {
 
               {isAdmin && (
                 <div className="admin-list-actions">
-                  {renderAddScheduleMenu()}
+                  <div className="add-schedule-menu-wrap">
+                  <button className="add-schedule-button" type="button" onClick={() => setShowAddScheduleMenu((prev) => !prev)}>
+                    + 일정 추가 ▾
+                  </button>
+                  {showAddScheduleMenu && (
+                    <div className="add-schedule-menu">
+                      <button type="button" onClick={() => { setShowAddScheduleMenu(false); openNewScheduleForm() }}>직접 일정 추가</button>
+                      <button type="button" onClick={() => { setShowAddScheduleMenu(false); openAutoImport() }}>스케줄표로 일정 추가</button>
+                    </div>
+                  )}
+                </div>
                 </div>
               )}
             </div>
@@ -3987,23 +3998,7 @@ function App() {
                         currentYear ===
                           today.getFullYear()
 
-                      function renderAddScheduleMenu() {
-    return (
-      <div className="add-schedule-menu">
-        <button className="add-schedule-button" type="button" onClick={() => setShowAddScheduleMenu((prev) => !prev)}>
-          + 일정 추가 <span className="add-schedule-chevron">⌄</span>
-        </button>
-        {showAddScheduleMenu && (
-          <div className="add-schedule-menu-panel">
-            <button type="button" onClick={() => { setShowAddScheduleMenu(false); openNewScheduleForm() }}>직접 일정 추가</button>
-            <button type="button" onClick={() => { setShowAddScheduleMenu(false); openAutoImport() }}>스케줄표로 일정 추가</button>
-          </div>
-        )}
-      </div>
-    )
-  }
-
-  return (
+                      return (
                         <button
                           key={index}
                           className={`calendar-day ${
@@ -4061,15 +4056,7 @@ function App() {
                                         }}
                                       />
 
-                                      <span
-                                        className="event-title"
-                                        style={{
-                                          '--event-color':
-                                            TYPE_COLORS[
-                                              schedule.schedule_type
-                                            ] || '#999',
-                                        }}
-                                      >
+                                      <span className="event-title" style={{ backgroundColor: TYPE_COLORS[schedule.schedule_type] || '#666' }}>
                                         {schedule.title}
                                       </span>
                                     </div>
