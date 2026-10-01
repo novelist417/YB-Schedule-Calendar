@@ -2471,6 +2471,10 @@ function App() {
 
         .calendar-day .event-title-row {
           position: relative !important;
+          flex: 1 1 auto !important;
+          width: 100% !important;
+          min-width: 0 !important;
+          box-sizing: border-box !important;
           background: color-mix(in srgb, var(--event-color, #777) 24%, #202020) !important;
           border-radius: 5px !important;
           border-left: 0 !important;
