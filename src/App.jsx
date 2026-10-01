@@ -139,6 +139,7 @@ function App() {
   const [autoImportSaving, setAutoImportSaving] = useState(false)
   const [autoImportError, setAutoImportError] = useState('')
   const autoImportFileRef = useRef(null)
+  const [showAddScheduleMenu, setShowAddScheduleMenu] = useState(false)
 
   // 관리자 요청사항 필터
   const [requestStatusFilter, setRequestStatusFilter] =
@@ -2349,6 +2350,14 @@ function App() {
           text-overflow: ellipsis !important;
         }
 
+        .calendar-day .event-title {
+          padding: 3px 6px !important;
+          border-radius: 5px !important;
+          background: color-mix(in srgb, var(--event-color, #777) 24%, #202020) !important;
+          border-left: 3px solid var(--event-color, #777) !important;
+          box-sizing: border-box !important;
+        }
+
         .address-link,
         .place-link {
           color: #fff !important;
@@ -2760,6 +2769,12 @@ function App() {
           }
         }
 
+        .add-schedule-menu { position: relative; flex: 0 0 auto; }
+        .add-schedule-chevron { display: inline-block; margin-left: 4px; opacity: .75; }
+        .add-schedule-menu-panel { position: absolute; top: calc(100% + 6px); right: 0; z-index: 30; min-width: 170px; padding: 5px; border: 1px solid #383838; border-radius: 10px; background: #1b1b1b; box-shadow: 0 10px 24px rgba(0,0,0,.28); }
+        .add-schedule-menu-panel button { display: block; width: 100%; padding: 9px 10px; border: 0; border-radius: 7px; background: transparent; color: #eee; text-align: left; font: inherit; font-size: 12px; cursor: pointer; }
+        .add-schedule-menu-panel button:hover { background: #2a2a2a; }
+
         .auto-import-button {
           border: 1px solid #5b4650;
           border-radius: 10px;
@@ -3051,6 +3066,10 @@ function App() {
             flex: 1 1 0;
           }
 
+          .admin-list-actions .add-schedule-menu { flex: 1 1 0; }
+          .admin-list-actions .add-schedule-menu > .add-schedule-button { width: 100%; }
+          .add-schedule-menu-panel { left: 0; right: auto; }
+
           .auto-import-context {
             grid-template-columns: 1fr 1fr;
           }
@@ -3255,22 +3274,7 @@ function App() {
               </div>
 
               <div className="admin-list-actions">
-                <button
-                  className="auto-import-button"
-                  type="button"
-                  onClick={openAutoImport}
-                >
-                  ✨ 스케줄표 자동 등록
-                </button>
-
-                <button
-                  className="add-schedule-button"
-                  onClick={
-                    openNewScheduleForm
-                  }
-                >
-                  + 일정 추가
-                </button>
+                {renderAddScheduleMenu()}
               </div>
             </div>
 
@@ -3857,22 +3861,7 @@ function App() {
 
               {isAdmin && (
                 <div className="admin-list-actions">
-                  <button
-                    className="auto-import-button"
-                    type="button"
-                    onClick={openAutoImport}
-                  >
-                    ✨ 스케줄표 자동 등록
-                  </button>
-
-                  <button
-                    className="add-schedule-button"
-                    onClick={
-                      openNewScheduleForm
-                    }
-                  >
-                    + 일정 추가
-                  </button>
+                  {renderAddScheduleMenu()}
                 </div>
               )}
             </div>
@@ -3998,7 +3987,23 @@ function App() {
                         currentYear ===
                           today.getFullYear()
 
-                      return (
+                      function renderAddScheduleMenu() {
+    return (
+      <div className="add-schedule-menu">
+        <button className="add-schedule-button" type="button" onClick={() => setShowAddScheduleMenu((prev) => !prev)}>
+          + 일정 추가 <span className="add-schedule-chevron">⌄</span>
+        </button>
+        {showAddScheduleMenu && (
+          <div className="add-schedule-menu-panel">
+            <button type="button" onClick={() => { setShowAddScheduleMenu(false); openNewScheduleForm() }}>직접 일정 추가</button>
+            <button type="button" onClick={() => { setShowAddScheduleMenu(false); openAutoImport() }}>스케줄표로 일정 추가</button>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  return (
                         <button
                           key={index}
                           className={`calendar-day ${
@@ -4056,10 +4061,16 @@ function App() {
                                         }}
                                       />
 
-                                      <span className="event-title">
-                                        {
-                                          schedule.title
-                                        }
+                                      <span
+                                        className="event-title"
+                                        style={{
+                                          '--event-color':
+                                            TYPE_COLORS[
+                                              schedule.schedule_type
+                                            ] || '#999',
+                                        }}
+                                      >
+                                        {schedule.title}
                                       </span>
                                     </div>
                                   )
