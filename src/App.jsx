@@ -3007,7 +3007,7 @@ function App() {
           }
 
           .calendar-day .event-title-row:has(.attendance-icon) .event-title {
-            padding-left: 10px !important;
+            padding-left: 8px !important;
           }
 
           .calendar-day .attendance-icon {
