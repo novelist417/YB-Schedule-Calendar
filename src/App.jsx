@@ -110,6 +110,7 @@ function App() {
     useState('upcoming')
 
   const [showForm, setShowForm] = useState(false)
+  const [showAddMenu, setShowAddMenu] = useState(false)
   const [editingSchedule, setEditingSchedule] = useState(null)
   const [form, setForm] = useState(EMPTY_FORM)
   const [saving, setSaving] = useState(false)
@@ -347,6 +348,31 @@ function App() {
     setAutoImportLoading(false)
     setAutoImportSaving(false)
     setShowAutoImport(true)
+  }
+
+  function openCafeImport() {
+    const cursorYear = calendarCursor.getFullYear()
+    const cursorMonth = calendarCursor.getMonth() + 1
+    setAutoImportYear(cursorYear)
+    setAutoImportMonth(cursorMonth)
+    setAutoImportMode('text')
+    setAutoImportText('')
+    setAutoImportImageData('')
+    setAutoImportImageName('')
+    setAutoImportCandidates([])
+    setAutoImportStage('input')
+    setAutoImportError('')
+    setAutoImportLoading(false)
+    setAutoImportSaving(false)
+    setShowAutoImport(true)
+    setShowAddMenu(false)
+  }
+
+  function handleAddMenu(action) {
+    setShowAddMenu(false)
+    if (action === 'schedule') openNewScheduleForm()
+    if (action === 'sheet') openAutoImport()
+    if (action === 'cafe') openCafeImport()
   }
 
   function closeAutoImport() {
@@ -802,6 +828,7 @@ function App() {
   }
 
   function openNewScheduleForm() {
+    setShowAddMenu(false)
     setEditingSchedule(null)
     setForm(EMPTY_FORM)
     setFormError('')
@@ -1038,9 +1065,9 @@ function App() {
         memo.attendance_status || null
     })
 
-    setMemos(memoMap)
-    setMemoText(textMap)
-    setAttendanceStatus(attendanceMap)
+    setMemos((prev) => ({ ...prev, ...memoMap }))
+    setMemoText((prev) => ({ ...prev, ...textMap }))
+    setAttendanceStatus((prev) => ({ ...prev, ...attendanceMap }))
     setEditingMemoId(null)
   }
 
@@ -3306,6 +3333,25 @@ function App() {
           }
 
           /* 모바일 월간 달력: 일정은 날짜 칸 전체 폭을 사용하고 여러 개가 겹치지 않게 */
+          .add-menu-wrap { position: relative; }
+          .add-schedule-menu {
+            position: absolute;
+            top: calc(100% + 6px);
+            right: 0;
+            z-index: 50;
+            min-width: 150px;
+            padding: 4px;
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-shadow: 0 8px 20px rgba(0,0,0,.12);
+          }
+          .add-schedule-menu button {
+            display: block; width: 100%; padding: 9px 10px; border: 0;
+            background: transparent; text-align: left; cursor: pointer; white-space: nowrap;
+          }
+          .add-schedule-menu button:hover { background: #f5f5f5; }
+
           .calendar-day {
             overflow: hidden;
           }
@@ -3322,13 +3368,17 @@ function App() {
           }
 
           .calendar-day .event {
-            flex: 0 0 17px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            flex: 0 0 20px;
             width: 100%;
             max-width: none;
             min-width: 0;
-            height: 17px;
-            min-height: 17px;
+            height: 20px;
+            min-height: 20px;
             overflow: hidden;
+            cursor: pointer;
           }
 
           .calendar-day .event-label {
@@ -3342,27 +3392,32 @@ function App() {
             display: block;
             width: 100%;
             max-width: none;
-            height: 17px;
+            height: 20px;
             padding: 0 7px;
             border-radius: 0;
             font-size: 11px;
-            line-height: 17px;
+            line-height: 20px;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
           }
 
           .calendar-day .event-attendance {
-            top: 0;
-            right: 4px;
-            width: 15px;
-            min-width: 15px;
-            height: 15px;
+            position: absolute;
+            top: 2px;
+            right: 3px;
+            z-index: 2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 16px;
+            min-width: 16px;
+            height: 16px;
+            padding: 0;
             font-size: 10px;
-          }
-
-          .calendar-day .event-title {
-            padding-right: 26px;
+            line-height: 16px;
+            font-weight: 700;
+            box-sizing: border-box;
           }
 
         }
@@ -3499,24 +3554,22 @@ function App() {
                 </p>
               </div>
 
-              <div className="admin-list-actions">
-                <button
-                  className="auto-import-button"
-                  type="button"
-                  onClick={openAutoImport}
-                >
-                  ✨ 스케줄표 자동 등록
-                </button>
-
-                <button
-                  className="add-schedule-button"
-                  onClick={
-                    openNewScheduleForm
-                  }
-                >
-                  + 일정 추가
-                </button>
-              </div>
+              <div className="admin-list-actions add-menu-wrap">
+                  <button
+                    className="add-schedule-button"
+                    type="button"
+                    onClick={() => setShowAddMenu((prev) => !prev)}
+                  >
+                    + 일정 추가
+                  </button>
+                  {showAddMenu && (
+                    <div className="add-schedule-menu">
+                      <button type="button" onClick={() => handleAddMenu('sheet')}>스케줄표</button>
+                      <button type="button" onClick={() => handleAddMenu('cafe')}>팬카페 글 삽입</button>
+                      <button type="button" onClick={() => handleAddMenu('schedule')}>직접 입력</button>
+                    </div>
+                  )}
+                </div>
             </div>
 
             <div className="schedule-list-toolbar">
@@ -4101,23 +4154,21 @@ function App() {
               </div>
 
               {isAdmin && (
-                <div className="admin-list-actions">
-                  <button
-                    className="auto-import-button"
-                    type="button"
-                    onClick={openAutoImport}
-                  >
-                    ✨ 스케줄표 자동 등록
-                  </button>
-
+                <div className="admin-list-actions add-menu-wrap">
                   <button
                     className="add-schedule-button"
-                    onClick={
-                      openNewScheduleForm
-                    }
+                    type="button"
+                    onClick={() => setShowAddMenu((prev) => !prev)}
                   >
                     + 일정 추가
                   </button>
+                  {showAddMenu && (
+                    <div className="add-schedule-menu">
+                      <button type="button" onClick={() => handleAddMenu('sheet')}>스케줄표</button>
+                      <button type="button" onClick={() => handleAddMenu('cafe')}>팬카페 글 삽입</button>
+                      <button type="button" onClick={() => handleAddMenu('schedule')}>직접 입력</button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -4382,22 +4433,6 @@ function App() {
                             <span className="untimed-name">
                               {schedule.short_title || schedule.title}
                             </span>
-                             {session?.user &&
-                               attendanceStatus[
-                                 schedule.id
-                               ] && (
-                                 <span className="event-attendance">
-                                   {attendanceStatus[
-                                     schedule.id
-                                   ] === 'attend'
-                                     ? '✓'
-                                     : attendanceStatus[
-                                           schedule.id
-                                         ] === 'maybe'
-                                       ? '?'
-                                       : '×'}
-                                 </span>
-                               )}
                           </button>
                         )
                       )}
@@ -4722,7 +4757,7 @@ function App() {
                           <div className="agenda-main">
                             <strong>
                               {
-                                schedule.short_title || schedule.title
+                                schedule.title
                               }
                             </strong>
 
@@ -4919,42 +4954,22 @@ function App() {
                     </span>
                   </div>
 
-                  {selectedSchedule.place && (
+                  {(selectedSchedule.place || selectedSchedule.address) && (
                     <div className="detail-row">
-                      <strong>
-                        장소
-                      </strong>
-
-                      <a
-                        className="place-link"
-                        href={getAddressHref(
-                          selectedSchedule.address ||
-                            selectedSchedule.place
+                      <strong>장소</strong>
+                      <span>
+                        {selectedSchedule.place && (
+                          <a className="place-link" href={getAddressHref(selectedSchedule.address || selectedSchedule.place)} target="_blank" rel="noreferrer">
+                            {selectedSchedule.place}
+                          </a>
                         )}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        {selectedSchedule.place}
-                      </a>
-                    </div>
-                  )}
-
-                  {selectedSchedule.address && (
-                    <div className="detail-row">
-                      <strong>
-                        주소
-                      </strong>
-
-                      <a
-                        className="address-link"
-                        href={getAddressHref(
-                          selectedSchedule.address
+                        {selectedSchedule.place && selectedSchedule.address ? ' · ' : ''}
+                        {selectedSchedule.address && (
+                          <a className="address-link" href={getAddressHref(selectedSchedule.address)} target="_blank" rel="noreferrer">
+                            {selectedSchedule.address}
+                          </a>
                         )}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        {selectedSchedule.address}
-                      </a>
+                      </span>
                     </div>
                   )}
 
