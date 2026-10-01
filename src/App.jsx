@@ -2473,7 +2473,22 @@ function App() {
           position: relative !important;
           background: color-mix(in srgb, var(--event-color, #777) 24%, #202020) !important;
           border-radius: 5px !important;
-          border-left: 3px solid var(--event-color, #777) !important;
+          border-left: 0 !important;
+          overflow: visible !important;
+        }
+
+        .calendar-day .event-title-row::before {
+          content: "" !important;
+          position: absolute !important;
+          left: -5px !important;
+          top: 0 !important;
+          bottom: 0 !important;
+          width: 3px !important;
+          border-radius: 2px 0 0 2px !important;
+          background: var(--event-color, #777) !important;
+        }
+
+        .calendar-day .event-title-row > .event-title {
           box-sizing: border-box !important;
           display: block !important;
           flex: 1 1 auto !important;
