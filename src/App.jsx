@@ -376,14 +376,6 @@ function App() {
     }
   }
 
-  function isImportedScheduleDuplicate(candidate) {
-    const normalize = (value) =>
-      String(value || '')
-        .trim()
-        .toLowerCase()
-        .replace(/\\s+/g, ' ')
-
-    return schedules.some((schedule) => {
       function renderAddScheduleMenu() {
     return (
       <div className="add-schedule-menu">
@@ -419,6 +411,15 @@ function App() {
       </div>
     )
   }
+
+  function isImportedScheduleDuplicate(candidate) {
+    const normalize = (value) =>
+      String(value || '')
+        .trim()
+        .toLowerCase()
+        .replace(/\\s+/g, ' ')
+
+    return schedules.some((schedule) => {
 
   return (
         normalize(schedule.title) ===
