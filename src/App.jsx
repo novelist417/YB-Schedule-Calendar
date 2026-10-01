@@ -3010,7 +3010,7 @@ function App() {
             width: 8px !important;
             height: 8px !important;
             font-size: 5px !important;
-            left: 3px !important;
+            left: -1px !important;
           }
 
           .schedule-list-toolbar {
@@ -4401,7 +4401,15 @@ function App() {
                                         }}
                                       />
 
-                                      <div className="event-title-row">
+                                      <div
+                                        className="event-title-row"
+                                        style={{
+                                          '--event-color':
+                                            TYPE_COLORS[
+                                              schedule.schedule_type
+                                            ] || '#999',
+                                        }}
+                                      >
                                         {attendanceStatuses[schedule.id] && (
                                           <span
                                             className={'attendance-icon attendance-' + attendanceStatuses[schedule.id]}
