@@ -3566,7 +3566,7 @@ function App() {
 
           .overlay:has(.schedule-view-sheet) .schedule-view-sheet {
             align-self: flex-end !important;
-            margin: 0 auto !important;
+            margin: 0 auto 20px !important;
             width: calc(100% - 20px) !important;
           }
 
