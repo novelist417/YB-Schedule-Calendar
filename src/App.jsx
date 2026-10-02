@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from './lib/supabase'
+import { Analytics } from '@vercel/analytics/react'
 
 const TYPE_COLORS = {
   방송: '#2673C8',
