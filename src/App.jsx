@@ -627,7 +627,6 @@ function App() {
           end_time:
             schedule.end_time || '',
           place: schedule.place || '',
-          address: schedule.address || '',
           details: schedule.details || '',
           related_link:
             schedule.related_link || '',
@@ -772,8 +771,7 @@ function App() {
           candidate.end_time || null,
         place:
           candidate.place.trim() || null,
-        address:
-          candidate.address.trim() || null,
+        address: null,
         details:
           candidate.details.trim() || null,
         related_link:
@@ -2537,6 +2535,12 @@ function App() {
           line-height: 1.45;
           word-break: break-word;
           cursor: pointer;
+        }
+
+        .place-text {
+          color: #fff !important;
+          line-height: 1.45;
+          word-break: break-word;
         }
 
         .address-link:hover,
@@ -5002,17 +5006,22 @@ function App() {
                         장소
                       </strong>
 
-                      <a
-                        className="place-link"
-                        href={getAddressHref(
-                          selectedSchedule.address ||
-                            selectedSchedule.place
-                        )}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        {selectedSchedule.place}
-                      </a>
+                      {selectedSchedule.address ? (
+                        <a
+                          className="place-link"
+                          href={getAddressHref(
+                            selectedSchedule.address
+                          )}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          {selectedSchedule.place}
+                        </a>
+                      ) : (
+                        <span className="place-text">
+                          {selectedSchedule.place}
+                        </span>
+                      )}
                     </div>
                   )}
 
@@ -5636,24 +5645,6 @@ function App() {
                                   updateAutoImportCandidate(
                                     candidate.id,
                                     'place',
-                                    e.target.value
-                                  )
-                                }
-                              />
-                            </label>
-
-                            <label className="auto-import-field">
-                              <span>
-                                주소 / 지도
-                              </span>
-                              <input
-                                value={
-                                  candidate.address
-                                }
-                                onChange={(e) =>
-                                  updateAutoImportCandidate(
-                                    candidate.id,
-                                    'address',
                                     e.target.value
                                   )
                                 }
