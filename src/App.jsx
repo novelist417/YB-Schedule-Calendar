@@ -2532,13 +2532,17 @@ function App() {
           gap: 2px !important;
         }
 
-        /* 날짜를 눌렀을 때 올라오는 목록/상세 모달 높이 */
+        /* 날짜를 눌렀을 때 올라오는 목록/상세 모달 기본값 */
         .schedule-view-sheet.schedule-selection-sheet {
+          height: auto !important;
+          min-height: 0 !important;
           max-height: 66vh !important;
         }
 
         .schedule-view-sheet.schedule-detail-sheet {
-          max-height: 55vh !important;
+          height: auto !important;
+          min-height: 0 !important;
+          max-height: calc(100dvh - 24px) !important;
         }
 
         .address-link,
@@ -3008,6 +3012,7 @@ function App() {
             flex-direction: column !important;
             gap: 1px !important;
             margin-top: -4px !important;
+            transform: translateY(-3px) !important;
             max-height: 38px !important;
             overflow: visible !important;
           }
@@ -3461,22 +3466,27 @@ function App() {
             align-self: center !important;
             width: calc(100% - 20px) !important;
             max-width: 620px !important;
-            max-height: 66vh !important;
+            height: auto !important;
+            min-height: 0 !important;
+            max-height: calc(100dvh - 24px) !important;
             margin: auto !important;
             padding: 10px 15px 20px !important;
             border-radius: 18px !important;
             box-sizing: border-box !important;
             overflow-x: hidden !important;
+            overflow-y: visible !important;
+          }
+
+          /* 모바일: 날짜 일정 목록은 내용만큼만 높이고 최대 약 1/3까지 */
+          .schedule-view-sheet.schedule-selection-sheet {
+            max-height: 33dvh !important;
             overflow-y: auto !important;
           }
 
-          /* 모바일: 날짜 일정 목록은 화면 아래 1/3 정도, 상세는 화면 절반 정도만 차지 */
-          .schedule-view-sheet.schedule-selection-sheet {
-            max-height: 33vh !important;
-          }
-
+          /* 모바일 상세는 내용이 잘리지 않게 자동 높이. 화면을 넘을 때만 스크롤 */
           .schedule-view-sheet.schedule-detail-sheet {
-            max-height: 50vh !important;
+            max-height: calc(100dvh - 24px) !important;
+            overflow-y: auto !important;
           }
 
           .schedule-view-sheet .schedule-detail,
