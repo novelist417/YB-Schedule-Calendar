@@ -3196,6 +3196,273 @@ function App() {
           }
         }
 
+        /* 업데이트 현황 전용 UI */
+        .update-page .list-page-header {
+          margin-bottom: 22px;
+        }
+
+        .update-editor-overlay {
+          position: fixed;
+          inset: 0;
+          z-index: 100;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 20px;
+          background: rgba(0,0,0,.68);
+          box-sizing: border-box;
+        }
+
+        .update-editor {
+          width: min(620px, 100%);
+          max-height: min(760px, calc(100dvh - 40px));
+          overflow-y: auto;
+          padding: 22px;
+          border: 1px solid #363636;
+          border-radius: 18px;
+          background: #171717;
+          box-shadow: 0 24px 70px rgba(0,0,0,.45);
+          box-sizing: border-box;
+        }
+
+        .update-editor-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          margin-bottom: 18px;
+        }
+
+        .update-editor-header h2 {
+          margin: 0;
+          color: #fff;
+          font-size: 18px;
+          line-height: 1.35;
+        }
+
+        .update-editor-close {
+          width: 34px;
+          height: 34px;
+          flex: 0 0 34px;
+          border: 1px solid #383838;
+          border-radius: 9px;
+          background: #202020;
+          color: #aaa;
+          font-size: 20px;
+          line-height: 1;
+          cursor: pointer;
+        }
+
+        .update-editor-form {
+          display: grid;
+          gap: 12px;
+        }
+
+        .update-editor-form input[type='text'],
+        .update-editor-form textarea {
+          width: 100%;
+          box-sizing: border-box;
+          border: 1px solid #363636;
+          border-radius: 10px;
+          background: #222;
+          color: #f4f4f4;
+          outline: none;
+          font: inherit;
+        }
+
+        .update-editor-form input[type='text'] {
+          height: 48px;
+          padding: 0 14px;
+          font-size: 14px;
+        }
+
+        .update-editor-form textarea {
+          min-height: 180px;
+          padding: 13px 14px;
+          font-size: 13px;
+          line-height: 1.65;
+          resize: vertical;
+        }
+
+        .update-editor-form input[type='text']:focus,
+        .update-editor-form textarea:focus {
+          border-color: #7b202d;
+          box-shadow: 0 0 0 2px rgba(123,32,45,.18);
+        }
+
+        .update-editor-form input::placeholder,
+        .update-editor-form textarea::placeholder {
+          color: #777;
+        }
+
+        .update-important-check {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          width: fit-content;
+          color: #ddd;
+          font-size: 12px;
+          font-weight: 700;
+          cursor: pointer;
+        }
+
+        .update-important-check input {
+          width: 15px;
+          height: 15px;
+          margin: 0;
+          accent-color: #a52a3b;
+        }
+
+        .update-editor-error {
+          margin: 0;
+          padding: 9px 11px;
+          border: 1px solid #54252b;
+          border-radius: 9px;
+          background: #25181a;
+          color: #e9a5ad;
+          font-size: 12px;
+          line-height: 1.5;
+          white-space: pre-line;
+        }
+
+        .update-editor-actions {
+          display: flex;
+          justify-content: flex-end;
+          gap: 8px;
+          margin-top: 3px;
+        }
+
+        .update-editor-cancel,
+        .update-editor-submit {
+          min-height: 38px;
+          padding: 0 15px;
+          border-radius: 9px;
+          font: inherit;
+          font-size: 12px;
+          font-weight: 800;
+          cursor: pointer;
+        }
+
+        .update-editor-cancel {
+          border: 1px solid #383838;
+          background: #202020;
+          color: #bbb;
+        }
+
+        .update-editor-submit {
+          border: 1px solid #7b202d;
+          background: #7b202d;
+          color: #fff;
+        }
+
+        .update-editor-submit:disabled {
+          opacity: .55;
+          cursor: default;
+        }
+
+        .update-list {
+          display: grid;
+          gap: 10px;
+        }
+
+        .update-card {
+          padding: 17px 18px;
+          border: 1px solid #303030;
+          border-radius: 14px;
+          background: #171717;
+          box-shadow: 0 5px 18px rgba(0,0,0,.12);
+        }
+
+        .update-card-meta {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          flex-wrap: wrap;
+          margin-bottom: 8px;
+        }
+
+        .update-important-badge {
+          padding: 4px 8px;
+          border-radius: 999px;
+          background: #7b202d;
+          color: #fff;
+          font-size: 10px;
+          font-weight: 800;
+        }
+
+        .update-card-date {
+          color: #777;
+          font-size: 11px;
+        }
+
+        .update-card-title {
+          margin: 0 0 8px;
+          color: #fff;
+          font-size: 16px;
+          line-height: 1.45;
+        }
+
+        .update-card-content {
+          margin: 0;
+          color: #aaa;
+          font-size: 13px;
+          line-height: 1.65;
+          white-space: pre-line;
+        }
+
+        .update-card-actions {
+          display: flex;
+          gap: 7px;
+          margin-top: 13px;
+        }
+
+        .update-card-actions button {
+          padding: 6px 10px;
+          border: 1px solid #383838;
+          border-radius: 8px;
+          background: #202020;
+          color: #aaa;
+          font: inherit;
+          font-size: 11px;
+          cursor: pointer;
+        }
+
+        .update-card-actions .update-delete-button {
+          border-color: #54252b;
+          color: #d99098;
+        }
+
+        @media (max-width: 640px) {
+          .update-editor-overlay {
+            align-items: flex-end;
+            padding: 0;
+          }
+
+          .update-editor {
+            width: 100%;
+            max-height: 88dvh;
+            padding: 18px 16px 20px;
+            border-radius: 18px 18px 0 0;
+            border-bottom: 0;
+          }
+
+          .update-editor-header {
+            margin-bottom: 14px;
+          }
+
+          .update-editor-form textarea {
+            min-height: 150px;
+          }
+
+          .update-editor-actions > button {
+            flex: 1 1 0;
+          }
+
+          .update-card {
+            padding: 15px;
+          }
+        }
+
         .add-schedule-menu { position: relative; flex: 0 0 auto; }
         .add-schedule-chevron { display: inline-block; margin-left: 4px; opacity: .75; }
         .add-schedule-menu-panel { position: absolute; top: calc(100% + 6px); right: 0; z-index: 30; min-width: 170px; padding: 5px; border: 1px solid #383838; border-radius: 10px; background: #1b1b1b; box-shadow: 0 10px 24px rgba(0,0,0,.28); }
@@ -4043,52 +4310,46 @@ function App() {
             </div>
 
             {isAdmin && showUpdateForm && (
-              <form
-                onSubmit={handleSaveUpdate}
-                style={{
-                  background: '#fff',
-                  border: '1px solid #e2e2e2',
-                  borderRadius: '14px',
-                  padding: '18px',
-                  marginBottom: '18px',
-                  boxShadow: '0 4px 16px rgba(0,0,0,0.04)',
-                }}
-              >
-                <div style={{ display: 'grid', gap: '12px' }}>
-                  <input
-                    value={updateForm.title}
-                    onChange={(e) => setUpdateForm((prev) => ({ ...prev, title: e.target.value }))}
-                    placeholder="업데이트 제목"
-                    style={{ width: '100%', boxSizing: 'border-box', padding: '12px 13px', border: '1px solid #ddd', borderRadius: '9px', fontSize: '15px' }}
-                  />
-                  <textarea
-                    value={updateForm.content}
-                    onChange={(e) => setUpdateForm((prev) => ({ ...prev, content: e.target.value }))}
-                    placeholder="업데이트 내용을 입력해주세요."
-                    rows={6}
-                    style={{ width: '100%', boxSizing: 'border-box', padding: '12px 13px', border: '1px solid #ddd', borderRadius: '9px', fontSize: '14px', lineHeight: 1.6, resize: 'vertical' }}
-                  />
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: 600, cursor: 'pointer' }}>
-                    <input
-                      type="checkbox"
-                      checked={updateForm.is_important}
-                      onChange={(e) => setUpdateForm((prev) => ({ ...prev, is_important: e.target.checked }))}
-                    />
-                    중요 업데이트
-                  </label>
-                  {updateError && (
-                    <div style={{ whiteSpace: 'pre-line', color: '#c0392b', fontSize: '13px' }}>
-                      {updateError}
-                    </div>
-                  )}
-                  <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                    <button type="button" onClick={cancelUpdateForm} style={{ padding: '9px 14px', border: '1px solid #ddd', borderRadius: '8px', background: '#fff', cursor: 'pointer' }}>취소</button>
-                    <button type="submit" disabled={updateSaving} className="add-schedule-button" style={{ opacity: updateSaving ? 0.6 : 1 }}>
-                      {updateSaving ? '저장 중...' : editingUpdate ? '수정 저장' : '등록'}
-                    </button>
+              <div className="update-editor-overlay" onClick={cancelUpdateForm}>
+                <div className="update-editor" onClick={(e) => e.stopPropagation()}>
+                  <div className="update-editor-header">
+                    <h2>{editingUpdate ? '업데이트 수정' : '업데이트 작성'}</h2>
+                    <button type="button" className="update-editor-close" onClick={cancelUpdateForm}>×</button>
                   </div>
+
+                  <form className="update-editor-form" onSubmit={handleSaveUpdate}>
+                    <input
+                      type="text"
+                      value={updateForm.title}
+                      onChange={(e) => setUpdateForm((prev) => ({ ...prev, title: e.target.value }))}
+                      placeholder="업데이트 제목"
+                      autoFocus
+                    />
+                    <textarea
+                      value={updateForm.content}
+                      onChange={(e) => setUpdateForm((prev) => ({ ...prev, content: e.target.value }))}
+                      placeholder="업데이트 내용을 입력해주세요."
+                    />
+                    <label className="update-important-check">
+                      <input
+                        type="checkbox"
+                        checked={updateForm.is_important}
+                        onChange={(e) => setUpdateForm((prev) => ({ ...prev, is_important: e.target.checked }))}
+                      />
+                      중요 업데이트
+                    </label>
+
+                    {updateError && <p className="update-editor-error">{updateError}</p>}
+
+                    <div className="update-editor-actions">
+                      <button type="button" className="update-editor-cancel" onClick={cancelUpdateForm}>취소</button>
+                      <button type="submit" disabled={updateSaving} className="update-editor-submit">
+                        {updateSaving ? '저장 중...' : editingUpdate ? '수정 저장' : '등록'}
+                      </button>
+                    </div>
+                  </form>
                 </div>
-              </form>
+              </div>
             )}
 
             {updateLoading ? (
@@ -4098,21 +4359,19 @@ function App() {
             ) : updates.length === 0 ? (
               <div className="empty-list">아직 등록된 업데이트가 없습니다.</div>
             ) : (
-              <div style={{ display: 'grid', gap: '12px' }}>
+              <div className="update-list">
                 {updates.map((update) => (
-                  <article key={update.id} style={{ background: '#fff', border: '1px solid #e4e4e4', borderRadius: '14px', padding: '17px 18px', boxShadow: '0 3px 12px rgba(0,0,0,0.035)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '7px' }}>
-                      {update.is_important && (
-                        <span style={{ fontSize: '11px', fontWeight: 700, color: '#fff', background: '#2673C8', borderRadius: '999px', padding: '4px 8px' }}>중요 업데이트</span>
-                      )}
-                      <span style={{ fontSize: '12px', color: '#999' }}>{formatRequestDate(update.created_at)}</span>
+                  <article key={update.id} className="update-card">
+                    <div className="update-card-meta">
+                      {update.is_important && <span className="update-important-badge">중요 업데이트</span>}
+                      <span className="update-card-date">{formatRequestDate(update.created_at)}</span>
                     </div>
-                    <h3 style={{ margin: '0 0 9px', fontSize: '17px', lineHeight: 1.4 }}>{update.title}</h3>
-                    <p style={{ margin: 0, whiteSpace: 'pre-line', color: '#555', fontSize: '14px', lineHeight: 1.65 }}>{update.content}</p>
+                    <h3 className="update-card-title">{update.title}</h3>
+                    <p className="update-card-content">{update.content}</p>
                     {isAdmin && (
-                      <div style={{ display: 'flex', gap: '7px', marginTop: '13px' }}>
-                        <button type="button" onClick={() => openEditUpdateForm(update)} style={{ padding: '7px 11px', border: '1px solid #d8d8d8', borderRadius: '8px', background: '#fff', cursor: 'pointer' }}>수정</button>
-                        <button type="button" onClick={() => handleDeleteUpdate(update)} style={{ padding: '7px 11px', border: '1px solid #e2b4ae', borderRadius: '8px', background: '#fff', color: '#c0392b', cursor: 'pointer' }}>삭제</button>
+                      <div className="update-card-actions">
+                        <button type="button" onClick={() => openEditUpdateForm(update)}>수정</button>
+                        <button type="button" className="update-delete-button" onClick={() => handleDeleteUpdate(update)}>삭제</button>
                       </div>
                     )}
                   </article>
