@@ -3577,7 +3577,8 @@ function App() {
 
           .overlay:has(.schedule-view-sheet) .schedule-view-sheet.schedule-detail-sheet {
             height: auto !important;
-            max-height: 50dvh !important;
+            min-height: 50dvh !important;
+            max-height: calc(100dvh - 24px) !important;
           }
         }
       `}</style>
