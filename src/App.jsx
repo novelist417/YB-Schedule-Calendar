@@ -3556,6 +3556,29 @@ function App() {
           .schedule-view-sheet .schedule-selection-list {
             margin-bottom: 0 !important;
           }
+
+          /* 모바일 날짜/상세 모달은 화면 아래에 붙이고, 모달 아래 빈 공간을 만들지 않음 */
+          .overlay:has(.schedule-view-sheet) {
+            align-items: flex-end !important;
+            justify-content: center !important;
+            padding: 0 !important;
+          }
+
+          .overlay:has(.schedule-view-sheet) .schedule-view-sheet {
+            align-self: flex-end !important;
+            margin: 0 auto !important;
+            width: calc(100% - 20px) !important;
+          }
+
+          .overlay:has(.schedule-view-sheet) .schedule-view-sheet.schedule-selection-sheet {
+            height: auto !important;
+            max-height: 33dvh !important;
+          }
+
+          .overlay:has(.schedule-view-sheet) .schedule-view-sheet.schedule-detail-sheet {
+            height: auto !important;
+            max-height: 50dvh !important;
+          }
         }
       `}</style>
       <header className="header">
