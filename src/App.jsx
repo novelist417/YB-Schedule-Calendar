@@ -3538,6 +3538,24 @@ function App() {
             min-width: 0 !important;
             max-width: 100% !important;
           }
+
+          /* 모바일 모달 하단의 불필요한 빈 공간 제거 */
+          .schedule-view-sheet {
+            padding-bottom: 4px !important;
+          }
+
+          .schedule-view-sheet .schedule-detail {
+            padding-bottom: 0 !important;
+            margin-bottom: 0 !important;
+          }
+
+          .schedule-view-sheet .schedule-item {
+            margin-bottom: 0 !important;
+          }
+
+          .schedule-view-sheet .schedule-selection-list {
+            margin-bottom: 0 !important;
+          }
         }
       `}</style>
       <header className="header">
