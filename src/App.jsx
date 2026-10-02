@@ -123,6 +123,19 @@ function App() {
   const [allRequests, setAllRequests] = useState([])
   const [requestLoading, setRequestLoading] = useState(false)
 
+  // 업데이트 현황
+  const [updates, setUpdates] = useState([])
+  const [updateForm, setUpdateForm] = useState({
+    title: '',
+    content: '',
+    is_important: false,
+  })
+  const [editingUpdate, setEditingUpdate] = useState(null)
+  const [showUpdateForm, setShowUpdateForm] = useState(false)
+  const [updateSaving, setUpdateSaving] = useState(false)
+  const [updateLoading, setUpdateLoading] = useState(false)
+  const [updateError, setUpdateError] = useState('')
+
   // 스케줄표 자동 등록
   const [showAutoImport, setShowAutoImport] = useState(false)
   const [autoImportMode, setAutoImportMode] = useState('image')
@@ -896,6 +909,10 @@ function App() {
     setAllRequests([])
     setEditingRequest(null)
     setShowRequestForm(false)
+    setUpdates([])
+    setEditingUpdate(null)
+    setUpdateForm({ title: '', content: '', is_important: false })
+    setUpdateError('')
   }
 
   function openNewScheduleForm() {
@@ -1666,6 +1683,132 @@ function App() {
     }
 
     await loadAllRequests()
+  }
+
+  // =========================
+  // 업데이트 현황
+  // =========================
+
+  async function loadUpdates() {
+    setUpdateLoading(true)
+    setUpdateError('')
+
+    const { data, error } = await supabase
+      .from('updates')
+      .select('*')
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      console.error('업데이트 현황 조회 실패:', error)
+      setUpdateError(`업데이트 현황을 불러오지 못했습니다.\n${error.message}`)
+      setUpdates([])
+      setUpdateLoading(false)
+      return
+    }
+
+    setUpdates(data || [])
+    setUpdateLoading(false)
+  }
+
+  function openNewUpdateForm() {
+    if (!isAdmin) return
+    setEditingUpdate(null)
+    setShowUpdateForm(true)
+    setUpdateForm({ title: '', content: '', is_important: false })
+    setUpdateError('')
+  }
+
+  function openEditUpdateForm(update) {
+    if (!isAdmin) return
+    setEditingUpdate(update)
+    setShowUpdateForm(true)
+    setUpdateForm({
+      title: update.title || '',
+      content: update.content || '',
+      is_important: Boolean(update.is_important),
+    })
+    setUpdateError('')
+  }
+
+  function cancelUpdateForm() {
+    setEditingUpdate(null)
+    setShowUpdateForm(false)
+    setUpdateForm({ title: '', content: '', is_important: false })
+    setUpdateError('')
+  }
+
+  async function handleSaveUpdate(e) {
+    e.preventDefault()
+    if (!isAdmin) return
+
+    const title = updateForm.title.trim()
+    const content = updateForm.content.trim()
+
+    if (!title || !content) {
+      setUpdateError('제목과 내용을 모두 입력해주세요.')
+      return
+    }
+
+    setUpdateSaving(true)
+    setUpdateError('')
+
+    let result
+
+    if (editingUpdate) {
+      result = await supabase
+        .from('updates')
+        .update({
+          title,
+          content,
+          is_important: updateForm.is_important,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', editingUpdate.id)
+    } else {
+      result = await supabase
+        .from('updates')
+        .insert({
+          title,
+          content,
+          is_important: updateForm.is_important,
+          author_id: session?.user?.id || null,
+        })
+    }
+
+    if (result.error) {
+      console.error('업데이트 저장 실패:', result.error)
+      setUpdateError(result.error.message)
+      setUpdateSaving(false)
+      return
+    }
+
+    await loadUpdates()
+    cancelUpdateForm()
+    setUpdateSaving(false)
+  }
+
+  async function handleDeleteUpdate(update) {
+    if (!isAdmin) return
+
+    const confirmed = window.confirm(`\"${update.title}\" 업데이트를 삭제할까요?`)
+    if (!confirmed) return
+
+    const { error } = await supabase
+      .from('updates')
+      .delete()
+      .eq('id', update.id)
+
+    if (error) {
+      console.error('업데이트 삭제 실패:', error)
+      alert(`삭제에 실패했습니다.\n${error.message}`)
+      return
+    }
+
+    if (editingUpdate?.id === update.id) {
+      cancelUpdateForm()
+    }
+
+    await loadUpdates()
   }
 
   // =========================
@@ -3641,6 +3784,20 @@ function App() {
 
               <button
                 className={
+                  page === 'updates'
+                    ? 'nav-button active'
+                    : 'nav-button'
+                }
+                onClick={() => {
+                  setPage('updates')
+                  loadUpdates()
+                }}
+              >
+                업데이트 현황
+              </button>
+
+              <button
+                className={
                   page === 'requests'
                     ? 'nav-button active'
                     : 'nav-button'
@@ -3862,6 +4019,106 @@ function App() {
                 )
               )}
             </div>
+          </section>
+        ) : page === 'updates' && session ? (
+          <section className="schedule-list-page update-page">
+            <div className="list-page-header">
+              <div>
+                <p className="page-eyebrow">UPDATE</p>
+                <h1>업데이트 현황</h1>
+                <p className="page-description">
+                  앱에서 변경되거나 추가된 기능을 확인할 수 있습니다.
+                </p>
+              </div>
+
+              {isAdmin && !editingUpdate && (
+                <button
+                  className="add-schedule-button"
+                  type="button"
+                  onClick={openNewUpdateForm}
+                >
+                  + 업데이트 작성
+                </button>
+              )}
+            </div>
+
+            {isAdmin && showUpdateForm && (
+              <form
+                onSubmit={handleSaveUpdate}
+                style={{
+                  background: '#fff',
+                  border: '1px solid #e2e2e2',
+                  borderRadius: '14px',
+                  padding: '18px',
+                  marginBottom: '18px',
+                  boxShadow: '0 4px 16px rgba(0,0,0,0.04)',
+                }}
+              >
+                <div style={{ display: 'grid', gap: '12px' }}>
+                  <input
+                    value={updateForm.title}
+                    onChange={(e) => setUpdateForm((prev) => ({ ...prev, title: e.target.value }))}
+                    placeholder="업데이트 제목"
+                    style={{ width: '100%', boxSizing: 'border-box', padding: '12px 13px', border: '1px solid #ddd', borderRadius: '9px', fontSize: '15px' }}
+                  />
+                  <textarea
+                    value={updateForm.content}
+                    onChange={(e) => setUpdateForm((prev) => ({ ...prev, content: e.target.value }))}
+                    placeholder="업데이트 내용을 입력해주세요."
+                    rows={6}
+                    style={{ width: '100%', boxSizing: 'border-box', padding: '12px 13px', border: '1px solid #ddd', borderRadius: '9px', fontSize: '14px', lineHeight: 1.6, resize: 'vertical' }}
+                  />
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: 600, cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={updateForm.is_important}
+                      onChange={(e) => setUpdateForm((prev) => ({ ...prev, is_important: e.target.checked }))}
+                    />
+                    중요 업데이트
+                  </label>
+                  {updateError && (
+                    <div style={{ whiteSpace: 'pre-line', color: '#c0392b', fontSize: '13px' }}>
+                      {updateError}
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                    <button type="button" onClick={cancelUpdateForm} style={{ padding: '9px 14px', border: '1px solid #ddd', borderRadius: '8px', background: '#fff', cursor: 'pointer' }}>취소</button>
+                    <button type="submit" disabled={updateSaving} className="add-schedule-button" style={{ opacity: updateSaving ? 0.6 : 1 }}>
+                      {updateSaving ? '저장 중...' : editingUpdate ? '수정 저장' : '등록'}
+                    </button>
+                  </div>
+                </div>
+              </form>
+            )}
+
+            {updateLoading ? (
+              <div className="empty-list">업데이트 현황을 불러오는 중입니다.</div>
+            ) : updateError && updates.length === 0 ? (
+              <div className="empty-list" style={{ whiteSpace: 'pre-line' }}>{updateError}</div>
+            ) : updates.length === 0 ? (
+              <div className="empty-list">아직 등록된 업데이트가 없습니다.</div>
+            ) : (
+              <div style={{ display: 'grid', gap: '12px' }}>
+                {updates.map((update) => (
+                  <article key={update.id} style={{ background: '#fff', border: '1px solid #e4e4e4', borderRadius: '14px', padding: '17px 18px', boxShadow: '0 3px 12px rgba(0,0,0,0.035)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '7px' }}>
+                      {update.is_important && (
+                        <span style={{ fontSize: '11px', fontWeight: 700, color: '#fff', background: '#2673C8', borderRadius: '999px', padding: '4px 8px' }}>중요 업데이트</span>
+                      )}
+                      <span style={{ fontSize: '12px', color: '#999' }}>{formatRequestDate(update.created_at)}</span>
+                    </div>
+                    <h3 style={{ margin: '0 0 9px', fontSize: '17px', lineHeight: 1.4 }}>{update.title}</h3>
+                    <p style={{ margin: 0, whiteSpace: 'pre-line', color: '#555', fontSize: '14px', lineHeight: 1.65 }}>{update.content}</p>
+                    {isAdmin && (
+                      <div style={{ display: 'flex', gap: '7px', marginTop: '13px' }}>
+                        <button type="button" onClick={() => openEditUpdateForm(update)} style={{ padding: '7px 11px', border: '1px solid #d8d8d8', borderRadius: '8px', background: '#fff', cursor: 'pointer' }}>수정</button>
+                        <button type="button" onClick={() => handleDeleteUpdate(update)} style={{ padding: '7px 11px', border: '1px solid #e2b4ae', borderRadius: '8px', background: '#fff', color: '#c0392b', cursor: 'pointer' }}>삭제</button>
+                      </div>
+                    )}
+                  </article>
+                ))}
+              </div>
+            )}
           </section>
         ) : page ===
             'requests' &&
