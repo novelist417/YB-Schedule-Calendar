@@ -3007,14 +3007,15 @@ function App() {
             display: flex !important;
             flex-direction: column !important;
             gap: 1px !important;
-            max-height: 42px !important;
+            margin-top: -4px !important;
+            max-height: 38px !important;
             overflow: visible !important;
           }
 
           .calendar-day .event {
-            min-height: 20px !important;
-            height: 20px !important;
-            flex: 0 0 20px !important;
+            min-height: 18px !important;
+            height: 18px !important;
+            flex: 0 0 18px !important;
             margin: 0 !important;
           }
 
@@ -3469,12 +3470,13 @@ function App() {
             overflow-y: auto !important;
           }
 
+          /* 모바일: 날짜 일정 목록은 화면 아래 1/3 정도, 상세는 화면 절반 정도만 차지 */
           .schedule-view-sheet.schedule-selection-sheet {
-            max-height: 66vh !important;
+            max-height: 33vh !important;
           }
 
           .schedule-view-sheet.schedule-detail-sheet {
-            max-height: 55vh !important;
+            max-height: 50vh !important;
           }
 
           .schedule-view-sheet .schedule-detail,
