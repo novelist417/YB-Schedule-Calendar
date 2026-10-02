@@ -473,7 +473,7 @@ function App() {
           type="button"
           onClick={() => setShowAddScheduleMenu((prev) => !prev)}
         >
-          + 일정 추가 <span className="add-schedule-chevron">⌄</span>
+          + 일정 추가
         </button>
         {showAddScheduleMenu && (
           <div className="add-schedule-menu-panel">
@@ -2526,6 +2526,21 @@ function App() {
           box-sizing: border-box !important;
         }
 
+        /* 달력 일정 위치/간격 */
+        .calendar-day .events {
+          margin-top: -2px !important;
+          gap: 2px !important;
+        }
+
+        /* 날짜를 눌렀을 때 올라오는 목록/상세 모달 높이 */
+        .schedule-view-sheet.schedule-selection-sheet {
+          max-height: 66vh !important;
+        }
+
+        .schedule-view-sheet.schedule-detail-sheet {
+          max-height: 55vh !important;
+        }
+
         .address-link,
         .place-link {
           color: #fff !important;
@@ -3445,13 +3460,21 @@ function App() {
             align-self: center !important;
             width: calc(100% - 20px) !important;
             max-width: 620px !important;
-            max-height: 86vh !important;
+            max-height: 66vh !important;
             margin: auto !important;
             padding: 10px 15px 20px !important;
             border-radius: 18px !important;
             box-sizing: border-box !important;
             overflow-x: hidden !important;
             overflow-y: auto !important;
+          }
+
+          .schedule-view-sheet.schedule-selection-sheet {
+            max-height: 66vh !important;
+          }
+
+          .schedule-view-sheet.schedule-detail-sheet {
+            max-height: 55vh !important;
           }
 
           .schedule-view-sheet .schedule-detail,
@@ -4846,7 +4869,7 @@ function App() {
           }}
         >
           <div
-            className="bottom-sheet schedule-view-sheet"
+            className={`bottom-sheet schedule-view-sheet ${selectedSchedule ? 'schedule-detail-sheet' : 'schedule-selection-sheet'}`}
             onClick={(e) =>
               e.stopPropagation()
             }
