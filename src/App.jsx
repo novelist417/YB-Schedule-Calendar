@@ -2589,11 +2589,19 @@ function App() {
           line-height: 1 !important;
         }
 
+        .calendar-day.today {
+          background: rgba(159, 41, 64, 0.12) !important;
+        }
+
         .calendar-day.today .date-number {
           top: 10px !important;
           left: 10px !important;
-          background: transparent !important;
-          color: #9f2940 !important;
+          background: rgba(159, 41, 64, 0.78) !important;
+          color: #fff !important;
+          border: 1px solid rgba(255, 255, 255, 0.65) !important;
+          border-radius: 6px !important;
+          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35) !important;
+          box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18) !important;
         }
 
         .calendar-day .events {
