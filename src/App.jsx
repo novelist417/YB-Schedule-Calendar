@@ -2597,6 +2597,8 @@ function App() {
           line-height: normal !important;
           border-radius: 50% !important;
           background: transparent !important;
+          position: relative !important;
+          z-index: 1 !important;
         }
 
         .calendar-day.today .date-number {
@@ -2606,6 +2608,8 @@ function App() {
 
         /* 날짜 숫자가 일반 흐름을 유지하므로 일정도 원래 위치에서 시작한다. */
         .calendar-day .events {
+          position: relative !important;
+          z-index: 2 !important;
           margin-top: 7px !important;
           overflow: visible !important;
           min-height: 0 !important;
@@ -3175,9 +3179,13 @@ function App() {
             text-align: center !important;
             font-size: 13px !important;
             line-height: normal !important;
+            position: relative !important;
+            z-index: 1 !important;
           }
 
           .calendar-day .events {
+            position: relative !important;
+            z-index: 2 !important;
             display: flex !important;
             flex-direction: column !important;
             gap: 1px !important;
