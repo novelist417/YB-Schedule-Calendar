@@ -2581,15 +2581,14 @@ function App() {
         }
 
         .calendar-day .date-number {
-          display: block !important;
-          width: 26px !important;
-          height: 26px !important;
-          min-width: 26px !important;
-          min-height: 26px !important;
-          padding: 5px 0 0 !important;
+          position: relative !important;
+          z-index: 1 !important;
+          display: inline-flex !important;
+          align-items: center !important;
+          justify-content: center !important;
           box-sizing: border-box !important;
-          text-align: center !important;
-          line-height: normal !important;
+          padding: 0 !important;
+          line-height: 1 !important;
         }
 
         .calendar-day.today .date-number {
@@ -2598,6 +2597,8 @@ function App() {
         }
 
         .calendar-day .events {
+          position: relative !important;
+          z-index: 2 !important;
           overflow: visible !important;
           min-height: 0 !important;
         }
@@ -2673,9 +2674,9 @@ function App() {
           box-sizing: border-box !important;
         }
 
-        /* 달력 일정 위치/간격: 날짜 영역을 침범하지 않도록 원래 흐름 유지 */
+        /* 달력 일정 위치/간격 */
         .calendar-day .events {
-          margin-top: 7px !important;
+          margin-top: -2px !important;
           gap: 2px !important;
         }
 
@@ -2690,6 +2691,79 @@ function App() {
           height: auto !important;
           min-height: 0 !important;
           max-height: calc(100dvh - 24px) !important;
+        }
+
+        .user-hub-grid {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 14px;
+          margin-top: 24px;
+        }
+
+        .user-hub-card {
+          position: relative;
+          display: flex;
+          flex-direction: column;
+          align-items: flex-start;
+          min-height: 150px;
+          padding: 20px;
+          border: 1px solid #303030;
+          border-radius: 14px;
+          background: #171717;
+          color: #f5f5f5;
+          text-align: left;
+          cursor: pointer;
+        }
+
+        .user-hub-card:hover:not(:disabled) {
+          border-color: #555;
+          background: #1d1d1d;
+        }
+
+        .user-hub-card-label {
+          margin-bottom: 10px;
+          color: #888;
+          font-size: 10px;
+          font-weight: 800;
+          letter-spacing: .08em;
+        }
+
+        .user-hub-card strong {
+          font-size: 17px;
+          line-height: 1.3;
+        }
+
+        .user-hub-card > span:not(.user-hub-card-label) {
+          margin-top: 8px;
+          color: #999;
+          font-size: 12px;
+          line-height: 1.5;
+        }
+
+        .user-hub-card-disabled {
+          opacity: .55;
+          cursor: default;
+        }
+
+        .user-hub-card em {
+          margin-top: auto;
+          padding-top: 12px;
+          color: #777;
+          font-size: 11px;
+          font-style: normal;
+        }
+
+        @media (max-width: 700px) {
+          .user-hub-grid {
+            grid-template-columns: 1fr;
+            gap: 10px;
+            margin-top: 18px;
+          }
+
+          .user-hub-card {
+            min-height: 120px;
+            padding: 16px;
+          }
         }
 
         .address-link,
@@ -3158,8 +3232,8 @@ function App() {
             display: flex !important;
             flex-direction: column !important;
             gap: 1px !important;
-            margin-top: 6px !important;
-            transform: none !important;
+            margin-top: -4px !important;
+            transform: translateY(-3px) !important;
             max-height: 38px !important;
             overflow: visible !important;
           }
@@ -4061,9 +4135,7 @@ function App() {
                     ? 'nav-button active'
                     : 'nav-button'
                 }
-                onClick={() =>
-                  setPage('hub')
-                }
+                onClick={() => setPage('hub')}
               >
                 정보·요청
               </button>
@@ -4073,15 +4145,12 @@ function App() {
           {!session && (
             <button
               className={
-                page === 'hub' ||
-                page === 'updates'
+                page === 'hub' || page === 'updates'
                   ? 'nav-button active'
                   : 'nav-button'
               }
               type="button"
-              onClick={() =>
-                setPage('hub')
-              }
+              onClick={() => setPage('hub')}
             >
               정보·요청
             </button>
