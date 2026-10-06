@@ -2581,8 +2581,6 @@ function App() {
         }
 
         .calendar-day .date-number {
-          position: relative !important;
-          z-index: 1 !important;
           display: inline-flex !important;
           align-items: center !important;
           justify-content: center !important;
@@ -2597,8 +2595,6 @@ function App() {
         }
 
         .calendar-day .events {
-          position: relative !important;
-          z-index: 2 !important;
           overflow: visible !important;
           min-height: 0 !important;
         }
@@ -2691,79 +2687,6 @@ function App() {
           height: auto !important;
           min-height: 0 !important;
           max-height: calc(100dvh - 24px) !important;
-        }
-
-        .user-hub-grid {
-          display: grid;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-          gap: 14px;
-          margin-top: 24px;
-        }
-
-        .user-hub-card {
-          position: relative;
-          display: flex;
-          flex-direction: column;
-          align-items: flex-start;
-          min-height: 150px;
-          padding: 20px;
-          border: 1px solid #303030;
-          border-radius: 14px;
-          background: #171717;
-          color: #f5f5f5;
-          text-align: left;
-          cursor: pointer;
-        }
-
-        .user-hub-card:hover:not(:disabled) {
-          border-color: #555;
-          background: #1d1d1d;
-        }
-
-        .user-hub-card-label {
-          margin-bottom: 10px;
-          color: #888;
-          font-size: 10px;
-          font-weight: 800;
-          letter-spacing: .08em;
-        }
-
-        .user-hub-card strong {
-          font-size: 17px;
-          line-height: 1.3;
-        }
-
-        .user-hub-card > span:not(.user-hub-card-label) {
-          margin-top: 8px;
-          color: #999;
-          font-size: 12px;
-          line-height: 1.5;
-        }
-
-        .user-hub-card-disabled {
-          opacity: .55;
-          cursor: default;
-        }
-
-        .user-hub-card em {
-          margin-top: auto;
-          padding-top: 12px;
-          color: #777;
-          font-size: 11px;
-          font-style: normal;
-        }
-
-        @media (max-width: 700px) {
-          .user-hub-grid {
-            grid-template-columns: 1fr;
-            gap: 10px;
-            margin-top: 18px;
-          }
-
-          .user-hub-card {
-            min-height: 120px;
-            padding: 16px;
-          }
         }
 
         .address-link,
@@ -4069,6 +3992,65 @@ function App() {
             max-height: calc(100dvh - 24px) !important;
           }
         }
+
+        .user-hub-grid {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 14px;
+          margin-top: 24px;
+        }
+
+        .user-hub-card {
+          appearance: none;
+          width: 100%;
+          min-height: 120px;
+          padding: 20px;
+          border: 1px solid #e5e5e7;
+          border-radius: 12px;
+          background: #fff;
+          text-align: left;
+          cursor: pointer;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          gap: 8px;
+          box-sizing: border-box;
+        }
+
+        .user-hub-card strong {
+          font-size: 17px;
+          color: #222;
+        }
+
+        .user-hub-card span {
+          font-size: 13px;
+          line-height: 1.5;
+          color: #777;
+        }
+
+        .user-hub-content {
+          margin-top: 24px;
+          padding: 20px;
+          border: 1px solid #e5e5e7;
+          border-radius: 12px;
+          background: #fff;
+          color: #555;
+          line-height: 1.7;
+        }
+
+        .user-hub-content p {
+          margin: 0 0 10px;
+        }
+
+        .user-hub-content p:last-child {
+          margin-bottom: 0;
+        }
+
+        @media (max-width: 700px) {
+          .user-hub-grid {
+            grid-template-columns: 1fr;
+          }
+        }
       `}</style>
       <header className="header">
         <div
@@ -4129,9 +4111,7 @@ function App() {
 
               <button
                 className={
-                  page === 'hub' ||
-                  page === 'updates' ||
-                  page === 'requests'
+                  page === 'hub'
                     ? 'nav-button active'
                     : 'nav-button'
                 }
@@ -4145,7 +4125,7 @@ function App() {
           {!session && (
             <button
               className={
-                page === 'hub' || page === 'updates'
+                page === 'hub'
                   ? 'nav-button active'
                   : 'nav-button'
               }
@@ -4183,7 +4163,99 @@ function App() {
 
       <main className="main">
 
-        {page === 'list' &&
+        {page === 'hub' ? (
+          <section className="schedule-list-page user-hub-page">
+            <div className="list-page-header">
+              <div>
+                <p className="page-eyebrow">INFO</p>
+                <h1>정보·요청</h1>
+                <p className="page-description">
+                  앱 이용에 필요한 안내와 요청사항을 확인할 수 있습니다.
+                </p>
+              </div>
+            </div>
+
+            <div className="user-hub-grid">
+              <button
+                type="button"
+                className="user-hub-card"
+                onClick={() => {
+                  setPage('requests')
+                  if (session) {
+                    if (isAdmin) loadAllRequests()
+                    else loadMyRequests()
+                  } else {
+                    openAuthPrompt()
+                  }
+                }}
+              >
+                <strong>요청하기</strong>
+                <span>일정 추가·수정이나 개선사항을 요청합니다.</span>
+              </button>
+
+              <button
+                type="button"
+                className="user-hub-card"
+                onClick={() => {
+                  setPage('updates')
+                  loadUpdates()
+                }}
+              >
+                <strong>업데이트 현황</strong>
+                <span>앱의 변경사항과 새 기능을 확인합니다.</span>
+              </button>
+
+              <button
+                type="button"
+                className="user-hub-card"
+                onClick={() => setPage('guide')}
+              >
+                <strong>이용 가이드</strong>
+                <span>앱의 주요 기능과 이용 방법을 확인합니다.</span>
+              </button>
+
+              <button
+                type="button"
+                className="user-hub-card"
+                onClick={() => setPage('download')}
+              >
+                <strong>앱 다운로드</strong>
+                <span>앱 설치와 관련된 안내를 확인합니다.</span>
+              </button>
+            </div>
+          </section>
+        ) : page === 'guide' ? (
+          <section className="schedule-list-page user-hub-page">
+            <div className="list-page-header">
+              <div>
+                <p className="page-eyebrow">GUIDE</p>
+                <h1>이용 가이드</h1>
+                <p className="page-description">YB Schedule Calendar 이용 방법입니다.</p>
+              </div>
+              <button className="nav-button" type="button" onClick={() => setPage('hub')}>정보·요청</button>
+            </div>
+            <div className="user-hub-content">
+              <p>달력에서 날짜를 눌러 일정을 확인할 수 있습니다.</p>
+              <p>로그인하면 일정별 메모와 참석 여부를 저장할 수 있습니다.</p>
+              <p>일정 추가·수정이 필요한 경우 요청사항을 이용해주세요.</p>
+            </div>
+          </section>
+        ) : page === 'download' ? (
+          <section className="schedule-list-page user-hub-page">
+            <div className="list-page-header">
+              <div>
+                <p className="page-eyebrow">APP</p>
+                <h1>앱 다운로드</h1>
+                <p className="page-description">앱 설치와 관련된 안내입니다.</p>
+              </div>
+              <button className="nav-button" type="button" onClick={() => setPage('hub')}>정보·요청</button>
+            </div>
+            <div className="user-hub-content">
+              <p>현재 사용 중인 YB Schedule Calendar의 웹앱을 이용해주세요.</p>
+              <p>모바일에서는 브라우저의 홈 화면에 추가하여 앱처럼 사용할 수 있습니다.</p>
+            </div>
+          </section>
+        ) : page === 'list' &&
         isAdmin ? (
           <section className="schedule-list-page">
             <div className="list-page-header">
@@ -4349,52 +4421,7 @@ function App() {
               )}
             </div>
           </section>
-        ) : page === 'hub' ? (
-          <section className="schedule-list-page user-hub-page">
-            <div className="list-page-header">
-              <div>
-                <p className="page-eyebrow">INFO & REQUEST</p>
-                <h1>정보·요청</h1>
-                <p className="page-description">
-                  앱 이용에 필요한 소식과 요청사항을 한곳에서 확인할 수 있습니다.
-                </p>
-              </div>
-            </div>
-
-            <div className="user-hub-grid">
-              <button type="button" className="user-hub-card" onClick={() => { setPage('updates'); loadUpdates() }}>
-                <span className="user-hub-card-label">UPDATE</span>
-                <strong>업데이트 현황</strong>
-                <span>새로 추가되거나 변경된 기능을 확인합니다.</span>
-              </button>
-
-              <button type="button" className="user-hub-card" onClick={() => {
-                if (!session) { openAuthPrompt(); return }
-                setPage('requests')
-                if (isAdmin) loadAllRequests()
-                else loadMyRequests()
-              }}>
-                <span className="user-hub-card-label">REQUEST</span>
-                <strong>요청사항</strong>
-                <span>일정 추가·수정이나 앱 개선 요청을 남깁니다.</span>
-              </button>
-
-              <button type="button" className="user-hub-card user-hub-card-disabled" disabled>
-                <span className="user-hub-card-label">GUIDE</span>
-                <strong>이용 가이드</strong>
-                <span>앱의 기본 기능과 이용 방법을 안내합니다.</span>
-                <em>준비 중</em>
-              </button>
-
-              <button type="button" className="user-hub-card user-hub-card-disabled" disabled>
-                <span className="user-hub-card-label">APP</span>
-                <strong>앱 다운로드</strong>
-                <span>모바일에서 더 편하게 이용할 수 있는 방법을 안내합니다.</span>
-                <em>준비 중</em>
-              </button>
-            </div>
-          </section>
-        ) : page === 'updates' ? (
+        ) : page === 'updates' && session ? (
           <section className="schedule-list-page update-page">
             <div className="list-page-header">
               <div>
