@@ -2590,8 +2590,17 @@ function App() {
         }
 
         .calendar-day.today .date-number {
-          top: 10px !important;
-          left: 10px !important;
+          position: absolute !important;
+          top: 8px !important;
+          left: 8px !important;
+          width: 26px !important;
+          height: 26px !important;
+          min-width: 26px !important;
+          min-height: 26px !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          border-radius: 50% !important;
+          z-index: 2 !important;
         }
 
         .calendar-day .events {
@@ -4004,7 +4013,7 @@ function App() {
         .user-hub-card-disabled:hover { border-color: #343434; background: #181818; transform: none; }
         .user-hub-card-disabled em { position: absolute; top: 18px; right: 18px; padding: 4px 7px; border: 1px solid #3a3a3a; border-radius: 999px; color: #777; font-size: 10px; font-style: normal; }
 
-        /* 오늘 날짜 강조가 일정 위로 겹치지 않도록 일정 레이어를 위로 */
+        /* 오늘 날짜 강조는 작은 원으로만 표시하고 일정 영역은 기존 위치를 유지 */
         .calendar-day.today .events { position: relative !important; z-index: 3 !important; }
         .calendar-day.today .event { position: relative !important; z-index: 4 !important; }
         .calendar-day.today .event-title-row { position: relative !important; z-index: 5 !important; }
