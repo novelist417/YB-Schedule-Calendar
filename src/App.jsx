@@ -2581,7 +2581,7 @@ function App() {
         }
 
         .calendar-day .date-number {
-          display: inline-flex !important;
+          display: flex !important;
           align-items: center !important;
           justify-content: center !important;
           box-sizing: border-box !important;
@@ -2593,7 +2593,7 @@ function App() {
            별도 위치 지정으로 달력 일정의 흐름을 밀어내지 않는다. */
         .calendar-day.today .date-number {
           position: relative !important;
-          display: inline-flex !important;
+          display: flex !important;
           width: 26px !important;
           height: 26px !important;
           min-width: 26px !important;
