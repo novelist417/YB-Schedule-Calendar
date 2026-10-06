@@ -2592,6 +2592,8 @@ function App() {
         .calendar-day.today .date-number {
           top: 10px !important;
           left: 10px !important;
+          background: transparent !important;
+          color: #9f2940 !important;
         }
 
         .calendar-day .events {
@@ -3992,65 +3994,6 @@ function App() {
             max-height: calc(100dvh - 24px) !important;
           }
         }
-
-        .user-hub-grid {
-          display: grid;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-          gap: 14px;
-          margin-top: 24px;
-        }
-
-        .user-hub-card {
-          appearance: none;
-          width: 100%;
-          min-height: 120px;
-          padding: 20px;
-          border: 1px solid #e5e5e7;
-          border-radius: 12px;
-          background: #fff;
-          text-align: left;
-          cursor: pointer;
-          display: flex;
-          flex-direction: column;
-          justify-content: center;
-          gap: 8px;
-          box-sizing: border-box;
-        }
-
-        .user-hub-card strong {
-          font-size: 17px;
-          color: #222;
-        }
-
-        .user-hub-card span {
-          font-size: 13px;
-          line-height: 1.5;
-          color: #777;
-        }
-
-        .user-hub-content {
-          margin-top: 24px;
-          padding: 20px;
-          border: 1px solid #e5e5e7;
-          border-radius: 12px;
-          background: #fff;
-          color: #555;
-          line-height: 1.7;
-        }
-
-        .user-hub-content p {
-          margin: 0 0 10px;
-        }
-
-        .user-hub-content p:last-child {
-          margin-bottom: 0;
-        }
-
-        @media (max-width: 700px) {
-          .user-hub-grid {
-            grid-template-columns: 1fr;
-          }
-        }
       `}</style>
       <header className="header">
         <div
@@ -4111,28 +4054,46 @@ function App() {
 
               <button
                 className={
-                  page === 'hub'
+                  page === 'updates'
                     ? 'nav-button active'
                     : 'nav-button'
                 }
-                onClick={() => setPage('hub')}
+                onClick={() => {
+                  setPage('updates')
+                  loadUpdates()
+                }}
               >
-                정보·요청
+                업데이트 현황
+              </button>
+
+              <button
+                className={
+                  page === 'requests'
+                    ? 'nav-button active'
+                    : 'nav-button'
+                }
+                onClick={() => {
+                  setPage('requests')
+
+                  if (isAdmin) {
+                    loadAllRequests()
+                  } else {
+                    loadMyRequests()
+                  }
+                }}
+              >
+                요청사항
               </button>
             </nav>
           )}
 
           {!session && (
             <button
-              className={
-                page === 'hub'
-                  ? 'nav-button active'
-                  : 'nav-button'
-              }
+              className="nav-button"
               type="button"
-              onClick={() => setPage('hub')}
+              onClick={openAuthPrompt}
             >
-              정보·요청
+              요청사항
             </button>
           )}
 
@@ -4163,99 +4124,7 @@ function App() {
 
       <main className="main">
 
-        {page === 'hub' ? (
-          <section className="schedule-list-page user-hub-page">
-            <div className="list-page-header">
-              <div>
-                <p className="page-eyebrow">INFO</p>
-                <h1>정보·요청</h1>
-                <p className="page-description">
-                  앱 이용에 필요한 안내와 요청사항을 확인할 수 있습니다.
-                </p>
-              </div>
-            </div>
-
-            <div className="user-hub-grid">
-              <button
-                type="button"
-                className="user-hub-card"
-                onClick={() => {
-                  setPage('requests')
-                  if (session) {
-                    if (isAdmin) loadAllRequests()
-                    else loadMyRequests()
-                  } else {
-                    openAuthPrompt()
-                  }
-                }}
-              >
-                <strong>요청하기</strong>
-                <span>일정 추가·수정이나 개선사항을 요청합니다.</span>
-              </button>
-
-              <button
-                type="button"
-                className="user-hub-card"
-                onClick={() => {
-                  setPage('updates')
-                  loadUpdates()
-                }}
-              >
-                <strong>업데이트 현황</strong>
-                <span>앱의 변경사항과 새 기능을 확인합니다.</span>
-              </button>
-
-              <button
-                type="button"
-                className="user-hub-card"
-                onClick={() => setPage('guide')}
-              >
-                <strong>이용 가이드</strong>
-                <span>앱의 주요 기능과 이용 방법을 확인합니다.</span>
-              </button>
-
-              <button
-                type="button"
-                className="user-hub-card"
-                onClick={() => setPage('download')}
-              >
-                <strong>앱 다운로드</strong>
-                <span>앱 설치와 관련된 안내를 확인합니다.</span>
-              </button>
-            </div>
-          </section>
-        ) : page === 'guide' ? (
-          <section className="schedule-list-page user-hub-page">
-            <div className="list-page-header">
-              <div>
-                <p className="page-eyebrow">GUIDE</p>
-                <h1>이용 가이드</h1>
-                <p className="page-description">YB Schedule Calendar 이용 방법입니다.</p>
-              </div>
-              <button className="nav-button" type="button" onClick={() => setPage('hub')}>정보·요청</button>
-            </div>
-            <div className="user-hub-content">
-              <p>달력에서 날짜를 눌러 일정을 확인할 수 있습니다.</p>
-              <p>로그인하면 일정별 메모와 참석 여부를 저장할 수 있습니다.</p>
-              <p>일정 추가·수정이 필요한 경우 요청사항을 이용해주세요.</p>
-            </div>
-          </section>
-        ) : page === 'download' ? (
-          <section className="schedule-list-page user-hub-page">
-            <div className="list-page-header">
-              <div>
-                <p className="page-eyebrow">APP</p>
-                <h1>앱 다운로드</h1>
-                <p className="page-description">앱 설치와 관련된 안내입니다.</p>
-              </div>
-              <button className="nav-button" type="button" onClick={() => setPage('hub')}>정보·요청</button>
-            </div>
-            <div className="user-hub-content">
-              <p>현재 사용 중인 YB Schedule Calendar의 웹앱을 이용해주세요.</p>
-              <p>모바일에서는 브라우저의 홈 화면에 추가하여 앱처럼 사용할 수 있습니다.</p>
-            </div>
-          </section>
-        ) : page === 'list' &&
+        {page === 'list' &&
         isAdmin ? (
           <section className="schedule-list-page">
             <div className="list-page-header">
