@@ -2589,18 +2589,30 @@ function App() {
           line-height: 1 !important;
         }
 
+        /* 오늘 날짜 원은 날짜 숫자 자체의 자리만 사용한다.
+           별도 위치 지정으로 달력 일정의 흐름을 밀어내지 않는다. */
         .calendar-day.today .date-number {
-          position: absolute !important;
-          top: 8px !important;
-          left: 8px !important;
+          position: relative !important;
+          display: inline-flex !important;
           width: 26px !important;
           height: 26px !important;
           min-width: 26px !important;
           min-height: 26px !important;
           margin: 0 !important;
           padding: 0 !important;
-          border-radius: 50% !important;
+          border-radius: 0 !important;
+          background: transparent !important;
+          color: #fff !important;
           z-index: 2 !important;
+        }
+
+        .calendar-day.today .date-number::before {
+          content: '' !important;
+          position: absolute !important;
+          inset: 0 !important;
+          border-radius: 50% !important;
+          background: #9f2940 !important;
+          z-index: -1 !important;
         }
 
         .calendar-day .events {
@@ -4012,11 +4024,6 @@ function App() {
         .user-hub-card-disabled { cursor: default; opacity: .62; }
         .user-hub-card-disabled:hover { border-color: #343434; background: #181818; transform: none; }
         .user-hub-card-disabled em { position: absolute; top: 18px; right: 18px; padding: 4px 7px; border: 1px solid #3a3a3a; border-radius: 999px; color: #777; font-size: 10px; font-style: normal; }
-
-        /* 오늘 날짜 강조는 작은 원으로만 표시하고 일정 영역은 기존 위치를 유지 */
-        .calendar-day.today .events { position: relative !important; z-index: 3 !important; }
-        .calendar-day.today .event { position: relative !important; z-index: 4 !important; }
-        .calendar-day.today .event-title-row { position: relative !important; z-index: 5 !important; }
 
         @media (max-width: 700px) {
           .user-hub-grid { grid-template-columns: 1fr; gap: 10px; margin-top: 18px; }
