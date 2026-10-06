@@ -4055,46 +4055,35 @@ function App() {
 
               <button
                 className={
-                  page === 'updates'
-                    ? 'nav-button active'
-                    : 'nav-button'
-                }
-                onClick={() => {
-                  setPage('updates')
-                  loadUpdates()
-                }}
-              >
-                업데이트 현황
-              </button>
-
-              <button
-                className={
+                  page === 'hub' ||
+                  page === 'updates' ||
                   page === 'requests'
                     ? 'nav-button active'
                     : 'nav-button'
                 }
-                onClick={() => {
-                  setPage('requests')
-
-                  if (isAdmin) {
-                    loadAllRequests()
-                  } else {
-                    loadMyRequests()
-                  }
-                }}
+                onClick={() =>
+                  setPage('hub')
+                }
               >
-                요청사항
+                정보·요청
               </button>
             </nav>
           )}
 
           {!session && (
             <button
-              className="nav-button"
+              className={
+                page === 'hub' ||
+                page === 'updates'
+                  ? 'nav-button active'
+                  : 'nav-button'
+              }
               type="button"
-              onClick={openAuthPrompt}
+              onClick={() =>
+                setPage('hub')
+              }
             >
-              요청사항
+              정보·요청
             </button>
           )}
 
@@ -4291,7 +4280,52 @@ function App() {
               )}
             </div>
           </section>
-        ) : page === 'updates' && session ? (
+        ) : page === 'hub' ? (
+          <section className="schedule-list-page user-hub-page">
+            <div className="list-page-header">
+              <div>
+                <p className="page-eyebrow">INFO & REQUEST</p>
+                <h1>정보·요청</h1>
+                <p className="page-description">
+                  앱 이용에 필요한 소식과 요청사항을 한곳에서 확인할 수 있습니다.
+                </p>
+              </div>
+            </div>
+
+            <div className="user-hub-grid">
+              <button type="button" className="user-hub-card" onClick={() => { setPage('updates'); loadUpdates() }}>
+                <span className="user-hub-card-label">UPDATE</span>
+                <strong>업데이트 현황</strong>
+                <span>새로 추가되거나 변경된 기능을 확인합니다.</span>
+              </button>
+
+              <button type="button" className="user-hub-card" onClick={() => {
+                if (!session) { openAuthPrompt(); return }
+                setPage('requests')
+                if (isAdmin) loadAllRequests()
+                else loadMyRequests()
+              }}>
+                <span className="user-hub-card-label">REQUEST</span>
+                <strong>요청사항</strong>
+                <span>일정 추가·수정이나 앱 개선 요청을 남깁니다.</span>
+              </button>
+
+              <button type="button" className="user-hub-card user-hub-card-disabled" disabled>
+                <span className="user-hub-card-label">GUIDE</span>
+                <strong>이용 가이드</strong>
+                <span>앱의 기본 기능과 이용 방법을 안내합니다.</span>
+                <em>준비 중</em>
+              </button>
+
+              <button type="button" className="user-hub-card user-hub-card-disabled" disabled>
+                <span className="user-hub-card-label">APP</span>
+                <strong>앱 다운로드</strong>
+                <span>모바일에서 더 편하게 이용할 수 있는 방법을 안내합니다.</span>
+                <em>준비 중</em>
+              </button>
+            </div>
+          </section>
+        ) : page === 'updates' ? (
           <section className="schedule-list-page update-page">
             <div className="list-page-header">
               <div>
