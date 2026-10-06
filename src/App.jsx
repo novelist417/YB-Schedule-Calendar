@@ -2580,37 +2580,24 @@ function App() {
           object-fit: contain;
         }
 
-        /* 날짜 숫자는 원래 달력 흐름을 그대로 유지한다. */
         .calendar-day .date-number {
-          position: static !important;
           display: block !important;
           width: 26px !important;
           height: 26px !important;
           min-width: 26px !important;
           min-height: 26px !important;
-          margin: 0 !important;
           padding: 5px 0 0 !important;
           box-sizing: border-box !important;
           text-align: center !important;
-          font-size: 14px !important;
-          font-weight: 650 !important;
           line-height: normal !important;
-          border-radius: 50% !important;
-          background: transparent !important;
-          position: relative !important;
-          z-index: 1 !important;
         }
 
         .calendar-day.today .date-number {
-          background: #9f2940 !important;
-          color: #fff !important;
+          top: 10px !important;
+          left: 10px !important;
         }
 
-        /* 날짜 숫자가 일반 흐름을 유지하므로 일정도 원래 위치에서 시작한다. */
         .calendar-day .events {
-          position: relative !important;
-          z-index: 2 !important;
-          margin-top: 7px !important;
           overflow: visible !important;
           min-height: 0 !important;
         }
@@ -2686,8 +2673,9 @@ function App() {
           box-sizing: border-box !important;
         }
 
-        /* 달력 일정 간격 */
+        /* 달력 일정 위치/간격: 날짜 영역을 침범하지 않도록 원래 흐름 유지 */
         .calendar-day .events {
+          margin-top: 7px !important;
           gap: 2px !important;
         }
 
@@ -3166,26 +3154,7 @@ function App() {
         }
 
         @media (max-width: 700px) {
-          .calendar-day .date-number {
-            position: static !important;
-            display: block !important;
-            width: 23px !important;
-            height: 23px !important;
-            min-width: 23px !important;
-            min-height: 23px !important;
-            margin: 0 !important;
-            padding: 4px 0 0 !important;
-            box-sizing: border-box !important;
-            text-align: center !important;
-            font-size: 13px !important;
-            line-height: normal !important;
-            position: relative !important;
-            z-index: 1 !important;
-          }
-
           .calendar-day .events {
-            position: relative !important;
-            z-index: 2 !important;
             display: flex !important;
             flex-direction: column !important;
             gap: 1px !important;
@@ -4026,25 +3995,6 @@ function App() {
             max-height: calc(100dvh - 24px) !important;
           }
         }
-
-        /* 통합 정보·요청 페이지 */
-        .user-hub-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-top: 24px; }
-        .user-hub-card { position: relative; display: flex; flex-direction: column; align-items: flex-start; min-height: 150px; padding: 20px; border: 1px solid #343434; border-radius: 14px; background: #181818; color: #fff; text-align: left; cursor: pointer; transition: border-color .15s ease, background .15s ease, transform .15s ease; }
-        .user-hub-card:hover { border-color: #555; background: #1d1d1d; transform: translateY(-1px); }
-        .user-hub-card-label { margin-bottom: 10px; color: #888; font-size: 10px; font-weight: 800; letter-spacing: .08em; }
-        .user-hub-card strong { font-size: 18px; line-height: 1.35; }
-        .user-hub-card > span:not(.user-hub-card-label) { margin-top: 8px; color: #aaa; font-size: 13px; line-height: 1.5; }
-        .user-hub-card-disabled { cursor: default; opacity: .62; }
-        .user-hub-card-disabled:hover { border-color: #343434; background: #181818; transform: none; }
-        .user-hub-card-disabled em { position: absolute; top: 18px; right: 18px; padding: 4px 7px; border: 1px solid #3a3a3a; border-radius: 999px; color: #777; font-size: 10px; font-style: normal; }
-
-        @media (max-width: 700px) {
-          .user-hub-grid { grid-template-columns: 1fr; gap: 10px; margin-top: 18px; }
-          .user-hub-card { min-height: 122px; padding: 17px; }
-          .user-hub-card strong { font-size: 16px; }
-          .user-hub-card > span:not(.user-hub-card-label) { font-size: 12px; }
-        }
-
       `}</style>
       <header className="header">
         <div
@@ -4105,35 +4055,46 @@ function App() {
 
               <button
                 className={
-                  page === 'hub' ||
-                  page === 'updates' ||
+                  page === 'updates'
+                    ? 'nav-button active'
+                    : 'nav-button'
+                }
+                onClick={() => {
+                  setPage('updates')
+                  loadUpdates()
+                }}
+              >
+                업데이트 현황
+              </button>
+
+              <button
+                className={
                   page === 'requests'
                     ? 'nav-button active'
                     : 'nav-button'
                 }
-                onClick={() =>
-                  setPage('hub')
-                }
+                onClick={() => {
+                  setPage('requests')
+
+                  if (isAdmin) {
+                    loadAllRequests()
+                  } else {
+                    loadMyRequests()
+                  }
+                }}
               >
-                정보·요청
+                요청사항
               </button>
             </nav>
           )}
 
           {!session && (
             <button
-              className={
-                page === 'hub' ||
-                page === 'updates'
-                  ? 'nav-button active'
-                  : 'nav-button'
-              }
+              className="nav-button"
               type="button"
-              onClick={() =>
-                setPage('hub')
-              }
+              onClick={openAuthPrompt}
             >
-              정보·요청
+              요청사항
             </button>
           )}
 
@@ -4330,52 +4291,7 @@ function App() {
               )}
             </div>
           </section>
-        ) : page === 'hub' ? (
-          <section className="schedule-list-page user-hub-page">
-            <div className="list-page-header">
-              <div>
-                <p className="page-eyebrow">INFO & REQUEST</p>
-                <h1>정보·요청</h1>
-                <p className="page-description">
-                  앱 이용에 필요한 소식과 요청사항을 한곳에서 확인할 수 있습니다.
-                </p>
-              </div>
-            </div>
-
-            <div className="user-hub-grid">
-              <button type="button" className="user-hub-card" onClick={() => { setPage('updates'); loadUpdates() }}>
-                <span className="user-hub-card-label">UPDATE</span>
-                <strong>업데이트 현황</strong>
-                <span>새로 추가되거나 변경된 기능을 확인합니다.</span>
-              </button>
-
-              <button type="button" className="user-hub-card" onClick={() => {
-                if (!session) { openAuthPrompt(); return }
-                setPage('requests')
-                if (isAdmin) loadAllRequests()
-                else loadMyRequests()
-              }}>
-                <span className="user-hub-card-label">REQUEST</span>
-                <strong>요청사항</strong>
-                <span>일정 추가·수정이나 앱 개선 요청을 남깁니다.</span>
-              </button>
-
-              <button type="button" className="user-hub-card user-hub-card-disabled" disabled>
-                <span className="user-hub-card-label">GUIDE</span>
-                <strong>이용 가이드</strong>
-                <span>앱의 기본 기능과 이용 방법을 안내합니다.</span>
-                <em>준비 중</em>
-              </button>
-
-              <button type="button" className="user-hub-card user-hub-card-disabled" disabled>
-                <span className="user-hub-card-label">APP</span>
-                <strong>앱 다운로드</strong>
-                <span>모바일에서 더 편하게 이용할 수 있는 방법을 안내합니다.</span>
-                <em>준비 중</em>
-              </button>
-            </div>
-          </section>
-        ) : page === 'updates' ? (
+        ) : page === 'updates' && session ? (
           <section className="schedule-list-page update-page">
             <div className="list-page-header">
               <div>
