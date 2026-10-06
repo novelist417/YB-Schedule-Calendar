@@ -2580,39 +2580,34 @@ function App() {
           object-fit: contain;
         }
 
+        /* 날짜 숫자는 셀 상단에 고정하고, 일정의 일반 흐름에는 참여시키지 않는다. */
         .calendar-day .date-number {
+          position: absolute !important;
+          top: 10px !important;
+          left: 10px !important;
           display: flex !important;
           align-items: center !important;
           justify-content: center !important;
-          box-sizing: border-box !important;
-          padding: 0 !important;
-          line-height: 1 !important;
-        }
-
-        /* 오늘 날짜 원은 날짜 숫자 자체의 자리만 사용한다.
-           별도 위치 지정으로 달력 일정의 흐름을 밀어내지 않는다. */
-        .calendar-day.today .date-number {
-          position: relative !important;
-          display: flex !important;
           width: 26px !important;
           height: 26px !important;
           min-width: 26px !important;
           min-height: 26px !important;
           margin: 0 !important;
           padding: 0 !important;
-          border-radius: 0 !important;
+          box-sizing: border-box !important;
+          line-height: 1 !important;
+          border-radius: 50% !important;
           background: transparent !important;
-          color: #fff !important;
-          z-index: 2 !important;
         }
 
-        .calendar-day.today .date-number::before {
-          content: '' !important;
-          position: absolute !important;
-          inset: 0 !important;
-          border-radius: 50% !important;
+        .calendar-day.today .date-number {
           background: #9f2940 !important;
-          z-index: -1 !important;
+          color: #fff !important;
+        }
+
+        /* 날짜 숫자를 absolute로 분리했으므로, 일정은 기존과 같은 높이에서 시작한다. */
+        .calendar-day .events {
+          margin-top: 24px !important;
         }
 
         .calendar-day .events {
@@ -2691,9 +2686,8 @@ function App() {
           box-sizing: border-box !important;
         }
 
-        /* 달력 일정 위치/간격 */
+        /* 달력 일정 간격 */
         .calendar-day .events {
-          margin-top: -2px !important;
           gap: 2px !important;
         }
 
@@ -3172,11 +3166,20 @@ function App() {
         }
 
         @media (max-width: 700px) {
+          .calendar-day .date-number {
+            top: 6px !important;
+            left: 6px !important;
+            width: 23px !important;
+            height: 23px !important;
+            min-width: 23px !important;
+            min-height: 23px !important;
+          }
+
           .calendar-day .events {
             display: flex !important;
             flex-direction: column !important;
             gap: 1px !important;
-            margin-top: -4px !important;
+            margin-top: 21px !important;
             transform: translateY(-3px) !important;
             max-height: 38px !important;
             overflow: visible !important;
