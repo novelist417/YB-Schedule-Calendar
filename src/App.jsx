@@ -137,6 +137,8 @@ function App() {
   const [updateSaving, setUpdateSaving] = useState(false)
   const [updateLoading, setUpdateLoading] = useState(false)
   const [updateError, setUpdateError] = useState('')
+  const [importantNotice, setImportantNotice] = useState(null)
+  const [showImportantNotice, setShowImportantNotice] = useState(false)
 
   // 스케줄표 자동 등록
   const [showAutoImport, setShowAutoImport] = useState(false)
@@ -225,6 +227,7 @@ function App() {
 
   useEffect(() => {
     loadSchedules()
+    loadImportantNotice()
   }, [])
 
   useEffect(() => {
@@ -1712,6 +1715,40 @@ function App() {
     setUpdateLoading(false)
   }
 
+  async function loadImportantNotice() {
+    const { data, error } = await supabase
+      .from('updates')
+      .select('id, title, content, is_important, created_at')
+      .eq('is_important', true)
+      .order('created_at', { ascending: false })
+      .limit(1)
+
+    if (error) {
+      console.warn('중요 공지 조회 실패:', error)
+      return
+    }
+
+    const notice = data?.[0] || null
+    setImportantNotice(notice)
+
+    if (!notice) return
+
+    const seenKey = `yb-important-notice-seen-${notice.id}`
+    if (window.localStorage.getItem(seenKey) !== '1') {
+      setShowImportantNotice(true)
+    }
+  }
+
+  function closeImportantNotice() {
+    if (importantNotice?.id) {
+      window.localStorage.setItem(
+        `yb-important-notice-seen-${importantNotice.id}`,
+        '1'
+      )
+    }
+    setShowImportantNotice(false)
+  }
+
   function openNewUpdateForm() {
     if (!isAdmin) return
     setEditingUpdate(null)
@@ -2590,17 +2627,13 @@ function App() {
           line-height: 1 !important;
         }
 
-        .calendar-day.today {
-          background: rgba(159, 41, 64, 0.12) !important;
-        }
-
         .calendar-day.today .date-number {
           top: 10px !important;
           left: 10px !important;
           background: transparent !important;
           border: 0 !important;
           box-shadow: none !important;
-          color: #fff !important;
+          color: #9f2940 !important;
         }
 
         .calendar-day .events {
@@ -4046,7 +4079,7 @@ function App() {
             max-height: calc(100dvh - 24px) !important;
           }
         }
-
+      `}
 .info-back-button {
   display: inline-flex;
   align-items: center;
@@ -4067,7 +4100,66 @@ function App() {
 .page-back-button {
   margin-bottom: 14px;
 }
-      `}
+
+        .important-notice-overlay {
+          position: fixed;
+          inset: 0;
+          z-index: 9999;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 20px;
+          background: rgba(0, 0, 0, 0.58);
+        }
+
+        .important-notice-modal {
+          width: min(440px, 100%);
+          box-sizing: border-box;
+          padding: 24px;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 14px;
+          background: #202020;
+          color: #fff;
+          box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+        }
+
+        .important-notice-label {
+          margin-bottom: 8px;
+          color: #e77fb5;
+          font-size: 12px;
+          font-weight: 700;
+        }
+
+        .important-notice-modal h2 {
+          margin: 0 0 14px;
+          font-size: 20px;
+          line-height: 1.35;
+        }
+
+        .important-notice-modal p {
+          margin: 0;
+          white-space: pre-line;
+          color: #ddd;
+          font-size: 14px;
+          line-height: 1.65;
+        }
+
+        .important-notice-modal > button {
+          display: block;
+          width: 100%;
+          margin-top: 20px;
+          padding: 11px 14px;
+          border: 0;
+          border-radius: 8px;
+          background: #333;
+          color: #fff;
+          font-size: 14px;
+          cursor: pointer;
+        }
+
+        .important-notice-modal > button:hover {
+          background: #444;
+        }
 </style>
       <header className="header">
         <div
@@ -4367,8 +4459,8 @@ function App() {
             {infoSection === 'home' ? (
               <div className="info-menu-grid">
                 <button type="button" className="info-menu-card" onClick={() => { setInfoSection('updates'); setPage('updates'); loadUpdates() }}>
-                  <strong>업데이트 현황</strong>
-                  <span>앱의 변경·추가된 기능을 확인합니다.</span>
+                  <strong>공지&업데이트</strong>
+                  <span>중요 공지와 변경·추가된 기능을 확인합니다.</span>
                 </button>
 
                 <button type="button" className="info-menu-card" onClick={() => {
@@ -4385,10 +4477,6 @@ function App() {
                   <span>준비중</span>
                 </button>
 
-                <button type="button" className="info-menu-card" onClick={() => setInfoSection('download')}>
-                  <strong>앱 다운로드</strong>
-                  <span>준비중</span>
-                </button>
               </div>
             ) : infoSection === 'guide' ? (
               <div className="info-detail-card">
@@ -4396,17 +4484,12 @@ function App() {
                   ← 안내·요청으로 돌아가기
                 </button>
                 <h2>이용 가이드</h2>
-                <p>준비중입니다.</p>
+                <p>달력에서 날짜를 선택하면 해당 날짜의 일정을 확인할 수 있습니다.</p>
+                <p>월간·주간·목록 보기에서 원하는 방식으로 일정을 확인할 수 있습니다.</p>
+                <p>일정 상세에서 장소, 관련 링크 등의 정보를 확인하고, 로그인하면 개인 메모와 참석 여부를 관리할 수 있습니다.</p>
+                <p>일정 추가·수정이 필요한 경우 요청사항을 통해 의견을 남겨주세요.</p>
               </div>
-            ) : (
-              <div className="info-detail-card">
-                <button type="button" className="info-back-button" onClick={() => setInfoSection('home')}>
-                  ← 안내·요청으로 돌아가기
-                </button>
-                <h2>앱 다운로드</h2>
-                <p>준비중입니다.</p>
-              </div>
-            )}
+            ) : null}
           </section>
         ) : page === 'updates' ? (
           <section className="schedule-list-page update-page">
@@ -4416,9 +4499,9 @@ function App() {
             <div className="list-page-header">
               <div>
                 <p className="page-eyebrow">UPDATE</p>
-                <h1>업데이트 현황</h1>
+                <h1>공지&업데이트</h1>
                 <p className="page-description">
-                  앱에서 변경되거나 추가된 기능을 확인할 수 있습니다.
+                  중요 공지와 변경·추가된 기능을 확인할 수 있습니다.
                 </p>
               </div>
 
@@ -6952,6 +7035,22 @@ function App() {
                       : '요청사항 등록'}
                 </button>
               </form>
+            </div>
+          </div>
+        )}
+
+        {showImportantNotice && importantNotice && (
+          <div className="important-notice-overlay" onClick={closeImportantNotice}>
+            <div
+              className="important-notice-modal"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="important-notice-label">중요 공지</div>
+              <h2>{importantNotice.title}</h2>
+              <p>{importantNotice.content}</p>
+              <button type="button" onClick={closeImportantNotice}>
+                확인
+              </button>
             </div>
           </div>
         )}
