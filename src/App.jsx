@@ -4042,7 +4042,28 @@ function App() {
             max-height: calc(100dvh - 24px) !important;
           }
         }
-      `}</style>
+      `}
+.info-back-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  margin: 0 0 18px;
+  color: #aaa;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.info-back-button:hover {
+  color: #fff;
+}
+
+.page-back-button {
+  margin-bottom: 14px;
+}
+</style>
       <header className="header">
         <div
           className="logo"
@@ -4338,49 +4359,55 @@ function App() {
               </div>
             </div>
 
-            <div className="info-menu-grid">
-              <button type="button" className="info-menu-card" onClick={() => { setInfoSection('updates'); setPage('updates'); loadUpdates() }}>
-                <strong>업데이트 현황</strong>
-                <span>앱의 변경·추가된 기능을 확인합니다.</span>
-              </button>
+            {infoSection === 'home' ? (
+              <div className="info-menu-grid">
+                <button type="button" className="info-menu-card" onClick={() => { setInfoSection('updates'); setPage('updates'); loadUpdates() }}>
+                  <strong>업데이트 현황</strong>
+                  <span>앱의 변경·추가된 기능을 확인합니다.</span>
+                </button>
 
-              <button type="button" className="info-menu-card" onClick={() => {
-                if (!session) { openAuthPrompt(); return }
-                setInfoSection('requests'); setPage('requests');
-                if (isAdmin) loadAllRequests(); else loadMyRequests()
-              }}>
-                <strong>요청사항</strong>
-                <span>{session ? '일정 추가·수정 등의 요청을 남깁니다.' : '로그인 후 요청사항을 남길 수 있습니다.'}</span>
-              </button>
+                <button type="button" className="info-menu-card" onClick={() => {
+                  if (!session) { openAuthPrompt(); return }
+                  setInfoSection('requests'); setPage('requests');
+                  if (isAdmin) loadAllRequests(); else loadMyRequests()
+                }}>
+                  <strong>요청사항</strong>
+                  <span>{session ? '일정 추가·수정 등의 요청을 남깁니다.' : '로그인 후 요청사항을 남길 수 있습니다.'}</span>
+                </button>
 
-              <button type="button" className="info-menu-card" onClick={() => setInfoSection('guide')}>
-                <strong>이용 가이드</strong>
-                <span>달력과 주요 기능의 이용 방법을 안내합니다.</span>
-              </button>
+                <button type="button" className="info-menu-card" onClick={() => setInfoSection('guide')}>
+                  <strong>이용 가이드</strong>
+                  <span>준비중</span>
+                </button>
 
-              <button type="button" className="info-menu-card" onClick={() => setInfoSection('download')}>
-                <strong>앱 다운로드</strong>
-                <span>앱 설치와 이용 방법을 안내합니다.</span>
-              </button>
-            </div>
-
-            {infoSection === 'guide' && (
-              <div className="info-detail-card">
-                <h2>이용 가이드</h2>
-                <p>달력에서 날짜를 선택하면 해당 날짜의 일정을 확인할 수 있습니다.</p>
-                <p>일정 상세에서 개인 메모와 참석 여부를 관리할 수 있습니다.</p>
+                <button type="button" className="info-menu-card" onClick={() => setInfoSection('download')}>
+                  <strong>앱 다운로드</strong>
+                  <span>준비중</span>
+                </button>
               </div>
-            )}
-
-            {infoSection === 'download' && (
+            ) : infoSection === 'guide' ? (
               <div className="info-detail-card">
+                <button type="button" className="info-back-button" onClick={() => setInfoSection('home')}>
+                  ← 안내·요청으로 돌아가기
+                </button>
+                <h2>이용 가이드</h2>
+                <p>준비중입니다.</p>
+              </div>
+            ) : (
+              <div className="info-detail-card">
+                <button type="button" className="info-back-button" onClick={() => setInfoSection('home')}>
+                  ← 안내·요청으로 돌아가기
+                </button>
                 <h2>앱 다운로드</h2>
-                <p>현재는 웹앱으로 이용할 수 있습니다. 모바일에서는 브라우저의 홈 화면에 추가해 앱처럼 사용할 수 있습니다.</p>
+                <p>준비중입니다.</p>
               </div>
             )}
           </section>
         ) : page === 'updates' ? (
           <section className="schedule-list-page update-page">
+            <button type="button" className="info-back-button page-back-button" onClick={() => { setPage('info'); setInfoSection('home') }}>
+              ← 안내·요청으로 돌아가기
+            </button>
             <div className="list-page-header">
               <div>
                 <p className="page-eyebrow">UPDATE</p>
@@ -4475,6 +4502,9 @@ function App() {
             'requests' &&
           session ? (
           <section className="schedule-list-page request-page">
+            <button type="button" className="info-back-button page-back-button" onClick={() => { setPage('info'); setInfoSection('home') }}>
+              ← 안내·요청으로 돌아가기
+            </button>
             <div className="list-page-header">
               <div>
                 <p className="page-eyebrow">
