@@ -4042,7 +4042,7 @@ function App() {
             max-height: calc(100dvh - 24px) !important;
           }
         }
-      `}
+
 .info-back-button {
   display: inline-flex;
   align-items: center;
@@ -4063,6 +4063,7 @@ function App() {
 .page-back-button {
   margin-bottom: 14px;
 }
+      `}
 </style>
       <header className="header">
         <div
