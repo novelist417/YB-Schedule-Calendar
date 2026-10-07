@@ -85,6 +85,7 @@ function App() {
   const [selectedSchedule, setSelectedSchedule] = useState(null)
 
   const [page, setPage] = useState('calendar')
+  const [infoSection, setInfoSection] = useState('home')
   const [calendarView, setCalendarView] = useState('month')
 
   const [calendarCursor, setCalendarCursor] = useState(
@@ -2589,23 +2590,13 @@ function App() {
           line-height: 1 !important;
         }
 
-        .calendar-day.today {
-          background: rgba(159, 41, 64, 0.12) !important;
-        }
-
-        .calendar-day.today {
-          background: rgba(159, 41, 64, 0.12) !important;
-        }
-
         .calendar-day.today .date-number {
           top: 10px !important;
           left: 10px !important;
           background: transparent !important;
-          color: #fff !important;
           border: 0 !important;
-          border-radius: 0 !important;
           box-shadow: none !important;
-          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35) !important;
+          color: #9f2940 !important;
         }
 
         .calendar-day .events {
@@ -3209,6 +3200,51 @@ function App() {
             min-height: 34px;
             max-width: 170px;
           }
+        }
+
+        .info-menu-grid {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 12px;
+          margin-top: 24px;
+        }
+
+        .info-menu-card {
+          text-align: left;
+          border: 1px solid #333;
+          border-radius: 12px;
+          background: #1d1d1d;
+          color: #fff;
+          padding: 18px;
+          cursor: pointer;
+        }
+
+        .info-menu-card strong {
+          display: block;
+          font-size: 16px;
+          margin-bottom: 7px;
+        }
+
+        .info-menu-card span {
+          display: block;
+          color: #aaa;
+          font-size: 13px;
+          line-height: 1.5;
+        }
+
+        .info-detail-card {
+          margin-top: 16px;
+          padding: 18px;
+          border: 1px solid #333;
+          border-radius: 12px;
+          background: #1d1d1d;
+        }
+
+        .info-detail-card h2 { margin: 0 0 12px; }
+        .info-detail-card p { margin: 7px 0; color: #ccc; line-height: 1.6; }
+
+        @media (max-width: 700px) {
+          .info-menu-grid { grid-template-columns: 1fr; }
         }
 
         /* 업데이트 현황 전용 UI */
@@ -4066,46 +4102,34 @@ function App() {
 
               <button
                 className={
-                  page === 'updates'
+                  page === 'info' || page === 'updates' || page === 'requests'
                     ? 'nav-button active'
                     : 'nav-button'
                 }
                 onClick={() => {
-                  setPage('updates')
-                  loadUpdates()
+                  setPage('info')
+                  setInfoSection('home')
                 }}
               >
-                업데이트 현황
-              </button>
-
-              <button
-                className={
-                  page === 'requests'
-                    ? 'nav-button active'
-                    : 'nav-button'
-                }
-                onClick={() => {
-                  setPage('requests')
-
-                  if (isAdmin) {
-                    loadAllRequests()
-                  } else {
-                    loadMyRequests()
-                  }
-                }}
-              >
-                요청사항
+                안내·요청
               </button>
             </nav>
           )}
 
           {!session && (
             <button
-              className="nav-button"
+              className={
+                page === 'info' || page === 'updates'
+                  ? 'nav-button active'
+                  : 'nav-button'
+              }
               type="button"
-              onClick={openAuthPrompt}
+              onClick={() => {
+                setPage('info')
+                setInfoSection('home')
+              }}
             >
-              요청사항
+              안내·요청
             </button>
           )}
 
@@ -4302,7 +4326,60 @@ function App() {
               )}
             </div>
           </section>
-        ) : page === 'updates' && session ? (
+        ) : page === 'info' ? (
+          <section className="schedule-list-page info-page">
+            <div className="list-page-header">
+              <div>
+                <p className="page-eyebrow">INFO</p>
+                <h1>안내·요청</h1>
+                <p className="page-description">
+                  앱 이용에 필요한 안내와 업데이트, 요청사항을 확인할 수 있습니다.
+                </p>
+              </div>
+            </div>
+
+            <div className="info-menu-grid">
+              <button type="button" className="info-menu-card" onClick={() => { setInfoSection('updates'); setPage('updates'); loadUpdates() }}>
+                <strong>업데이트 현황</strong>
+                <span>앱의 변경·추가된 기능을 확인합니다.</span>
+              </button>
+
+              <button type="button" className="info-menu-card" onClick={() => {
+                if (!session) { openAuthPrompt(); return }
+                setInfoSection('requests'); setPage('requests');
+                if (isAdmin) loadAllRequests(); else loadMyRequests()
+              }}>
+                <strong>요청사항</strong>
+                <span>{session ? '일정 추가·수정 등의 요청을 남깁니다.' : '로그인 후 요청사항을 남길 수 있습니다.'}</span>
+              </button>
+
+              <button type="button" className="info-menu-card" onClick={() => setInfoSection('guide')}>
+                <strong>이용 가이드</strong>
+                <span>달력과 주요 기능의 이용 방법을 안내합니다.</span>
+              </button>
+
+              <button type="button" className="info-menu-card" onClick={() => setInfoSection('download')}>
+                <strong>앱 다운로드</strong>
+                <span>앱 설치와 이용 방법을 안내합니다.</span>
+              </button>
+            </div>
+
+            {infoSection === 'guide' && (
+              <div className="info-detail-card">
+                <h2>이용 가이드</h2>
+                <p>달력에서 날짜를 선택하면 해당 날짜의 일정을 확인할 수 있습니다.</p>
+                <p>일정 상세에서 개인 메모와 참석 여부를 관리할 수 있습니다.</p>
+              </div>
+            )}
+
+            {infoSection === 'download' && (
+              <div className="info-detail-card">
+                <h2>앱 다운로드</h2>
+                <p>현재는 웹앱으로 이용할 수 있습니다. 모바일에서는 브라우저의 홈 화면에 추가해 앱처럼 사용할 수 있습니다.</p>
+              </div>
+            )}
+          </section>
+        ) : page === 'updates' ? (
           <section className="schedule-list-page update-page">
             <div className="list-page-header">
               <div>
