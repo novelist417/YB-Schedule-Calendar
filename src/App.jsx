@@ -131,6 +131,8 @@ function App() {
     title: '',
     content: '',
     is_important: false,
+    image_url: '',
+    image_file: null,
   })
   const [editingUpdate, setEditingUpdate] = useState(null)
   const [showUpdateForm, setShowUpdateForm] = useState(false)
@@ -916,7 +918,7 @@ function App() {
     setShowRequestForm(false)
     setUpdates([])
     setEditingUpdate(null)
-    setUpdateForm({ title: '', content: '', is_important: false })
+    setUpdateForm({ title: '', content: '', is_important: false, image_url: '', image_file: null })
     setUpdateError('')
   }
 
@@ -1718,7 +1720,7 @@ function App() {
   async function loadImportantNotice() {
     const { data, error } = await supabase
       .from('updates')
-      .select('id, title, content, is_important, created_at')
+      .select('id, title, content, image_url, is_important, created_at')
       .eq('is_important', true)
       .order('created_at', { ascending: false })
       .limit(1)
@@ -1753,7 +1755,7 @@ function App() {
     if (!isAdmin) return
     setEditingUpdate(null)
     setShowUpdateForm(true)
-    setUpdateForm({ title: '', content: '', is_important: false })
+    setUpdateForm({ title: '', content: '', is_important: false, image_url: '', image_file: null })
     setUpdateError('')
   }
 
@@ -1765,6 +1767,8 @@ function App() {
       title: update.title || '',
       content: update.content || '',
       is_important: Boolean(update.is_important),
+      image_url: update.image_url || '',
+      image_file: null,
     })
     setUpdateError('')
   }
@@ -1772,7 +1776,7 @@ function App() {
   function cancelUpdateForm() {
     setEditingUpdate(null)
     setShowUpdateForm(false)
-    setUpdateForm({ title: '', content: '', is_important: false })
+    setUpdateForm({ title: '', content: '', is_important: false, image_url: '', image_file: null })
     setUpdateError('')
   }
 
@@ -1791,6 +1795,31 @@ function App() {
     setUpdateSaving(true)
     setUpdateError('')
 
+    let imageUrl = updateForm.image_url || ''
+
+    if (updateForm.image_file) {
+      const file = updateForm.image_file
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
+      const filePath = `${session?.user?.id || 'admin'}/${Date.now()}-${safeName}`
+
+      const { error: uploadError } = await supabase.storage
+        .from('update-images')
+        .upload(filePath, file, { upsert: false })
+
+      if (uploadError) {
+        console.error('공지 이미지 업로드 실패:', uploadError)
+        setUpdateError(`이미지 업로드에 실패했습니다.\n${uploadError.message}`)
+        setUpdateSaving(false)
+        return
+      }
+
+      const { data: publicUrlData } = supabase.storage
+        .from('update-images')
+        .getPublicUrl(filePath)
+
+      imageUrl = publicUrlData?.publicUrl || ''
+    }
+
     let result
 
     if (editingUpdate) {
@@ -1799,6 +1828,7 @@ function App() {
         .update({
           title,
           content,
+          image_url: imageUrl,
           is_important: updateForm.is_important,
           updated_at: new Date().toISOString(),
         })
@@ -1809,6 +1839,7 @@ function App() {
         .insert({
           title,
           content,
+          image_url: imageUrl,
           is_important: updateForm.is_important,
           author_id: session?.user?.id || null,
         })
@@ -3387,6 +3418,53 @@ function App() {
           color: #777;
         }
 
+        .update-image-field {
+          display: grid;
+          gap: 7px;
+        }
+
+        .update-image-label {
+          color: #ddd;
+          font-size: 12px;
+          font-weight: 700;
+        }
+
+        .update-image-field input[type='file'] {
+          width: 100%;
+          box-sizing: border-box;
+          color: #aaa;
+          font: inherit;
+          font-size: 12px;
+        }
+
+        .update-image-preview,
+        .update-card-image,
+        .important-notice-image {
+          display: block;
+          width: 100%;
+          max-width: 100%;
+          height: auto;
+          border-radius: 10px;
+          object-fit: contain;
+        }
+
+        .update-image-preview {
+          max-height: 260px;
+          background: #111;
+        }
+
+        .update-image-name {
+          margin: 0;
+          color: #888;
+          font-size: 11px;
+        }
+
+        .update-card-image {
+          margin: 0 0 11px;
+          max-height: 520px;
+          background: #111;
+        }
+
         .update-important-check {
           display: inline-flex;
           align-items: center;
@@ -4543,6 +4621,26 @@ function App() {
                       onChange={(e) => setUpdateForm((prev) => ({ ...prev, content: e.target.value }))}
                       placeholder="업데이트 내용을 입력해주세요."
                     />
+
+                    <div className="update-image-field">
+                      <label className="update-image-label" htmlFor="update-image-input">공지 이미지</label>
+                      <input
+                        id="update-image-input"
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0] || null
+                          setUpdateForm((prev) => ({ ...prev, image_file: file }))
+                        }}
+                      />
+                      {updateForm.image_url && !updateForm.image_file && (
+                        <img className="update-image-preview" src={updateForm.image_url} alt="현재 공지 이미지" />
+                      )}
+                      {updateForm.image_file && (
+                        <p className="update-image-name">선택됨: {updateForm.image_file.name}</p>
+                      )}
+                    </div>
+
                     <label className="update-important-check">
                       <input
                         type="checkbox"
@@ -4580,6 +4678,9 @@ function App() {
                       <span className="update-card-date">{formatRequestDate(update.created_at)}</span>
                     </div>
                     <h3 className="update-card-title">{update.title}</h3>
+                    {update.image_url && (
+                      <img className="update-card-image" src={update.image_url} alt="공지 이미지" />
+                    )}
                     <p className="update-card-content">{update.content}</p>
                     {isAdmin && (
                       <div className="update-card-actions">
@@ -7053,6 +7154,9 @@ function App() {
             >
               <div className="important-notice-label">중요 공지</div>
               <h2>{importantNotice.title}</h2>
+              {importantNotice.image_url && (
+                <img className="important-notice-image" src={importantNotice.image_url} alt="공지 이미지" />
+              )}
               <p>{importantNotice.content}</p>
               <button type="button" onClick={closeImportantNotice}>
                 확인
