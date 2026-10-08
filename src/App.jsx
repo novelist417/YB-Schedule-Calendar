@@ -4476,23 +4476,25 @@ function App() {
                   <span>{session ? '일정 추가·수정 등의 요청을 남깁니다.' : '로그인 후 요청사항을 남길 수 있습니다.'}</span>
                 </button>
 
-                <button type="button" className="info-menu-card" onClick={() => setInfoSection('guide')}>
+                <button type="button" className="info-menu-card" disabled>
                   <strong>이용 가이드</strong>
                   <span>준비중</span>
                 </button>
 
               </div>
             ) : infoSection === 'guide' ? (
-              <div className="info-detail-card">
-                <button type="button" className="info-back-button" onClick={() => setInfoSection('home')}>
+              <>
+                <button type="button" className="info-back-button page-back-button" onClick={() => setInfoSection('home')}>
                   ← 안내·요청으로 돌아가기
                 </button>
-                <h2>이용 가이드</h2>
-                <p>달력에서 날짜를 선택하면 해당 날짜의 일정을 확인할 수 있습니다.</p>
-                <p>월간·주간·목록 보기에서 원하는 방식으로 일정을 확인할 수 있습니다.</p>
-                <p>일정 상세에서 장소, 관련 링크 등의 정보를 확인하고, 로그인하면 개인 메모와 참석 여부를 관리할 수 있습니다.</p>
-                <p>일정 추가·수정이 필요한 경우 요청사항을 통해 의견을 남겨주세요.</p>
-              </div>
+                <div className="info-detail-card">
+                  <h2>이용 가이드</h2>
+                  <p>달력에서 날짜를 선택하면 해당 날짜의 일정을 확인할 수 있습니다.</p>
+                  <p>월간·주간·목록 보기에서 원하는 방식으로 일정을 확인할 수 있습니다.</p>
+                  <p>일정 상세에서 장소, 관련 링크 등의 정보를 확인하고, 로그인하면 개인 메모와 참석 여부를 관리할 수 있습니다.</p>
+                  <p>일정 추가·수정이 필요한 경우 요청사항을 통해 의견을 남겨주세요.</p>
+                </div>
+              </>
             ) : null}
           </section>
         ) : page === 'updates' ? (
