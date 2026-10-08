@@ -836,11 +836,55 @@ function App() {
     )
   }
 
+  function translateAuthError(error) {
+    const message = String(error?.message || '').toLowerCase()
+
+    if (
+      message.includes('invalid login credentials') ||
+      message.includes('invalid credentials')
+    ) {
+      return '이메일 또는 비밀번호가 올바르지 않습니다.'
+    }
+
+    if (
+      message.includes('user already registered') ||
+      message.includes('already registered') ||
+      message.includes('already exists')
+    ) {
+      return '이미 가입된 계정입니다. 기존 계정으로 로그인해주세요.'
+    }
+
+    if (message.includes('email not confirmed')) {
+      return '이메일 인증이 완료되지 않은 계정입니다.'
+    }
+
+    if (message.includes('password should be at least')) {
+      return '비밀번호는 6자 이상 입력해주세요.'
+    }
+
+    if (message.includes('unable to validate email')) {
+      return '올바른 이메일 주소를 입력해주세요.'
+    }
+
+    if (message.includes('email rate limit exceeded')) {
+      return '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.'
+    }
+
+    return error?.message || '로그인에 실패했습니다. 잠시 후 다시 시도해주세요.'
+  }
+
   async function handleLogin(e) {
     e.preventDefault()
 
     setLoginError('')
     setSignupMessage('')
+
+    if (!email.trim() || !password) {
+      setLoginError(
+        '이메일과 비밀번호를 입력해주세요.'
+      )
+      return
+    }
 
     const { error } =
       await supabase.auth.signInWithPassword({
@@ -849,7 +893,7 @@ function App() {
       })
 
     if (error) {
-      setLoginError(error.message)
+      setLoginError(translateAuthError(error))
       return
     }
 
@@ -883,7 +927,7 @@ function App() {
       })
 
     if (error) {
-      setLoginError(error.message)
+      setLoginError(translateAuthError(error))
       return
     }
 
