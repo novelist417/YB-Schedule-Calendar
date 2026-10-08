@@ -2627,13 +2627,17 @@ function App() {
           line-height: 1 !important;
         }
 
+        .calendar-day.today {
+          background: rgba(159, 41, 64, 0.12) !important;
+        }
+
         .calendar-day.today .date-number {
           top: 10px !important;
           left: 10px !important;
           background: transparent !important;
           border: 0 !important;
           box-shadow: none !important;
-          color: #9f2940 !important;
+          color: #fff !important;
         }
 
         .calendar-day .events {
