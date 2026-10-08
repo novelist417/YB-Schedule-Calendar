@@ -4601,7 +4601,14 @@ function App() {
             </div>
 
             {isAdmin && showUpdateForm && (
-              <div className="update-editor-overlay" onClick={cancelUpdateForm}>
+              <div
+                className="update-editor-overlay"
+                onPointerDown={(e) => {
+                  if (e.target === e.currentTarget) {
+                    cancelUpdateForm()
+                  }
+                }}
+              >
                 <div className="update-editor" onClick={(e) => e.stopPropagation()}>
                   <div className="update-editor-header">
                     <h2>{editingUpdate ? '업데이트 수정' : '업데이트 작성'}</h2>
