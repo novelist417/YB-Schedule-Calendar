@@ -1,3 +1,4 @@
+
 {
   "name": "yb-schedule-calendar",
   "private": true,
@@ -11,6 +12,7 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.57.4",
     "@vercel/analytics": "^1.5.0",
+    "lunar-javascript": "^1.6.12",
     "react": "^19.1.1",
     "react-dom": "^19.1.1"
   },
