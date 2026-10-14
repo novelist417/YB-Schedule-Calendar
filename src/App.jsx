@@ -437,53 +437,98 @@ function App() {
   }
 
   async function loadRecurringTitleOverrides() {
-    const { data, error } = await supabase
-      .from('recurring_schedule_overrides')
-      .select('recurring_key, title')
+  const { data, error } = await supabase
+    .from('recurring_schedule_overrides')
+    .select('recurring_key, title, calendar_title, details')
 
-    if (error) {
-      console.error('반복 기념일 이름 조회 실패:', error)
-      return
-    }
-
-    const overrides = {}
-    ;(data || []).forEach((item) => {
-      overrides[item.recurring_key] = item.title
-    })
-    setRecurringTitleOverrides(overrides)
+  if (error) {
+    console.error('반복 기념일 설정 조회 실패:', error)
+    return
   }
 
-  async function handleEditRecurringTitle(schedule) {
-    if (!isAdmin || !schedule?.isRecurringVirtual) return
-
-    const nextTitle = window.prompt('이 기념일의 일정명을 입력해주세요.', schedule.title)
-    if (nextTitle === null) return
-    if (!nextTitle.trim()) {
-      alert('일정명을 입력해주세요.')
-      return
+  const overrides = {}
+  ;(data || []).forEach((item) => {
+    overrides[item.recurring_key] = {
+      title: item.title || '',
+      calendar_title: item.calendar_title || '',
+      details: item.details,
     }
+  })
 
-    const title = nextTitle.trim()
-    const { error } = await supabase
-      .from('recurring_schedule_overrides')
-      .upsert(
-        { recurring_key: schedule.recurringKey, title, updated_at: new Date().toISOString() },
-        { onConflict: 'recurring_key' }
-      )
+  setRecurringTitleOverrides(overrides)
+}
 
-    if (error) {
-      console.error('반복 기념일 이름 저장 실패:', error)
-      alert(`일정명 저장에 실패했습니다.
+async function handleEditRecurringTitle(schedule) {
+  if (!isAdmin || !schedule?.isRecurringVirtual) return
+
+  const current = recurringTitleOverrides[schedule.recurringKey] || {}
+
+  const nextTitle = window.prompt(
+    '정식 일정명을 입력해주세요.',
+    current.title || schedule.title
+  )
+  if (nextTitle === null) return
+
+  if (!nextTitle.trim()) {
+    alert('정식 일정명을 입력해주세요.')
+    return
+  }
+
+  const nextCalendarTitle = window.prompt(
+    '캘린더 노출용 일정명을 입력해주세요. 비우면 정식 일정명이 표시됩니다.',
+    current.calendar_title ?? schedule.calendar_title ?? ''
+  )
+  if (nextCalendarTitle === null) return
+
+  const nextDetails = window.prompt(
+    '일정 세부정보를 입력해주세요.',
+    current.details ?? schedule.details ?? ''
+  )
+  if (nextDetails === null) return
+
+  const override = {
+    title: nextTitle.trim(),
+    calendar_title: nextCalendarTitle.trim(),
+    details: nextDetails.trim(),
+  }
+
+  const { error } = await supabase
+    .from('recurring_schedule_overrides')
+    .upsert(
+      {
+        recurring_key: schedule.recurringKey,
+        ...override,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'recurring_key' }
+    )
+
+  if (error) {
+    console.error('반복 기념일 설정 저장 실패:', error)
+    alert(`기념일 설정 저장에 실패했습니다.
 ${error.message}
 
-Supabase에 반복 기념일 이름 저장용 테이블이 만들어졌는지 확인해주세요.`)
-      return
-    }
-
-    setRecurringTitleOverrides((prev) => ({ ...prev, [schedule.recurringKey]: title }))
-    setSelectedSchedule((prev) => prev?.recurringKey === schedule.recurringKey ? { ...prev, title, calendar_title: title } : prev)
-    setSelectedSchedules((prev) => prev.map((item) => item.recurringKey === schedule.recurringKey ? { ...item, title, calendar_title: title } : item))
+Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해주세요.`)
+    return
   }
+
+  setRecurringTitleOverrides((prev) => ({
+    ...prev,
+    [schedule.recurringKey]: override,
+  }))
+
+  const applyOverride = (item) =>
+    item?.recurringKey === schedule.recurringKey
+      ? {
+          ...item,
+          ...override,
+          calendar_title: override.calendar_title || '',
+        }
+      : item
+
+  setSelectedSchedule((prev) => applyOverride(prev))
+  setSelectedSchedules((prev) => prev.map(applyOverride))
+}
 
   async function loadSchedules() {
     setScheduleLoadError('')
