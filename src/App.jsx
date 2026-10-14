@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from './lib/supabase'
 import { Analytics } from '@vercel/analytics/react'
+import { Lunar } from 'lunar-javascript'
 
 const TYPE_COLORS = {
   방송: '#2673C8',
@@ -63,6 +64,97 @@ const WEEKDAYS = [
   '토요일',
 ]
 
+function translateAuthError(error) {
+  const message = String(error?.message || '').toLowerCase()
+
+  if (message.includes('invalid login credentials') || message.includes('invalid credentials')) {
+    return '이메일 또는 비밀번호가 올바르지 않습니다.'
+  }
+  if (message.includes('user already registered') || message.includes('already registered') || message.includes('already exists')) {
+    return '이미 가입된 계정입니다. 기존 계정으로 로그인해주세요.'
+  }
+  if (message.includes('email not confirmed')) return '이메일 인증이 완료되지 않은 계정입니다.'
+  if (message.includes('password should be at least')) return '비밀번호는 6자 이상 입력해주세요.'
+  if (message.includes('unable to validate email')) return '올바른 이메일 주소를 입력해주세요.'
+  if (message.includes('email rate limit exceeded')) return '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.'
+  return error?.message || '로그인에 실패했습니다. 잠시 후 다시 시도해주세요.'
+}
+
+const RECURRING_BIRTHDAYS = [
+  { key: 'yoon-dohyun', name: '윤도현', calendar: 'solar', month: 2, day: 3 },
+  { key: 'park-taehee', name: '박태희', calendar: 'lunar', month: 9, day: 19 },
+  { key: 'kim-jinwon', name: '김진원', calendar: 'lunar', month: 2, day: 23 },
+  { key: 'heo-jun', name: '허준', calendar: 'solar', month: 9, day: 17 },
+]
+
+function toIsoDate(year, month, day) {
+  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+}
+
+function getRecurringSchedules(years) {
+  const result = []
+
+  years.forEach((year) => {
+    RECURRING_BIRTHDAYS.forEach((birthday) => {
+      let solarYear = year
+      let solarMonth = birthday.month
+      let solarDay = birthday.day
+
+      if (birthday.calendar === 'lunar') {
+        try {
+          const solar = Lunar.fromYmd(year, birthday.month, birthday.day).getSolar()
+          solarYear = solar.getYear()
+          solarMonth = solar.getMonth()
+          solarDay = solar.getDay()
+        } catch (error) {
+          console.warn('음력 생일 변환 실패:', birthday.name, year, error)
+          return
+        }
+      }
+
+      result.push({
+        id: `recurring-birthday-${birthday.key}-${year}`,
+        recurringKey: birthday.key,
+        isRecurringVirtual: true,
+        title: `${birthday.name} 생일`,
+        calendar_title: `${birthday.name} 생일`,
+        schedule_type: '기념일',
+        event_date: toIsoDate(solarYear, solarMonth, solarDay),
+        event_time: null,
+        end_date: null,
+        end_time: null,
+        place: null,
+        address: null,
+        details: birthday.calendar === 'lunar'
+          ? `음력 ${birthday.month}월 ${birthday.day}일 생일`
+          : `양력 ${birthday.month}월 ${birthday.day}일 생일`,
+        related_link: null,
+        related_link_text: null,
+      })
+    })
+
+    result.push({
+      id: `recurring-yb-debut-${year}`,
+      recurringKey: 'yb-debut',
+      isRecurringVirtual: true,
+      title: `YB 데뷔 ${year - 1995}주년`,
+      calendar_title: `YB 데뷔 ${year - 1995}주년`,
+      schedule_type: '기념일',
+      event_date: toIsoDate(year, 8, 24),
+      event_time: null,
+      end_date: null,
+      end_time: null,
+      place: null,
+      address: null,
+      details: `1995년 8월 24일 데뷔 기준 · ${year - 1995}주년`,
+      related_link: null,
+      related_link_text: null,
+    })
+  })
+
+  return result
+}
+
 function App() {
   const [session, setSession] = useState(null)
   const [profile, setProfile] = useState(null)
@@ -91,6 +183,17 @@ function App() {
   const [calendarCursor, setCalendarCursor] = useState(
     new Date()
   )
+
+  const recurringSchedules = useMemo(() => {
+    const year = calendarCursor.getFullYear()
+    return getRecurringSchedules([year - 1, year, year + 1])
+  }, [calendarCursor])
+
+  const calendarSchedules = useMemo(
+    () => [...schedules, ...recurringSchedules],
+    [schedules, recurringSchedules]
+  )
+
 
   const timetableScrollRef = useRef(null)
 
@@ -187,17 +290,17 @@ function App() {
 
   const scheduleListSchedules = useMemo(() => {
     if (scheduleListFilter === 'past') {
-      return schedules.filter(isPastSchedule)
+      return calendarSchedules.filter(isPastSchedule)
     }
 
     if (scheduleListFilter === 'all') {
-      return schedules
+      return calendarSchedules
     }
 
-    return schedules.filter(
+    return calendarSchedules.filter(
       (schedule) => !isPastSchedule(schedule)
     )
-  }, [schedules, scheduleListFilter, todayDateString])
+  }, [calendarSchedules, scheduleListFilter, todayDateString])
 
   useEffect(() => {
     checkSession()
@@ -836,55 +939,11 @@ function App() {
     )
   }
 
-  function translateAuthError(error) {
-    const message = String(error?.message || '').toLowerCase()
-
-    if (
-      message.includes('invalid login credentials') ||
-      message.includes('invalid credentials')
-    ) {
-      return '이메일 또는 비밀번호가 올바르지 않습니다.'
-    }
-
-    if (
-      message.includes('user already registered') ||
-      message.includes('already registered') ||
-      message.includes('already exists')
-    ) {
-      return '이미 가입된 계정입니다. 기존 계정으로 로그인해주세요.'
-    }
-
-    if (message.includes('email not confirmed')) {
-      return '이메일 인증이 완료되지 않은 계정입니다.'
-    }
-
-    if (message.includes('password should be at least')) {
-      return '비밀번호는 6자 이상 입력해주세요.'
-    }
-
-    if (message.includes('unable to validate email')) {
-      return '올바른 이메일 주소를 입력해주세요.'
-    }
-
-    if (message.includes('email rate limit exceeded')) {
-      return '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.'
-    }
-
-    return error?.message || '로그인에 실패했습니다. 잠시 후 다시 시도해주세요.'
-  }
-
   async function handleLogin(e) {
     e.preventDefault()
 
     setLoginError('')
     setSignupMessage('')
-
-    if (!email.trim() || !password) {
-      setLoginError(
-        '이메일과 비밀번호를 입력해주세요.'
-      )
-      return
-    }
 
     const { error } =
       await supabase.auth.signInWithPassword({
@@ -974,6 +1033,7 @@ function App() {
   }
 
   function openEditForm(schedule) {
+    if (schedule?.isRecurringVirtual) return
     setEditingSchedule(schedule)
 
     setForm({
@@ -1126,7 +1186,7 @@ function App() {
   async function handleDeleteSchedule(
     schedule
   ) {
-    if (!isAdmin) return
+    if (!isAdmin || schedule?.isRecurringVirtual) return
 
     const confirmed = window.confirm(
       `"${schedule.title}" 일정을 삭제할까요?`
@@ -1166,11 +1226,11 @@ function App() {
   async function loadMemos(scheduleIds) {
     // 로그인 직후 메모 로딩에서 사용하는 일정 ID 목록
     // (이전 버전의 ids 오타로 로그인 후 화면이 암전되는 문제 방지)
-    const ids = scheduleIds
+    const ids = (scheduleIds || []).filter((id) => !String(id).startsWith('recurring-'))
 
     if (
       !session?.user ||
-      !scheduleIds?.length
+      !ids.length
     ) {
       setMemos({})
       setMemoText({})
@@ -1183,7 +1243,7 @@ function App() {
         .from('memos')
         .select('*')
         .eq('user_id', session.user.id)
-        .in('schedule_id', scheduleIds)
+        .in('schedule_id', ids)
 
     if (error) {
       console.error(
@@ -1347,7 +1407,7 @@ function App() {
     if (!date) return
 
     const daySchedules =
-      schedules
+      calendarSchedules
         .filter(
           (schedule) =>
             isScheduleOnDate(
@@ -1394,7 +1454,7 @@ function App() {
       dateString || schedule.event_date
 
     const daySchedules =
-      schedules
+      calendarSchedules
         .filter((item) =>
           isScheduleOnDate(
             item,
@@ -2287,7 +2347,7 @@ function App() {
 
   const filteredSchedules =
     useMemo(() => {
-      return schedules.filter(
+      return calendarSchedules.filter(
         (schedule) => {
           const matchesType =
             filterType === 'all' ||
@@ -2321,7 +2381,7 @@ function App() {
         }
       )
     }, [
-      schedules,
+      calendarSchedules,
       filterType,
       normalizedSearch,
     ])
@@ -5379,7 +5439,7 @@ function App() {
                                             ] || '#999',
                                         }}
                                       >
-                                        {attendanceStatuses[schedule.id] && (
+                                        {!schedule.isRecurringVirtual && attendanceStatuses[schedule.id] && (
                                           <span
                                             className={'attendance-icon attendance-' + attendanceStatuses[schedule.id]}
                                             aria-label={'참석 여부: ' + attendanceStatuses[schedule.id]}
@@ -6020,7 +6080,7 @@ function App() {
                     </div>
                   )}
 
-                  <div className="memo-section">
+                  {!selectedSchedule.isRecurringVirtual && <div className="memo-section">
                     {session?.user ? (
                       <>
                       <div className="memo-heading">
@@ -6117,9 +6177,9 @@ function App() {
                         로그인하면 이 일정에 개인 메모를 남길 수 있어요
                       </button>
                     )}
-                  </div>
+                  </div>}
 
-                  <div className="attendance-section">
+                  {!selectedSchedule.isRecurringVirtual && <div className="attendance-section">
                     <div className="attendance-heading">
                       <strong>참석 여부</strong>
                       <span>이 일정에 대한 내 참석 상태</span>
@@ -6145,9 +6205,9 @@ function App() {
                         </button>
                       )}
                     </div>
-                  </div>
+                  </div>}
 
-                  {isAdmin && (
+                  {isAdmin && !selectedSchedule.isRecurringVirtual && (
                     <div className="admin-actions">
                       <button
                         onClick={() =>
