@@ -91,6 +91,17 @@ function toIsoDate(year, month, day) {
   return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
 }
 
+// lunar-javascript의 음력 날짜 결과를 한국 달력 날짜로 정규화한다.
+// 라이브러리 결과가 한국 기준보다 하루 이르게 나오는 경우를 보정한다.
+function normalizeLunarSolarDate(year, month, day) {
+  const date = new Date(Date.UTC(year, month - 1, day + 1))
+  return {
+    year: date.getUTCFullYear(),
+    month: date.getUTCMonth() + 1,
+    day: date.getUTCDate(),
+  }
+}
+
 function getRecurringSchedules(years) {
   const result = []
 
@@ -103,9 +114,14 @@ function getRecurringSchedules(years) {
       if (birthday.calendar === 'lunar') {
         try {
           const solar = Lunar.fromYmd(year, birthday.month, birthday.day).getSolar()
-          solarYear = solar.getYear()
-          solarMonth = solar.getMonth()
-          solarDay = solar.getDay()
+          const normalized = normalizeLunarSolarDate(
+            solar.getYear(),
+            solar.getMonth(),
+            solar.getDay()
+          )
+          solarYear = normalized.year
+          solarMonth = normalized.month
+          solarDay = normalized.day
         } catch (error) {
           console.warn('음력 생일 변환 실패:', birthday.name, year, error)
           return
@@ -168,6 +184,7 @@ function App() {
 
   const [schedules, setSchedules] = useState([])
   const [scheduleLoadError, setScheduleLoadError] = useState('')
+  const [recurringTitleOverrides, setRecurringTitleOverrides] = useState({})
 
   // 날짜 선택 → 일정 목록
   const [selectedDate, setSelectedDate] = useState(null)
@@ -186,8 +203,13 @@ function App() {
 
   const recurringSchedules = useMemo(() => {
     const year = calendarCursor.getFullYear()
-    return getRecurringSchedules([year - 1, year, year + 1])
-  }, [calendarCursor])
+    return getRecurringSchedules([year - 1, year, year + 1]).map((schedule) => {
+      const customTitle = recurringTitleOverrides[schedule.recurringKey]
+      return customTitle
+        ? { ...schedule, title: customTitle, calendar_title: customTitle }
+        : schedule
+    })
+  }, [calendarCursor, recurringTitleOverrides])
 
   const calendarSchedules = useMemo(
     () => [...schedules, ...recurringSchedules],
@@ -408,6 +430,55 @@ function App() {
     setProfile(data)
   }
 
+  async function loadRecurringTitleOverrides() {
+    const { data, error } = await supabase
+      .from('recurring_schedule_overrides')
+      .select('recurring_key, title')
+
+    if (error) {
+      console.error('반복 기념일 이름 조회 실패:', error)
+      return
+    }
+
+    const overrides = {}
+    ;(data || []).forEach((item) => {
+      overrides[item.recurring_key] = item.title
+    })
+    setRecurringTitleOverrides(overrides)
+  }
+
+  async function handleEditRecurringTitle(schedule) {
+    if (!isAdmin || !schedule?.isRecurringVirtual) return
+
+    const nextTitle = window.prompt('이 기념일의 일정명을 입력해주세요.', schedule.title)
+    if (nextTitle === null) return
+    if (!nextTitle.trim()) {
+      alert('일정명을 입력해주세요.')
+      return
+    }
+
+    const title = nextTitle.trim()
+    const { error } = await supabase
+      .from('recurring_schedule_overrides')
+      .upsert(
+        { recurring_key: schedule.recurringKey, title, updated_at: new Date().toISOString() },
+        { onConflict: 'recurring_key' }
+      )
+
+    if (error) {
+      console.error('반복 기념일 이름 저장 실패:', error)
+      alert(`일정명 저장에 실패했습니다.
+${error.message}
+
+Supabase에 반복 기념일 이름 저장용 테이블이 만들어졌는지 확인해주세요.`)
+      return
+    }
+
+    setRecurringTitleOverrides((prev) => ({ ...prev, [schedule.recurringKey]: title }))
+    setSelectedSchedule((prev) => prev?.recurringKey === schedule.recurringKey ? { ...prev, title, calendar_title: title } : prev)
+    setSelectedSchedules((prev) => prev.map((item) => item.recurringKey === schedule.recurringKey ? { ...item, title, calendar_title: title } : item))
+  }
+
   async function loadSchedules() {
     setScheduleLoadError('')
 
@@ -426,6 +497,7 @@ function App() {
     }
 
     setSchedules(data || [])
+    await loadRecurringTitleOverrides()
   }
 
   async function loadAttendanceStatuses(userId = session?.user?.id) {
@@ -1033,7 +1105,10 @@ function App() {
   }
 
   function openEditForm(schedule) {
-    if (schedule?.isRecurringVirtual) return
+    if (schedule?.isRecurringVirtual) {
+      handleEditRecurringTitle(schedule)
+      return
+    }
     setEditingSchedule(schedule)
 
     setForm({
@@ -6207,28 +6282,22 @@ function App() {
                     </div>
                   </div>}
 
-                  {isAdmin && !selectedSchedule.isRecurringVirtual && (
+                  {isAdmin && (
                     <div className="admin-actions">
-                      <button
-                        onClick={() =>
-                          openEditForm(
-                            selectedSchedule
-                          )
-                        }
-                      >
-                        수정
-                      </button>
-
-                      <button
-                        className="delete-button"
-                        onClick={() =>
-                          handleDeleteSchedule(
-                            selectedSchedule
-                          )
-                        }
-                      >
-                        삭제
-                      </button>
+                      {selectedSchedule.isRecurringVirtual ? (
+                        <button onClick={() => handleEditRecurringTitle(selectedSchedule)}>
+                          기념일 이름 수정
+                        </button>
+                      ) : (
+                        <>
+                          <button onClick={() => openEditForm(selectedSchedule)}>
+                            수정
+                          </button>
+                          <button className="delete-button" onClick={() => handleDeleteSchedule(selectedSchedule)}>
+                            삭제
+                          </button>
+                        </>
+                      )}
                     </div>
                   )}
                 </div>
