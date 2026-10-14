@@ -6337,7 +6337,7 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
                     <div className="admin-actions">
                       {selectedSchedule.isRecurringVirtual ? (
                         <button onClick={() => handleEditRecurringTitle(selectedSchedule)}>
-                          기념일 이름 수정
+                          수정
                         </button>
                       ) : (
                         <>
