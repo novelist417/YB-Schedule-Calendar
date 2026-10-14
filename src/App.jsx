@@ -204,9 +204,15 @@ function App() {
   const recurringSchedules = useMemo(() => {
     const year = calendarCursor.getFullYear()
     return getRecurringSchedules([year - 1, year, year + 1]).map((schedule) => {
-      const customTitle = recurringTitleOverrides[schedule.recurringKey]
-      return customTitle
-        ? { ...schedule, title: customTitle, calendar_title: customTitle }
+      const override = recurringTitleOverrides[schedule.recurringKey]
+
+      return override
+        ? {
+            ...schedule,
+            title: override.title || schedule.title,
+            calendar_title: override.calendar_title || '',
+            details: override.details ?? schedule.details,
+          }
         : schedule
     })
   }, [calendarCursor, recurringTitleOverrides])
