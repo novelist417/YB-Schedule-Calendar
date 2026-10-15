@@ -1151,6 +1151,7 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
 
   function openNewScheduleForm() {
     setEditingSchedule(null)
+    setEditingRecurringSchedule(null)
     setForm(EMPTY_FORM)
     setFormError('')
     setShowForm(true)
@@ -1158,9 +1159,20 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
 
   function openEditForm(schedule) {
     if (schedule?.isRecurringVirtual) {
-      handleEditRecurringTitle(schedule)
+      const current = recurringTitleOverrides[schedule.recurringKey] || {}
+      setEditingSchedule(null)
+      setEditingRecurringSchedule(schedule)
+      setForm({
+        ...EMPTY_FORM,
+        title: current.title || schedule.title || '',
+        calendar_title: current.calendar_title ?? schedule.calendar_title ?? '',
+        details: current.details ?? schedule.details ?? '',
+      })
+      setFormError('')
+      setShowForm(true)
       return
     }
+    setEditingRecurringSchedule(null)
     setEditingSchedule(schedule)
 
     setForm({
@@ -1191,6 +1203,7 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
   function closeForm() {
     setShowForm(false)
     setEditingSchedule(null)
+    setEditingRecurringSchedule(null)
     setForm(EMPTY_FORM)
     setFormError('')
   }
@@ -1213,6 +1226,45 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
       setFormError(
         '일정 제목을 입력해주세요.'
       )
+      return
+    }
+
+    if (editingRecurringSchedule) {
+      setSaving(true)
+      setFormError('')
+
+      const override = {
+        title: form.title.trim(),
+        calendar_title: form.calendar_title.trim(),
+        details: form.details.trim(),
+      }
+      const { error } = await supabase
+        .from('recurring_schedule_overrides')
+        .upsert({
+          recurring_key: editingRecurringSchedule.recurringKey,
+          ...override,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'recurring_key' })
+
+      if (error) {
+        console.error('반복 기념일 설정 저장 실패:', error)
+        setFormError(`기념일 설정 저장에 실패했습니다. ${error.message}`)
+        setSaving(false)
+        return
+      }
+
+      setRecurringTitleOverrides((prev) => ({
+        ...prev,
+        [editingRecurringSchedule.recurringKey]: override,
+      }))
+      const applyOverride = (item) =>
+        item?.recurringKey === editingRecurringSchedule.recurringKey
+          ? { ...item, ...override, calendar_title: override.calendar_title || '' }
+          : item
+      setSelectedSchedule((prev) => applyOverride(prev))
+      setSelectedSchedules((prev) => prev.map(applyOverride))
+      setSaving(false)
+      closeForm()
       return
     }
 
@@ -6337,7 +6389,7 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
                   {isAdmin && (
                     <div className="admin-actions">
                       {selectedSchedule.isRecurringVirtual ? (
-                        <button onClick={() => handleEditRecurringTitle(selectedSchedule)}>
+                        <button onClick={() => openEditForm(selectedSchedule)}>
                           수정
                         </button>
                       ) : (
@@ -7029,7 +7081,7 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
 
               <div className="sheet-header">
                 <h2>
-                  {editingSchedule
+                  {editingSchedule || editingRecurringSchedule
                     ? '일정 수정'
                     : '일정 추가'}
                 </h2>
@@ -7048,6 +7100,40 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
                   handleSaveSchedule
                 }
               >
+                {editingRecurringSchedule ? (
+                  <>
+                    <label>
+                      정식 일정명 *
+                      <input
+                        name="title"
+                        value={form.title}
+                        onChange={handleFormChange}
+                        placeholder="상세 화면에 표시할 일정명"
+                        required
+                      />
+                    </label>
+                    <label>
+                      캘린더 노출명
+                      <input
+                        name="calendar_title"
+                        value={form.calendar_title}
+                        onChange={handleFormChange}
+                        placeholder="비우면 정식 일정명이 표시됩니다"
+                      />
+                    </label>
+                    <label>
+                      참고 사항
+                      <textarea
+                        name="details"
+                        value={form.details}
+                        onChange={handleFormChange}
+                        placeholder="참고 사항"
+                        rows="3"
+                      />
+                    </label>
+                  </>
+                ) : (
+                  <>
                 <label>
                   제목 *
                   <input
@@ -7231,6 +7317,9 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
                   />
                 </label>
 
+                  </>
+                )}
+
                 {formError && (
                   <p className="error-message">
                     {formError}
@@ -7244,7 +7333,7 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
                 >
                   {saving
                     ? '저장 중...'
-                    : editingSchedule
+                    : editingSchedule || editingRecurringSchedule
                       ? '수정 저장'
                       : '일정 저장'}
                 </button>
