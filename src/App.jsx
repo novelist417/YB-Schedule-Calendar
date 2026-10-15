@@ -185,6 +185,8 @@ function App() {
   const [schedules, setSchedules] = useState([])
   const [scheduleLoadError, setScheduleLoadError] = useState('')
   const [recurringTitleOverrides, setRecurringTitleOverrides] = useState({})
+  // 일정과 반복 기념일 사용자 설정을 모두 불러오기 전에는 기본 반복 일정이 먼저 노출되지 않도록 한다.
+  const [initialCalendarDataLoaded, setInitialCalendarDataLoaded] = useState(false)
 
   // 날짜 선택 → 일정 목록
   const [selectedDate, setSelectedDate] = useState(null)
@@ -218,8 +220,8 @@ function App() {
   }, [calendarCursor, recurringTitleOverrides])
 
   const calendarSchedules = useMemo(
-    () => [...schedules, ...recurringSchedules],
-    [schedules, recurringSchedules]
+    () => initialCalendarDataLoaded ? [...schedules, ...recurringSchedules] : [],
+    [initialCalendarDataLoaded, schedules, recurringSchedules]
   )
 
 
@@ -545,11 +547,15 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
       setScheduleLoadError(
         `일정을 불러오지 못했습니다. 잠시 후 다시 시도해주세요.\n${error.message}`
       )
+      // 일정 조회가 실패해도 반복 기념일 사용자 설정은 불러와서 초기 로딩을 마친다.
+      await loadRecurringTitleOverrides()
+      setInitialCalendarDataLoaded(true)
       return
     }
 
     setSchedules(data || [])
     await loadRecurringTitleOverrides()
+    setInitialCalendarDataLoaded(true)
   }
 
   async function loadAttendanceStatuses(userId = session?.user?.id) {
