@@ -233,6 +233,7 @@ function App() {
 
   const [showForm, setShowForm] = useState(false)
   const [editingSchedule, setEditingSchedule] = useState(null)
+  const [editingRecurringSchedule, setEditingRecurringSchedule] = useState(null)
   const [form, setForm] = useState(EMPTY_FORM)
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState('')
