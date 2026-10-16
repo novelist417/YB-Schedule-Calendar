@@ -6325,7 +6325,8 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
                   )}
 
 
-                  {!selectedSchedule.isRecurringVirtual && !selectedSchedule.isRecurringInstance && <div className="attendance-section">
+                  {!selectedSchedule.isRecurringVirtual && !selectedSchedule.isRecurringInstance && <div className="personal-notes-section" style={{ marginTop: 18, paddingTop: 14, borderTop: '1px solid var(--border-color, #e5e7eb)', display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  <div className="attendance-section">
                     <div className="attendance-heading">
                       <strong>참석 여부</strong>
                       <span>이 일정에 대한 내 참석 상태</span>
@@ -6351,16 +6352,14 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
                         </button>
                       )}
                     </div>
-                  </div>}
+                  </div>
 
-                  {!selectedSchedule.isRecurringVirtual && !selectedSchedule.isRecurringInstance && <div
+                  <div
                     className="memo-section"
                     style={{
                       display: 'flex',
                       flexDirection: 'column',
-                      gap: 8,
-                      paddingTop: 14,
-                      borderTop: '1px solid var(--border-color, #e5e7eb)',
+                      gap: 5,
                     }}
                   >
                     {session?.user ? (
@@ -6375,7 +6374,7 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
                           }}
                         >
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                            <strong>내 메모</strong>
+                            <strong>메모</strong>
                             <span style={{ fontSize: 12, color: 'var(--muted-text, #6b7280)' }}>
                               메모는 나만 볼 수 있어요.
                             </span>
@@ -6408,7 +6407,7 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
                               memos[selectedSchedule.id]?.content ??
                               ''
                             }
-                            onFocus={() => {
+                            onFocus={(e) => {
                               if (editingMemoId !== selectedSchedule.id) {
                                 setEditingMemoId(selectedSchedule.id)
                                 setMemoText((prev) => ({
@@ -6419,6 +6418,8 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
                                     '',
                                 }))
                               }
+                              e.target.style.height = 'auto'
+                              e.target.style.height = `${Math.max(24, e.target.scrollHeight)}px`
                             }}
                             onChange={(e) => {
                               setEditingMemoId(selectedSchedule.id)
@@ -6426,22 +6427,26 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
                                 ...prev,
                                 [selectedSchedule.id]: e.target.value,
                               }))
+                              e.target.style.height = 'auto'
+                              e.target.style.height = `${Math.max(24, e.target.scrollHeight)}px`
                             }}
-                            placeholder="이 일정에 대한 메모를 남겨보세요."
-                            rows={3}
+                            placeholder="메모를 입력하세요."
+                            rows={1}
                             style={{
                               display: 'block',
                               width: '100%',
                               boxSizing: 'border-box',
-                              resize: 'vertical',
-                              padding: '4px 0',
+                              resize: 'none',
+                              overflow: 'hidden',
+                              minHeight: 24,
+                              padding: '3px 0',
                               border: 'none',
                               borderRadius: 0,
                               outline: 'none',
                               background: 'transparent',
                               color: 'inherit',
-                              font: 'inherit',
-                              lineHeight: 1.6,
+                              fontSize: 13,
+                              lineHeight: 1.5,
                             }}
                           />
 
@@ -6471,6 +6476,7 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
                         로그인하면 이 일정에 개인 메모를 남길 수 있어요
                       </button>
                     )}
+                  </div>
                   </div>}
 
 
