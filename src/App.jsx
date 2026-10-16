@@ -170,6 +170,9 @@ function App() {
   const [calendarCursor, setCalendarCursor] = useState(
     new Date()
   )
+  const [showMonthPicker, setShowMonthPicker] = useState(false)
+  const [monthPickerYear, setMonthPickerYear] = useState(new Date().getFullYear())
+  const [monthPickerMonth, setMonthPickerMonth] = useState(new Date().getMonth())
 
   const recurringSchedules = useMemo(() => {
     const year = calendarCursor.getFullYear()
@@ -5352,16 +5355,33 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
                     ‹
                   </button>
 
-                  <h1>
-                    {calendarView ===
-                    'week'
-                      ? getWeekTitle(
-                          weekDates
-                        )
-                      : getMonthTitle(
-                          calendarCursor
-                        )}
-                  </h1>
+                  <button
+                    type="button"
+                    className="calendar-month-picker-trigger"
+                    onClick={() => {
+                      setMonthPickerYear(calendarCursor.getFullYear())
+                      setMonthPickerMonth(calendarCursor.getMonth())
+                      setShowMonthPicker((prev) => !prev)
+                    }}
+                    aria-expanded={showMonthPicker}
+                    aria-label="연도와 월 선택"
+                    style={{
+                      border: 0,
+                      background: 'transparent',
+                      color: 'inherit',
+                      font: 'inherit',
+                      fontWeight: 700,
+                      padding: '4px 6px',
+                      borderRadius: 8,
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {calendarView === 'week'
+                      ? getWeekTitle(weekDates)
+                      : getMonthTitle(calendarCursor)}
+                    <span aria-hidden="true" style={{ marginLeft: 6, fontSize: '0.72em', opacity: 0.65 }}>▾</span>
+                  </button>
 
                   <button
                     type="button"
@@ -5384,6 +5404,60 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
                     오늘
                   </button>
                 </div>
+
+                {showMonthPicker && (
+                  <div
+                    className="calendar-month-picker"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      flexWrap: 'wrap',
+                      gap: 8,
+                      padding: '10px 12px',
+                      marginTop: 8,
+                      border: '1px solid var(--border-color, #ddd)',
+                      borderRadius: 12,
+                      background: 'var(--panel-bg, #fff)',
+                    }}
+                  >
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                      <span>연도</span>
+                      <select
+                        value={monthPickerYear}
+                        onChange={(e) => setMonthPickerYear(Number(e.target.value))}
+                        aria-label="연도 선택"
+                      >
+                        {Array.from({ length: 21 }, (_, index) => new Date().getFullYear() - 10 + index).map((year) => (
+                          <option key={year} value={year}>{year}년</option>
+                        ))}
+                      </select>
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                      <span>월</span>
+                      <select
+                        value={monthPickerMonth}
+                        onChange={(e) => setMonthPickerMonth(Number(e.target.value))}
+                        aria-label="월 선택"
+                      >
+                        {Array.from({ length: 12 }, (_, index) => index).map((month) => (
+                          <option key={month} value={month}>{month + 1}월</option>
+                        ))}
+                      </select>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCalendarCursor(new Date(monthPickerYear, monthPickerMonth, 1))
+                        setShowMonthPicker(false)
+                      }}
+                    >
+                      이동
+                    </button>
+                    <button type="button" onClick={() => setShowMonthPicker(false)}>
+                      취소
+                    </button>
+                  </div>
+                )}
 
                 <select
                   className="calendar-view-select"
@@ -6249,14 +6323,9 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
                     {session?.user ? (
                       <>
                       <div className="memo-heading">
-                        <div>
-                          <strong>
-                            내 메모
-                          </strong>
-
-                          <span>
-                            로그인한 계정에서만 볼 수 있어요.
-                          </span>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                          <strong>내 메모</strong>
+                          <span>메모는 나만 볼 수 있어요.</span>
                         </div>
 
                         {memos[
@@ -6301,7 +6370,16 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
                       </div>
 
                       {memos[selectedSchedule.id] && editingMemoId !== selectedSchedule.id ? (
-                        <div className="memo-view">
+                        <div
+                          className="memo-view"
+                          aria-label="저장된 개인 메모. 읽기 전용이며 수정 버튼으로 편집할 수 있습니다."
+                          style={{
+                            cursor: 'default',
+                            userSelect: 'text',
+                            whiteSpace: 'pre-wrap',
+                            overflowWrap: 'anywhere',
+                          }}
+                        >
                           {memos[selectedSchedule.id].content}
                         </div>
                       ) : (
