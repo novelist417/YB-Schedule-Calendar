@@ -6324,15 +6324,43 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
                     </div>
                   )}
 
+
+                  {!selectedSchedule.isRecurringVirtual && !selectedSchedule.isRecurringInstance && <div className="attendance-section">
+                    <div className="attendance-heading">
+                      <strong>참석 여부</strong>
+                      <span>이 일정에 대한 내 참석 상태</span>
+                    </div>
+                    <div className="attendance-buttons">
+                      {['참석', '미정', '불참'].map((status) => (
+                        <button
+                          type="button"
+                          key={status}
+                          className={attendanceStatuses[selectedSchedule.id] === status ? 'attendance-button active' : 'attendance-button'}
+                          onClick={() => handleAttendanceChange(selectedSchedule.id, status)}
+                        >
+                          {getAttendanceIcon(status)} {status}
+                        </button>
+                      ))}
+                      {attendanceStatuses[selectedSchedule.id] && (
+                        <button
+                          type="button"
+                          className="attendance-reset-button"
+                          onClick={() => handleAttendanceChange(selectedSchedule.id, null)}
+                        >
+                          선택 해제
+                        </button>
+                      )}
+                    </div>
+                  </div>}
+
                   {!selectedSchedule.isRecurringVirtual && !selectedSchedule.isRecurringInstance && <div
                     className="memo-section"
                     style={{
-                      border: '1px solid var(--border-color, #e5e7eb)',
-                      borderRadius: 12,
-                      padding: 14,
                       display: 'flex',
                       flexDirection: 'column',
-                      gap: 10,
+                      gap: 8,
+                      paddingTop: 14,
+                      borderTop: '1px solid var(--border-color, #e5e7eb)',
                     }}
                   >
                     {session?.user ? (
@@ -6364,9 +6392,9 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
                                 background: 'transparent',
                                 color: 'var(--muted-text, #6b7280)',
                                 cursor: 'pointer',
-                                fontSize: 18,
-                                lineHeight: 1,
-                                padding: 2,
+                                fontSize: 12,
+                                lineHeight: 1.4,
+                                padding: '3px 0',
                               }}
                             >
                               삭제
@@ -6374,8 +6402,7 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
                           )}
                         </div>
 
-                        <div style={{ position: 'relative' }}>
-                          <textarea
+                        <textarea
                             value={
                               memoText[selectedSchedule.id] ??
                               memos[selectedSchedule.id]?.content ??
@@ -6407,46 +6434,16 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
                               width: '100%',
                               boxSizing: 'border-box',
                               resize: 'vertical',
-                              padding: '11px 36px 11px 12px',
-                              border: '1px solid var(--border-color, #d1d5db)',
-                              borderRadius: 9,
-                              background: 'var(--input-background, transparent)',
+                              padding: '4px 0',
+                              border: 'none',
+                              borderRadius: 0,
+                              outline: 'none',
+                              background: 'transparent',
                               color: 'inherit',
                               font: 'inherit',
-                              lineHeight: 1.5,
+                              lineHeight: 1.6,
                             }}
                           />
-                          {(memoText[selectedSchedule.id] || memos[selectedSchedule.id]?.content) && (
-                            <button
-                              type="button"
-                              aria-label="메모 입력 내용 지우기"
-                              title="입력 내용 지우기"
-                              onClick={() =>
-                                setMemoText((prev) => ({
-                                  ...prev,
-                                  [selectedSchedule.id]: '',
-                                }))
-                              }
-                              style={{
-                                position: 'absolute',
-                                top: 8,
-                                right: 8,
-                                border: 0,
-                                borderRadius: '50%',
-                                width: 24,
-                                height: 24,
-                                background: 'var(--surface-secondary, #f3f4f6)',
-                                color: 'var(--muted-text, #6b7280)',
-                                cursor: 'pointer',
-                                fontSize: 17,
-                                lineHeight: 1,
-                                padding: 0,
-                              }}
-                            >
-                              ×
-                            </button>
-                          )}
-                        </div>
 
                         {(editingMemoId === selectedSchedule.id ||
                           !memos[selectedSchedule.id]) && (
@@ -6476,33 +6473,6 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
                     )}
                   </div>}
 
-                  {!selectedSchedule.isRecurringVirtual && !selectedSchedule.isRecurringInstance && <div className="attendance-section">
-                    <div className="attendance-heading">
-                      <strong>참석 여부</strong>
-                      <span>이 일정에 대한 내 참석 상태</span>
-                    </div>
-                    <div className="attendance-buttons">
-                      {['참석', '미정', '불참'].map((status) => (
-                        <button
-                          type="button"
-                          key={status}
-                          className={attendanceStatuses[selectedSchedule.id] === status ? 'attendance-button active' : 'attendance-button'}
-                          onClick={() => handleAttendanceChange(selectedSchedule.id, status)}
-                        >
-                          {getAttendanceIcon(status)} {status}
-                        </button>
-                      ))}
-                      {attendanceStatuses[selectedSchedule.id] && (
-                        <button
-                          type="button"
-                          className="attendance-reset-button"
-                          onClick={() => handleAttendanceChange(selectedSchedule.id, null)}
-                        >
-                          선택 해제
-                        </button>
-                      )}
-                    </div>
-                  </div>}
 
                   {isAdmin && (
                     <div className="admin-actions">
