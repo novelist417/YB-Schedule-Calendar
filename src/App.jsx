@@ -32,6 +32,10 @@ const EMPTY_FORM = {
   details: '',
   related_link: '',
   related_link_text: '',
+  recurrence_type: 'none',
+  recurrence_calendar: 'solar',
+  recurrence_month: '',
+  recurrence_day: '',
 }
 
 const EMPTY_REQUEST_FORM = {
@@ -80,19 +84,10 @@ function translateAuthError(error) {
   return error?.message || '로그인에 실패했습니다. 잠시 후 다시 시도해주세요.'
 }
 
-const RECURRING_BIRTHDAYS = [
-  { key: 'yoon-dohyun', name: '윤도현', calendar: 'solar', month: 2, day: 3 },
-  { key: 'park-taehee', name: '박태희', calendar: 'lunar', month: 9, day: 19 },
-  { key: 'kim-jinwon', name: '김진원', calendar: 'lunar', month: 2, day: 23 },
-  { key: 'heo-jun', name: '허준', calendar: 'solar', month: 9, day: 17 },
-]
-
 function toIsoDate(year, month, day) {
   return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
 }
 
-// lunar-javascript의 음력 날짜 결과를 한국 달력 날짜로 정규화한다.
-// 라이브러리 결과가 한국 기준보다 하루 이르게 나오는 경우를 보정한다.
 function normalizeLunarSolarDate(year, month, day) {
   const date = new Date(Date.UTC(year, month - 1, day + 1))
   return {
@@ -102,72 +97,45 @@ function normalizeLunarSolarDate(year, month, day) {
   }
 }
 
-function getRecurringSchedules(years) {
+function getRecurringOccurrenceDate(schedule, year) {
+  const month = Number(schedule.recurrence_month)
+  const day = Number(schedule.recurrence_day)
+  if (!month || !day) return null
+  if (schedule.recurrence_calendar !== 'lunar') {
+    const maxDay = new Date(year, month, 0).getDate()
+    return toIsoDate(year, month, Math.min(day, maxDay))
+  }
+  try {
+    const solar = Lunar.fromYmd(year, month, day).getSolar()
+    const normalized = normalizeLunarSolarDate(solar.getYear(), solar.getMonth(), solar.getDay())
+    return toIsoDate(normalized.year, normalized.month, normalized.day)
+  } catch (error) {
+    console.warn('음력 반복 일정 변환 실패:', schedule.title, year, error)
+    return null
+  }
+}
+
+function getRecurringScheduleInstances(schedules, years) {
   const result = []
-
-  years.forEach((year) => {
-    RECURRING_BIRTHDAYS.forEach((birthday) => {
-      let solarYear = year
-      let solarMonth = birthday.month
-      let solarDay = birthday.day
-
-      if (birthday.calendar === 'lunar') {
-        try {
-          const solar = Lunar.fromYmd(year, birthday.month, birthday.day).getSolar()
-          const normalized = normalizeLunarSolarDate(
-            solar.getYear(),
-            solar.getMonth(),
-            solar.getDay()
-          )
-          solarYear = normalized.year
-          solarMonth = normalized.month
-          solarDay = normalized.day
-        } catch (error) {
-          console.warn('음력 생일 변환 실패:', birthday.name, year, error)
-          return
-        }
-      }
-
+  schedules.filter((schedule) => schedule.recurrence_type === 'yearly').forEach((schedule) => {
+    years.forEach((year) => {
+      const eventDate = getRecurringOccurrenceDate(schedule, year)
+      if (!eventDate) return
+      const isYbDebut = schedule.recurrence_key === 'yb-debut'
+      const title = isYbDebut ? `YB 데뷔 ${year - 1995}주년` : schedule.title
       result.push({
-        id: `recurring-birthday-${birthday.key}-${year}`,
-        recurringKey: birthday.key,
-        isRecurringVirtual: true,
-        title: `${birthday.name} 생일`,
-        calendar_title: `${birthday.name} 생일`,
-        schedule_type: '기념일',
-        event_date: toIsoDate(solarYear, solarMonth, solarDay),
-        event_time: null,
+        ...schedule,
+        id: `recurring-instance-${schedule.id}-${year}`,
+        sourceScheduleId: schedule.id,
+        isRecurringInstance: true,
+        event_date: eventDate,
         end_date: null,
-        end_time: null,
-        place: null,
-        address: null,
-        details: birthday.calendar === 'lunar'
-          ? `음력 ${birthday.month}월 ${birthday.day}일 생일`
-          : `양력 ${birthday.month}월 ${birthday.day}일 생일`,
-        related_link: null,
-        related_link_text: null,
+        title,
+        calendar_title: isYbDebut ? title : (schedule.calendar_title || ''),
+        details: isYbDebut ? `1995년 8월 24일 데뷔 기준 · ${year - 1995}주년` : schedule.details,
       })
     })
-
-    result.push({
-      id: `recurring-yb-debut-${year}`,
-      recurringKey: 'yb-debut',
-      isRecurringVirtual: true,
-      title: `YB 데뷔 ${year - 1995}주년`,
-      calendar_title: `YB 데뷔 ${year - 1995}주년`,
-      schedule_type: '기념일',
-      event_date: toIsoDate(year, 8, 24),
-      event_time: null,
-      end_date: null,
-      end_time: null,
-      place: null,
-      address: null,
-      details: `1995년 8월 24일 데뷔 기준 · ${year - 1995}주년`,
-      related_link: null,
-      related_link_text: null,
-    })
   })
-
   return result
 }
 
@@ -205,25 +173,13 @@ function App() {
 
   const recurringSchedules = useMemo(() => {
     const year = calendarCursor.getFullYear()
-    return getRecurringSchedules([year - 1, year, year + 1]).map((schedule) => {
-      const override = recurringTitleOverrides[schedule.recurringKey]
-
-      return override
-        ? {
-            ...schedule,
-            title: override.title || schedule.title,
-            calendar_title: override.calendar_title || '',
-            details: override.details ?? schedule.details,
-          }
-        : schedule
-    })
-  }, [calendarCursor, recurringTitleOverrides])
+    return getRecurringScheduleInstances(schedules, [year - 1, year, year + 1])
+  }, [calendarCursor, schedules])
 
   const calendarSchedules = useMemo(
-    () => initialCalendarDataLoaded ? [...schedules, ...recurringSchedules] : [],
+    () => initialCalendarDataLoaded ? [...schedules.filter((schedule) => schedule.recurrence_type !== 'yearly'), ...recurringSchedules] : [],
     [initialCalendarDataLoaded, schedules, recurringSchedules]
   )
-
 
   const timetableScrollRef = useRef(null)
 
@@ -1164,6 +1120,10 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
   }
 
   function openEditForm(schedule) {
+    if (schedule?.isRecurringInstance) {
+      const source = schedules.find((item) => String(item.id) === String(schedule.sourceScheduleId))
+      if (source) schedule = source
+    }
     if (schedule?.isRecurringVirtual) {
       const current = recurringTitleOverrides[schedule.recurringKey] || {}
       setEditingSchedule(null)
@@ -1200,6 +1160,10 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
       related_link: schedule.related_link || '',
       related_link_text:
         schedule.related_link_text || '',
+      recurrence_type: schedule.recurrence_type || 'none',
+      recurrence_calendar: schedule.recurrence_calendar || 'solar',
+      recurrence_month: schedule.recurrence_month ? String(schedule.recurrence_month) : '',
+      recurrence_day: schedule.recurrence_day ? String(schedule.recurrence_day) : '',
     })
 
     setFormError('')
@@ -1281,6 +1245,15 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
       return
     }
 
+    if (form.recurrence_type === 'yearly' && form.schedule_type === '기념일') {
+      const month = Number(form.recurrence_month)
+      const day = Number(form.recurrence_day)
+      if (!month || !day || month < 1 || month > 12 || day < 1 || day > 30) {
+        setFormError('반복할 월과 일을 올바르게 입력해주세요. (음력은 1~30일)')
+        return
+      }
+    }
+
     if (
       form.end_date &&
       form.end_date < form.event_date
@@ -1328,6 +1301,10 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
         form.related_link.trim() || null,
       related_link_text:
         form.related_link_text.trim() || null,
+      recurrence_type: form.schedule_type === '기념일' ? form.recurrence_type : 'none',
+      recurrence_calendar: form.schedule_type === '기념일' ? form.recurrence_calendar : 'solar',
+      recurrence_month: form.schedule_type === '기념일' && form.recurrence_type === 'yearly' ? Number(form.recurrence_month) : null,
+      recurrence_day: form.schedule_type === '기념일' && form.recurrence_type === 'yearly' ? Number(form.recurrence_day) : null,
       updated_at: new Date().toISOString(),
     }
 
@@ -1372,6 +1349,9 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
     schedule
   ) {
     if (!isAdmin || schedule?.isRecurringVirtual) return
+    if (schedule?.isRecurringInstance) {
+      schedule = schedules.find((item) => String(item.id) === String(schedule.sourceScheduleId)) || schedule
+    }
 
     const confirmed = window.confirm(
       `"${schedule.title}" 일정을 삭제할까요?`
@@ -5624,7 +5604,7 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
                                             ] || '#999',
                                         }}
                                       >
-                                        {!schedule.isRecurringVirtual && attendanceStatuses[schedule.id] && (
+                                        {!schedule.isRecurringVirtual && !schedule.isRecurringInstance && attendanceStatuses[schedule.id] && (
                                           <span
                                             className={'attendance-icon attendance-' + attendanceStatuses[schedule.id]}
                                             aria-label={'참석 여부: ' + attendanceStatuses[schedule.id]}
@@ -6265,7 +6245,7 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
                     </div>
                   )}
 
-                  {!selectedSchedule.isRecurringVirtual && <div className="memo-section">
+                  {!selectedSchedule.isRecurringVirtual && !selectedSchedule.isRecurringInstance && <div className="memo-section">
                     {session?.user ? (
                       <>
                       <div className="memo-heading">
@@ -6364,7 +6344,7 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
                     )}
                   </div>}
 
-                  {!selectedSchedule.isRecurringVirtual && <div className="attendance-section">
+                  {!selectedSchedule.isRecurringVirtual && !selectedSchedule.isRecurringInstance && <div className="attendance-section">
                     <div className="attendance-heading">
                       <strong>참석 여부</strong>
                       <span>이 일정에 대한 내 참석 상태</span>
@@ -6394,7 +6374,7 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
 
                   {isAdmin && (
                     <div className="admin-actions">
-                      {selectedSchedule.isRecurringVirtual ? (
+                      {selectedSchedule.isRecurringVirtual || selectedSchedule.isRecurringInstance ? (
                         <button onClick={() => openEditForm(selectedSchedule)}>
                           수정
                         </button>
@@ -7211,6 +7191,40 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
                     }
                   />
                 </label>
+
+                {form.schedule_type === '기념일' && (
+                  <div className="recurrence-settings">
+                    <label>
+                      반복
+                      <select name="recurrence_type" value={form.recurrence_type} onChange={handleFormChange}>
+                        <option value="none">반복 안 함</option>
+                        <option value="yearly">매년 반복</option>
+                      </select>
+                    </label>
+                    {form.recurrence_type === 'yearly' && (
+                      <>
+                        <label>
+                          달력 기준
+                          <select name="recurrence_calendar" value={form.recurrence_calendar} onChange={handleFormChange}>
+                            <option value="solar">양력</option>
+                            <option value="lunar">음력</option>
+                          </select>
+                        </label>
+                        <div className="recurrence-date-fields">
+                          <label>
+                            반복 월
+                            <input type="number" name="recurrence_month" min="1" max="12" value={form.recurrence_month} onChange={handleFormChange} placeholder="월" required />
+                          </label>
+                          <label>
+                            반복 일
+                            <input type="number" name="recurrence_day" min="1" max={form.recurrence_calendar === 'lunar' ? '30' : '31'} value={form.recurrence_day} onChange={handleFormChange} placeholder="일" required />
+                          </label>
+                        </div>
+                        <small className="form-help">반복 날짜는 위 시작 날짜와 별도로 설정돼. 음력 기념일은 음력 월·일을 입력해줘.</small>
+                      </>
+                    )}
+                  </div>
+                )}
 
                 <label>
                   시작 시간
