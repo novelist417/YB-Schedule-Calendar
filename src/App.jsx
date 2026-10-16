@@ -1538,6 +1538,11 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
       return
     }
 
+    setMemoText((prev) => ({
+      ...prev,
+      [scheduleId]: '',
+    }))
+
     await loadMemos(
       selectedSchedules.map(
         (schedule) => schedule.id
@@ -6319,97 +6324,146 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
                     </div>
                   )}
 
-                  {!selectedSchedule.isRecurringVirtual && !selectedSchedule.isRecurringInstance && <div className="memo-section">
+                  {!selectedSchedule.isRecurringVirtual && !selectedSchedule.isRecurringInstance && <div
+                    className="memo-section"
+                    style={{
+                      border: '1px solid var(--border-color, #e5e7eb)',
+                      borderRadius: 12,
+                      padding: 14,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 10,
+                    }}
+                  >
                     {session?.user ? (
                       <>
-                      <div className="memo-heading">
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                          <strong>내 메모</strong>
-                          <span>메모는 나만 볼 수 있어요.</span>
-                        </div>
-
-                        {memos[
-                          selectedSchedule.id
-                        ] && (
-                          <div className="memo-actions">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setEditingMemoId(
-                                  selectedSchedule.id
-                                )
-
-                                setMemoText(
-                                  (
-                                    prev
-                                  ) => ({
-                                    ...prev,
-                                    [selectedSchedule.id]:
-                                      memos[
-                                        selectedSchedule.id
-                                      ].content,
-                                  })
-                                )
-                              }}
-                            >
-                              ✏️
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() =>
-                                handleDeleteMemo(
-                                  selectedSchedule.id
-                                )
-                              }
-                            >
-                              🗑️
-                            </button>
-                          </div>
-                        )}
-                      </div>
-
-                      {memos[selectedSchedule.id] && editingMemoId !== selectedSchedule.id ? (
                         <div
-                          className="memo-view"
-                          aria-label="저장된 개인 메모. 읽기 전용이며 수정 버튼으로 편집할 수 있습니다."
+                          className="memo-heading"
                           style={{
-                            cursor: 'default',
-                            userSelect: 'text',
-                            whiteSpace: 'pre-wrap',
-                            overflowWrap: 'anywhere',
+                            display: 'flex',
+                            alignItems: 'flex-start',
+                            justifyContent: 'space-between',
+                            gap: 12,
                           }}
                         >
-                          {memos[selectedSchedule.id].content}
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                            <strong>내 메모</strong>
+                            <span style={{ fontSize: 12, color: 'var(--muted-text, #6b7280)' }}>
+                              메모는 나만 볼 수 있어요.
+                            </span>
+                          </div>
+
+                          {memos[selectedSchedule.id] && (
+                            <button
+                              type="button"
+                              aria-label="메모 삭제"
+                              title="메모 삭제"
+                              onClick={() => handleDeleteMemo(selectedSchedule.id)}
+                              style={{
+                                border: 0,
+                                background: 'transparent',
+                                color: 'var(--muted-text, #6b7280)',
+                                cursor: 'pointer',
+                                fontSize: 18,
+                                lineHeight: 1,
+                                padding: 2,
+                              }}
+                            >
+                              삭제
+                            </button>
+                          )}
                         </div>
-                      ) : (
-                        <div className="memo-editor">
+
+                        <div style={{ position: 'relative' }}>
                           <textarea
-                            value={memoText[selectedSchedule.id] || ''}
-                            onChange={(e) =>
+                            value={
+                              memoText[selectedSchedule.id] ??
+                              memos[selectedSchedule.id]?.content ??
+                              ''
+                            }
+                            onFocus={() => {
+                              if (editingMemoId !== selectedSchedule.id) {
+                                setEditingMemoId(selectedSchedule.id)
+                                setMemoText((prev) => ({
+                                  ...prev,
+                                  [selectedSchedule.id]:
+                                    prev[selectedSchedule.id] ??
+                                    memos[selectedSchedule.id]?.content ??
+                                    '',
+                                }))
+                              }
+                            }}
+                            onChange={(e) => {
+                              setEditingMemoId(selectedSchedule.id)
                               setMemoText((prev) => ({
                                 ...prev,
                                 [selectedSchedule.id]: e.target.value,
                               }))
-                            }
+                            }}
                             placeholder="이 일정에 대한 메모를 남겨보세요."
-                            rows="2"
+                            rows={3}
+                            style={{
+                              display: 'block',
+                              width: '100%',
+                              boxSizing: 'border-box',
+                              resize: 'vertical',
+                              padding: '11px 36px 11px 12px',
+                              border: '1px solid var(--border-color, #d1d5db)',
+                              borderRadius: 9,
+                              background: 'var(--input-background, transparent)',
+                              color: 'inherit',
+                              font: 'inherit',
+                              lineHeight: 1.5,
+                            }}
                           />
-
-                          <button
-                            type="button"
-                            className="memo-save-button"
-                            onClick={() =>
-                              handleSaveMemo(selectedSchedule.id)
-                            }
-                            disabled={memoSaving === selectedSchedule.id}
-                          >
-                            {memoSaving === selectedSchedule.id
-                              ? '저장 중...'
-                              : '저장'}
-                          </button>
+                          {(memoText[selectedSchedule.id] || memos[selectedSchedule.id]?.content) && (
+                            <button
+                              type="button"
+                              aria-label="메모 입력 내용 지우기"
+                              title="입력 내용 지우기"
+                              onClick={() =>
+                                setMemoText((prev) => ({
+                                  ...prev,
+                                  [selectedSchedule.id]: '',
+                                }))
+                              }
+                              style={{
+                                position: 'absolute',
+                                top: 8,
+                                right: 8,
+                                border: 0,
+                                borderRadius: '50%',
+                                width: 24,
+                                height: 24,
+                                background: 'var(--surface-secondary, #f3f4f6)',
+                                color: 'var(--muted-text, #6b7280)',
+                                cursor: 'pointer',
+                                fontSize: 17,
+                                lineHeight: 1,
+                                padding: 0,
+                              }}
+                            >
+                              ×
+                            </button>
+                          )}
                         </div>
-                      )}
+
+                        {(editingMemoId === selectedSchedule.id ||
+                          !memos[selectedSchedule.id]) && (
+                          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                            <button
+                              type="button"
+                              className="memo-save-button"
+                              onClick={() => handleSaveMemo(selectedSchedule.id)}
+                              disabled={
+                                memoSaving === selectedSchedule.id ||
+                                !(memoText[selectedSchedule.id] || '').trim()
+                              }
+                            >
+                              {memoSaving === selectedSchedule.id ? '저장 중...' : '저장'}
+                            </button>
+                          </div>
+                        )}
                       </>
                     ) : (
                       <button
