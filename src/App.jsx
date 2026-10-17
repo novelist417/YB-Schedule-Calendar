@@ -5347,7 +5347,7 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
         ) : (
           <section className="calendar-section">
             <div className="calendar-header">
-              <div className="calendar-title-row">
+              <div className="calendar-title-row" style={{ position: 'relative' }}>
                 <div className="calendar-navigation">
                   <button
                     type="button"
@@ -5414,15 +5414,23 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
                   <div
                     className="calendar-month-picker"
                     style={{
+                      position: 'absolute',
+                      top: 'calc(100% + 8px)',
+                      left: 0,
+                      zIndex: 1000,
                       display: 'flex',
                       alignItems: 'center',
                       flexWrap: 'wrap',
-                      gap: 8,
-                      padding: '10px 12px',
-                      marginTop: 8,
-                      border: '1px solid var(--border-color, #ddd)',
+                      gap: 10,
+                      padding: '12px',
+                      width: 'max-content',
+                      maxWidth: 'min(340px, calc(100vw - 32px))',
+                      boxSizing: 'border-box',
+                      border: '1px solid var(--border-color, #383838)',
                       borderRadius: 12,
-                      background: 'var(--panel-bg, #fff)',
+                      background: 'var(--panel-bg, #171717)',
+                      color: 'var(--text-color, #f5f5f5)',
+                      boxShadow: '0 10px 28px rgba(0,0,0,.45)',
                     }}
                   >
                     <label style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
@@ -5431,6 +5439,7 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
                         value={monthPickerYear}
                         onChange={(e) => setMonthPickerYear(Number(e.target.value))}
                         aria-label="연도 선택"
+                        style={{ background: '#242424', color: 'inherit', border: '1px solid #444', borderRadius: 7, padding: '6px 8px', fontSize: 14 }}
                       >
                         {Array.from({ length: 21 }, (_, index) => new Date().getFullYear() - 10 + index).map((year) => (
                           <option key={year} value={year}>{year}년</option>
@@ -5443,6 +5452,7 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
                         value={monthPickerMonth}
                         onChange={(e) => setMonthPickerMonth(Number(e.target.value))}
                         aria-label="월 선택"
+                        style={{ background: '#242424', color: 'inherit', border: '1px solid #444', borderRadius: 7, padding: '6px 8px', fontSize: 14 }}
                       >
                         {Array.from({ length: 12 }, (_, index) => index).map((month) => (
                           <option key={month} value={month}>{month + 1}월</option>
@@ -5455,10 +5465,11 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
                         setCalendarCursor(new Date(monthPickerYear, monthPickerMonth, 1))
                         setShowMonthPicker(false)
                       }}
+                      style={{ background: '#8e2337', color: '#fff', border: 0, borderRadius: 7, padding: '7px 12px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
                     >
                       이동
                     </button>
-                    <button type="button" onClick={() => setShowMonthPicker(false)}>
+                    <button type="button" onClick={() => setShowMonthPicker(false)} style={{ background: '#292929', color: 'inherit', border: '1px solid #444', borderRadius: 7, padding: '7px 12px', fontSize: 13, cursor: 'pointer' }}>
                       취소
                     </button>
                   </div>
@@ -6325,159 +6336,75 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
                   )}
 
 
-                  {!selectedSchedule.isRecurringVirtual && !selectedSchedule.isRecurringInstance && <div className="personal-notes-section" style={{ marginTop: 18, paddingTop: 14, borderTop: '1px solid var(--border-color, #e5e7eb)', display: 'flex', flexDirection: 'column', gap: 14 }}>
-                  <div className="attendance-section">
-                    <div className="attendance-heading">
-                      <strong>참석 여부</strong>
-                      <span>이 일정에 대한 내 참석 상태</span>
-                    </div>
-                    <div className="attendance-buttons">
-                      {['참석', '미정', '불참'].map((status) => (
-                        <button
-                          type="button"
-                          key={status}
-                          className={attendanceStatuses[selectedSchedule.id] === status ? 'attendance-button active' : 'attendance-button'}
-                          onClick={() => handleAttendanceChange(selectedSchedule.id, status)}
-                        >
-                          {getAttendanceIcon(status)} {status}
-                        </button>
-                      ))}
-                      {attendanceStatuses[selectedSchedule.id] && (
-                        <button
-                          type="button"
-                          className="attendance-reset-button"
-                          onClick={() => handleAttendanceChange(selectedSchedule.id, null)}
-                        >
-                          선택 해제
-                        </button>
-                      )}
-                    </div>
-                  </div>
+                  {!selectedSchedule.isRecurringVirtual && !selectedSchedule.isRecurringInstance && (
+                    <section className="personal-notes-section" style={{ marginTop: 18, paddingTop: 14, borderTop: '1px solid var(--border-color, #303030)' }}>
+                      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, marginBottom: 10 }}>
+                        <strong style={{ fontSize: 15 }}>내 기록</strong>
+                        <span style={{ fontSize: 11, color: 'var(--muted-text, #929292)' }}>참석 여부와 메모는 나만 볼 수 있어요.</span>
+                      </div>
 
-                  <div
-                    className="memo-section"
-                    style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: 5,
-                    }}
-                  >
-                    {session?.user ? (
-                      <>
-                        <div
-                          className="memo-heading"
-                          style={{
-                            display: 'flex',
-                            alignItems: 'flex-start',
-                            justifyContent: 'space-between',
-                            gap: 12,
-                          }}
-                        >
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                            <strong>메모</strong>
-                            <span style={{ fontSize: 12, color: 'var(--muted-text, #6b7280)' }}>
-                              메모는 나만 볼 수 있어요.
-                            </span>
+                      {session?.user ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                          <div className="attendance-buttons" style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                            {['참석', '미정', '불참'].map((status) => (
+                              <button
+                                type="button"
+                                key={status}
+                                className={attendanceStatuses[selectedSchedule.id] === status ? 'attendance-button active' : 'attendance-button'}
+                                onClick={() => handleAttendanceChange(selectedSchedule.id, status)}
+                              >
+                                {getAttendanceIcon(status)} {status}
+                              </button>
+                            ))}
+                            {attendanceStatuses[selectedSchedule.id] && (
+                              <button type="button" className="attendance-reset-button" onClick={() => handleAttendanceChange(selectedSchedule.id, null)}>
+                                선택 해제
+                              </button>
+                            )}
                           </div>
 
-                          {memos[selectedSchedule.id] && (
-                            <button
-                              type="button"
-                              aria-label="메모 삭제"
-                              title="메모 삭제"
-                              onClick={() => handleDeleteMemo(selectedSchedule.id)}
-                              style={{
-                                border: 0,
-                                background: 'transparent',
-                                color: 'var(--muted-text, #6b7280)',
-                                cursor: 'pointer',
-                                fontSize: 12,
-                                lineHeight: 1.4,
-                                padding: '3px 0',
-                              }}
-                            >
-                              삭제
-                            </button>
-                          )}
+                          <div className="memo-section" style={{ display: 'flex', alignItems: 'flex-start', gap: 8, paddingTop: 9, borderTop: '1px solid var(--border-color, #303030)' }}>
+                            <span aria-hidden="true" style={{ fontSize: 13, color: 'var(--muted-text, #929292)', paddingTop: 3, flexShrink: 0 }}>메모</span>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <textarea
+                                value={memoText[selectedSchedule.id] ?? memos[selectedSchedule.id]?.content ?? ''}
+                                onFocus={(e) => {
+                                  if (editingMemoId !== selectedSchedule.id) {
+                                    setEditingMemoId(selectedSchedule.id)
+                                    setMemoText((prev) => ({ ...prev, [selectedSchedule.id]: prev[selectedSchedule.id] ?? memos[selectedSchedule.id]?.content ?? '' }))
+                                  }
+                                  e.target.style.height = 'auto'
+                                  e.target.style.height = `${Math.max(22, e.target.scrollHeight)}px`
+                                }}
+                                onChange={(e) => {
+                                  setEditingMemoId(selectedSchedule.id)
+                                  setMemoText((prev) => ({ ...prev, [selectedSchedule.id]: e.target.value }))
+                                  e.target.style.height = 'auto'
+                                  e.target.style.height = `${Math.max(22, e.target.scrollHeight)}px`
+                                }}
+                                placeholder="간단한 메모를 남겨 보세요"
+                                rows={1}
+                                aria-label="개인 메모"
+                                style={{ display: 'block', width: '100%', boxSizing: 'border-box', resize: 'none', overflow: 'hidden', minHeight: 22, padding: '2px 0', border: 0, outline: 'none', background: 'transparent', color: 'inherit', fontSize: 12, lineHeight: 1.5, fontFamily: 'inherit' }}
+                              />
+                              {(editingMemoId === selectedSchedule.id || !memos[selectedSchedule.id]) && (
+                                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 7, marginTop: 4 }}>
+                                  {memos[selectedSchedule.id] && (
+                                    <button type="button" onClick={() => handleDeleteMemo(selectedSchedule.id)} style={{ border: 0, background: 'transparent', color: 'var(--muted-text, #929292)', fontSize: 11, padding: '3px 5px', cursor: 'pointer' }}>삭제</button>
+                                  )}
+                                  <button type="button" className="memo-save-button" onClick={() => handleSaveMemo(selectedSchedule.id)} disabled={memoSaving === selectedSchedule.id || !(memoText[selectedSchedule.id] || '').trim()} style={{ fontSize: 11, padding: '4px 9px' }}>
+                                    {memoSaving === selectedSchedule.id ? '저장 중…' : '저장'}
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
                         </div>
-
-                        <textarea
-                            value={
-                              memoText[selectedSchedule.id] ??
-                              memos[selectedSchedule.id]?.content ??
-                              ''
-                            }
-                            onFocus={(e) => {
-                              if (editingMemoId !== selectedSchedule.id) {
-                                setEditingMemoId(selectedSchedule.id)
-                                setMemoText((prev) => ({
-                                  ...prev,
-                                  [selectedSchedule.id]:
-                                    prev[selectedSchedule.id] ??
-                                    memos[selectedSchedule.id]?.content ??
-                                    '',
-                                }))
-                              }
-                              e.target.style.height = 'auto'
-                              e.target.style.height = `${Math.max(24, e.target.scrollHeight)}px`
-                            }}
-                            onChange={(e) => {
-                              setEditingMemoId(selectedSchedule.id)
-                              setMemoText((prev) => ({
-                                ...prev,
-                                [selectedSchedule.id]: e.target.value,
-                              }))
-                              e.target.style.height = 'auto'
-                              e.target.style.height = `${Math.max(24, e.target.scrollHeight)}px`
-                            }}
-                            placeholder="메모를 입력하세요."
-                            rows={1}
-                            style={{
-                              display: 'block',
-                              width: '100%',
-                              boxSizing: 'border-box',
-                              resize: 'none',
-                              overflow: 'hidden',
-                              minHeight: 24,
-                              padding: '3px 0',
-                              border: 'none',
-                              borderRadius: 0,
-                              outline: 'none',
-                              background: 'transparent',
-                              color: 'inherit',
-                              fontSize: 13,
-                              lineHeight: 1.5,
-                            }}
-                          />
-
-                        {(editingMemoId === selectedSchedule.id ||
-                          !memos[selectedSchedule.id]) && (
-                          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-                            <button
-                              type="button"
-                              className="memo-save-button"
-                              onClick={() => handleSaveMemo(selectedSchedule.id)}
-                              disabled={
-                                memoSaving === selectedSchedule.id ||
-                                !(memoText[selectedSchedule.id] || '').trim()
-                              }
-                            >
-                              {memoSaving === selectedSchedule.id ? '저장 중...' : '저장'}
-                            </button>
-                          </div>
-                        )}
-                      </>
-                    ) : (
-                      <button
-                        type="button"
-                        className="login-required-button"
-                        onClick={openAuthPrompt}
-                      >
-                        로그인하면 이 일정에 개인 메모를 남길 수 있어요
-                      </button>
-                    )}
-                  </div>
-                  </div>}
+                      ) : (
+                        <button className="login-required-button" onClick={openAuthPrompt}>로그인하면 참석 여부와 개인 메모를 기록할 수 있어요</button>
+                      )}
+                    </section>
+                  )}
 
 
                   {isAdmin && (
