@@ -6363,8 +6363,8 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
                             )}
                           </div>
 
-                          <div className="memo-section" style={{ display: 'flex', alignItems: 'flex-start', gap: 8, paddingTop: 9, borderTop: '1px solid var(--border-color, #303030)' }}>
-                            <span aria-hidden="true" style={{ fontSize: 13, color: 'var(--muted-text, #929292)', paddingTop: 3, flexShrink: 0 }}>메모</span>
+                          <div className="memo-section" style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: 5 }}>
+                            <span aria-hidden="true" style={{ fontSize: 12, color: 'var(--muted-text, #929292)', flexShrink: 0 }}>메모</span>
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <textarea
                                 value={memoText[selectedSchedule.id] ?? memos[selectedSchedule.id]?.content ?? ''}
@@ -6385,7 +6385,7 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
                                 placeholder="간단한 메모를 남겨 보세요"
                                 rows={1}
                                 aria-label="개인 메모"
-                                style={{ display: 'block', width: '100%', boxSizing: 'border-box', resize: 'none', overflow: 'hidden', minHeight: 22, padding: '2px 0', border: 0, outline: 'none', background: 'transparent', color: 'inherit', fontSize: 12, lineHeight: 1.5, fontFamily: 'inherit' }}
+                                style={{ display: 'block', width: '100%', boxSizing: 'border-box', resize: 'none', overflow: 'hidden', minHeight: 36, padding: '8px 10px', border: '1px solid var(--border-color, #303030)', borderRadius: 8, outline: 'none', background: 'var(--input-bg, #111111)', color: 'inherit', fontSize: 12, lineHeight: 1.45, fontFamily: 'inherit' }}
                               />
                               {(editingMemoId === selectedSchedule.id || !memos[selectedSchedule.id]) && (
                                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 7, marginTop: 4 }}>
