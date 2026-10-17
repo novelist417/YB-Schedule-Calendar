@@ -5411,6 +5411,17 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
                 </div>
 
                 {showMonthPicker && (
+                  <>
+                  <div
+                    aria-hidden="true"
+                    onClick={() => setShowMonthPicker(false)}
+                    style={{
+                      position: 'fixed',
+                      inset: 0,
+                      zIndex: 999,
+                      background: 'transparent',
+                    }}
+                  />
                   <div
                     className="calendar-month-picker"
                     style={{
@@ -5469,10 +5480,8 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
                     >
                       이동
                     </button>
-                    <button type="button" onClick={() => setShowMonthPicker(false)} style={{ background: '#292929', color: 'inherit', border: '1px solid #444', borderRadius: 7, padding: '7px 12px', fontSize: 13, cursor: 'pointer' }}>
-                      취소
-                    </button>
                   </div>
+                  </>
                 )}
 
                 <select
