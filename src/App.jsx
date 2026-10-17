@@ -1120,10 +1120,10 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
     setUpdateError('')
   }
 
-  function openNewScheduleForm() {
+  function openNewScheduleForm(date = '') {
     setEditingSchedule(null)
     setEditingRecurringSchedule(null)
-    setForm(EMPTY_FORM)
+    setForm({ ...EMPTY_FORM, event_date: date || '' })
     setFormError('')
     setShowForm(true)
   }
@@ -2459,26 +2459,9 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
     ).padStart(2, '0')}`
   }
 
-  function getWeekTitle(dates) {
-    if (!dates.length) return ''
-
-    const first = dates[0]
-    const last =
-      dates[dates.length - 1]
-
-    const firstText = `${first.getFullYear()}. ${String(
-      first.getMonth() + 1
-    ).padStart(2, '0')}. ${String(
-      first.getDate()
-    ).padStart(2, '0')}`
-
-    const lastText = `${last.getFullYear()}. ${String(
-      last.getMonth() + 1
-    ).padStart(2, '0')}. ${String(
-      last.getDate()
-    ).padStart(2, '0')}`
-
-    return `${firstText} ~ ${lastText}`
+  function getWeekTitle(date) {
+    const weekNumber = Math.ceil(date.getDate() / 7)
+    return `${date.getMonth() + 1}월 ${weekNumber}주`
   }
 
   function moveCalendar(
@@ -3201,8 +3184,16 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
 
         .timetable-day-head {
           position: relative !important;
-          padding: 0 6px 7px !important;
-          overflow: hidden;
+          padding: 0 3px 7px !important;
+          overflow: visible !important;
+          min-width: 0;
+          box-sizing: border-box;
+        }
+
+        .timetable-day-head > strong {
+          white-space: nowrap;
+          font-size: clamp(10px, 2.8vw, 13px);
+          letter-spacing: -0.4px;
         }
 
         .timetable-day-head > span:not(.timetable-anniversary-badge) {
@@ -4623,21 +4614,6 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
                 달력
               </button>
 
-              {isAdmin && (
-                <button
-                  className={
-                    page === 'list'
-                      ? 'nav-button active'
-                      : 'nav-button'
-                  }
-                  onClick={() =>
-                    setPage('list')
-                  }
-                >
-                  일정목록
-                </button>
-              )}
-
               <button
                 className={
                   page === 'info' || page === 'updates' || page === 'requests'
@@ -4698,173 +4674,7 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
 
       <main className="main">
 
-        {page === 'list' &&
-        isAdmin ? (
-          <section className="schedule-list-page">
-            <div className="list-page-header">
-              <div>
-                <p className="page-eyebrow">
-                  ADMIN
-                </p>
-
-                <h1>일정목록</h1>
-
-                <p className="page-description">
-                  등록된 모든 일정을
-                  관리합니다.
-                </p>
-              </div>
-
-              <div className="admin-list-actions">
-                {renderAddScheduleMenu()}
-              </div>
-            </div>
-
-            <div className="schedule-list-toolbar">
-              <div className="schedule-list-filter-label">
-                일정 보기
-              </div>
-
-              <select
-                className="schedule-list-filter"
-                value={scheduleListFilter}
-                onChange={(e) =>
-                  setScheduleListFilter(e.target.value)
-                }
-                aria-label="일정목록 표시 범위"
-              >
-                <option value="upcoming">
-                  지나간 일정 숨김
-                </option>
-                <option value="past">
-                  지난 일정만 보기
-                </option>
-                <option value="all">
-                  전체 일정 보기
-                </option>
-              </select>
-
-              <span className="schedule-list-count">
-                {scheduleListSchedules.length}개
-              </span>
-            </div>
-
-            <div className="schedule-list">
-              {scheduleListSchedules.length ===
-              0 ? (
-                <div className="empty-list">
-                  {scheduleLoadError ? (
-                    <>
-                      일정을
-                      불러오지 못했습니다.
-                      <br />
-                      {scheduleLoadError}
-                    </>
-                  ) : (
-                    scheduleListFilter === 'upcoming'
-                      ? '지나간 일정을 제외하면 표시할 일정이 없습니다.'
-                      : scheduleListFilter === 'past'
-                        ? '지난 일정이 없습니다.'
-                        : '등록된 일정이 없습니다.'
-                  )}
-                </div>
-              ) : (
-                scheduleListSchedules.map(
-                  (schedule) => (
-                    <div
-                      className="schedule-list-item"
-                      key={schedule.id}
-                    >
-                      <div className="list-item-date">
-                        <span className="list-item-date-text list-item-date-desktop">
-                          {formatListDate(
-                            schedule.event_date
-                          )}
-                        </span>
-                        <span className="list-item-date-text list-item-date-mobile">
-                          {schedule.event_date
-                            ? `${schedule.event_date.slice(
-                                2,
-                                4
-                              )}.${schedule.event_date.slice(
-                                5,
-                                7
-                              )}.${schedule.event_date.slice(
-                                8,
-                                10
-                              )}.`
-                            : ''}
-                        </span>
-                        <span className="list-item-time-text">
-                          {formatScheduleTimeRange(
-                            schedule
-                          )}
-                        </span>
-                      </div>
-
-                      <div className="list-item-main">
-                        <div
-                          className="list-item-type"
-                          style={{
-                            color:
-                              TYPE_COLORS[
-                                schedule
-                                  .schedule_type
-                              ] ||
-                              '#777',
-                          }}
-                        >
-                          {
-                            schedule.schedule_type
-                          }
-                        </div>
-
-                        <h3>
-                          {
-                            schedule.title
-                          }
-                        </h3>
-
-                        <div className="list-item-info">
-                          {schedule.place && (
-                            <span>
-                              {
-                                schedule.place
-                              }
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="list-item-actions">
-                        <button
-                          onClick={() =>
-                            openEditForm(
-                              schedule
-                            )
-                          }
-                        >
-                          수정
-                        </button>
-
-                        <button
-                          className="delete-button"
-                          onClick={() =>
-                            handleDeleteSchedule(
-                              schedule
-                            )
-                          }
-                        >
-                          삭제
-                        </button>
-                      </div>
-                    </div>
-                  )
-                )
-              )}
-            </div>
-          </section>
-        ) : page === 'info' ? (
+        {page === 'info' ? (
           <section className="schedule-list-page info-page">
             <div className="list-page-header">
               <div>
@@ -5444,7 +5254,7 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
                     }}
                   >
                     {calendarView === 'week'
-                      ? getWeekTitle(weekDates)
+                      ? getWeekTitle(calendarCursor)
                       : getMonthTitle(calendarCursor)}
                     <span aria-hidden="true" style={{ marginLeft: 6, fontSize: '0.72em', opacity: 0.65 }}>▾</span>
                   </button>
@@ -5856,11 +5666,6 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
                         const isToday =
                           dateString ===
                           toDateString(today)
-                        const anniversaries =
-                          getAnniversariesForDate(
-                            dateString
-                          )
-
                         return (
                           <button
                             type="button"
@@ -5891,12 +5696,6 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
                               .
                               {date.getDate()}
                             </strong>
-                            {anniversaries.length >
-                              0 && (
-                              <span className="timetable-anniversary-badge">
-                                기념일
-                              </span>
-                            )}
                           </button>
                         )
                       })}
@@ -6243,6 +6042,20 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
             </div>
 
             <div className="schedule-detail">
+              {!selectedSchedule && isAdmin && (
+                <button
+                  type="button"
+                  className="add-schedule-button"
+                  style={{ width: '100%', marginBottom: 12 }}
+                  onClick={() => {
+                    const dateToAdd = selectedDate
+                    closeScheduleOverlay()
+                    openNewScheduleForm(dateToAdd)
+                  }}
+                >
+                  + 이 날짜에 일정 추가
+                </button>
+              )}
               {!selectedSchedule ? (
                 selectedSchedules.length ===
                 0 ? (
