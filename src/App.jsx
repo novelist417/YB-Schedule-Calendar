@@ -234,6 +234,7 @@ function App() {
   const [updateError, setUpdateError] = useState('')
   const [importantNotice, setImportantNotice] = useState(null)
   const [showImportantNotice, setShowImportantNotice] = useState(false)
+  const [hasUnreadUpdates, setHasUnreadUpdates] = useState(false)
 
   // 스케줄표 자동 등록
   const [showAutoImport, setShowAutoImport] = useState(false)
@@ -323,6 +324,11 @@ function App() {
   useEffect(() => {
     loadSchedules()
     loadImportantNotice()
+    refreshUpdateNotification()
+    const updateCheckInterval = window.setInterval(() => {
+      refreshUpdateNotification()
+    }, 60000)
+    return () => window.clearInterval(updateCheckInterval)
   }, [])
 
   useEffect(() => {
@@ -1992,6 +1998,45 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
 
     setUpdates(data || [])
     setUpdateLoading(false)
+    refreshUpdateNotification(data || [])
+    return data || []
+  }
+
+  const UPDATE_SEEN_KEY = 'yb-updates-last-seen-at-v1'
+  const UPDATE_BASELINE_KEY = 'yb-updates-baseline-set-v1'
+
+  async function refreshUpdateNotification(knownUpdates = null) {
+    let rows = knownUpdates
+    if (!rows) {
+      const { data, error } = await supabase
+        .from('updates')
+        .select('id, created_at, is_important')
+        .order('created_at', { ascending: false })
+        .limit(100)
+      if (error) {
+        console.warn('새 업데이트 확인 실패:', error)
+        return
+      }
+      rows = data || []
+    }
+
+    const newestTime = rows[0]?.created_at || ''
+    if (!window.localStorage.getItem(UPDATE_BASELINE_KEY)) {
+      // 기능을 처음 적용했을 때 기존 글은 새 글로 알리지 않음
+      window.localStorage.setItem(UPDATE_BASELINE_KEY, '1')
+      if (newestTime) window.localStorage.setItem(UPDATE_SEEN_KEY, newestTime)
+      setHasUnreadUpdates(false)
+      return
+    }
+
+    const seenAt = window.localStorage.getItem(UPDATE_SEEN_KEY) || ''
+    setHasUnreadUpdates(Boolean(newestTime && newestTime > seenAt))
+  }
+
+  function markUpdatesAsSeen(rows = updates) {
+    const newestTime = rows?.[0]?.created_at || ''
+    if (newestTime) window.localStorage.setItem(UPDATE_SEEN_KEY, newestTime)
+    setHasUnreadUpdates(false)
   }
 
   async function loadImportantNotice() {
@@ -3574,6 +3619,22 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
           margin-bottom: 7px;
         }
 
+        .info-update-menu-title {
+          display: flex !important;
+          align-items: center;
+          gap: 7px;
+        }
+
+        .new-update-dot {
+          display: inline-block;
+          width: 7px;
+          height: 7px;
+          flex: 0 0 7px;
+          border-radius: 50%;
+          background: #e77fb5;
+          vertical-align: middle;
+        }
+
         .info-menu-card span {
           display: block;
           color: #aaa;
@@ -4817,8 +4878,8 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
 
             {infoSection === 'home' ? (
               <div className="info-menu-grid">
-                <button type="button" className="info-menu-card" onClick={() => { setInfoSection('updates'); setPage('updates'); loadUpdates() }}>
-                  <strong>공지&업데이트</strong>
+                <button type="button" className="info-menu-card" onClick={() => { setInfoSection('updates'); setPage('updates'); loadUpdates().then((rows) => markUpdatesAsSeen(rows)) }}>
+                  <strong className="info-update-menu-title">공지&업데이트{hasUnreadUpdates && <i className="new-update-dot" aria-label="새 업데이트" />}</strong>
                   <span>중요 공지와 변경·추가된 기능을 확인합니다.</span>
                 </button>
 
