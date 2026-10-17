@@ -4575,9 +4575,15 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
       <header className="header">
         <div
           className="logo"
-          onClick={() =>
+          onClick={() => {
             setPage('calendar')
-          }
+            setCalendarView('month')
+            setCalendarCursor(new Date())
+            setSelectedDate(null)
+            setSelectedSchedules([])
+            setSelectedSchedule(null)
+            setShowMonthPicker(false)
+          }}
           style={{
             cursor: 'pointer',
           }}
