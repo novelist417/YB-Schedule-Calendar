@@ -187,6 +187,7 @@ function App() {
   const timetableScrollRef = useRef(null)
 
   const [searchText, setSearchText] = useState('')
+  const [showSearchResults, setShowSearchResults] = useState(false)
   const [filterTypes, setFilterTypes] = useState([])
   const [showTypeFilter, setShowTypeFilter] = useState(false)
 
@@ -5416,11 +5417,11 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
                 <input
                   type="search"
                   value={searchText}
-                  onChange={(e) =>
-                    setSearchText(
-                      e.target.value
-                    )
-                  }
+                  onChange={(e) => {
+                    // 입력 중에는 결과 목록을 자동으로 열지 않고, 사용자가 목록 버튼을 눌렀을 때만 표시합니다.
+                    setSearchText(e.target.value)
+                    setShowSearchResults(false)
+                  }}
                   placeholder="일정 검색"
                   aria-label="일정 검색"
                 />
@@ -5429,9 +5430,10 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
                   <button
                     type="button"
                     className="search-clear"
-                    onClick={() =>
+                    onClick={() => {
                       setSearchText('')
-                    }
+                      setShowSearchResults(false)
+                    }}
                     aria-label="검색어 지우기"
                   >
                     ×
@@ -5469,25 +5471,21 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
 
             {(searchText ||
               filterTypes.length > 0) && (
-              <div className="filter-result-info">
-                {filteredSchedules.length}개
-                일정
-                {searchText && (
-                  <>
-                    {' '}
-                    · "{searchText}"
-                  </>
-                )}
-                {filterTypes.length > 0 && (
-                  <>
-                    {' '}
-                    · {filterTypes.join(', ')}
-                  </>
+              <div className="filter-result-info" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                <span>
+                  {filteredSchedules.length}개 일정
+                  {searchText && <> {' '}· "{searchText}"</>}
+                  {filterTypes.length > 0 && <> {' '}· {filterTypes.join(', ')}</>}
+                </span>
+                {normalizedSearch && filteredSchedules.length > 0 && (
+                  <button type="button" onClick={() => setShowSearchResults((value) => !value)} style={{ flexShrink: 0, border: 0, background: 'transparent', color: 'inherit', cursor: 'pointer', padding: '4px 2px', fontSize: 'inherit' }} aria-expanded={showSearchResults}>
+                    {showSearchResults ? '목록 닫기 ▴' : '일정 목록 보기 ▾'}
+                  </button>
                 )}
               </div>
             )}
 
-            {normalizedSearch && filteredSchedules.length > 0 && (
+            {normalizedSearch && showSearchResults && filteredSchedules.length > 0 && (
               <div className="search-results-list" style={{ margin: '8px 0 14px', padding: 10, border: '1px solid #383838', borderRadius: 10, background: '#181818' }}>
                 <div style={{ fontSize: 12, color: '#aaa', marginBottom: 6 }}>검색 결과 · {filteredSchedules.length}개 · 항목을 누르면 해당 일정으로 이동</div>
                 <div style={{ maxHeight: 220, overflowY: 'auto' }}>
