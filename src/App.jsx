@@ -5471,14 +5471,14 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
 
             {(searchText ||
               filterTypes.length > 0) && (
-              <div className="filter-result-info" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+              <div className="filter-result-info" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', flexWrap: 'wrap', gap: 8 }}>
                 <span>
                   {filteredSchedules.length}개 일정
                   {searchText && <> {' '}· "{searchText}"</>}
                   {filterTypes.length > 0 && <> {' '}· {filterTypes.join(', ')}</>}
                 </span>
                 {normalizedSearch && filteredSchedules.length > 0 && (
-                  <button type="button" onClick={() => setShowSearchResults((value) => !value)} style={{ flexShrink: 0, border: 0, background: 'transparent', color: 'inherit', cursor: 'pointer', padding: '4px 2px', fontSize: 'inherit' }} aria-expanded={showSearchResults}>
+                  <button type="button" onClick={() => setShowSearchResults((value) => !value)} style={{ flexShrink: 0, border: '1px solid #a83a50', background: '#8e2337', color: '#fff', cursor: 'pointer', padding: '5px 9px', borderRadius: 7, fontSize: 12, fontWeight: 600, lineHeight: 1.4 }} aria-expanded={showSearchResults}>
                     {showSearchResults ? '목록 닫기 ▴' : '일정 목록 보기 ▾'}
                   </button>
                 )}
