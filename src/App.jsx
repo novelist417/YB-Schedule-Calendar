@@ -176,7 +176,7 @@ function App() {
 
   const recurringSchedules = useMemo(() => {
     const year = calendarCursor.getFullYear()
-    return getRecurringScheduleInstances(schedules, [year - 1, year, year + 1])
+    return getRecurringScheduleInstances(schedules, Array.from({ length: 21 }, (_, index) => year - 10 + index))
   }, [calendarCursor, schedules])
 
   const calendarSchedules = useMemo(
@@ -187,7 +187,8 @@ function App() {
   const timetableScrollRef = useRef(null)
 
   const [searchText, setSearchText] = useState('')
-  const [filterType, setFilterType] = useState('all')
+  const [filterTypes, setFilterTypes] = useState([])
+  const [showTypeFilter, setShowTypeFilter] = useState(false)
 
   const [scheduleListFilter, setScheduleListFilter] =
     useState('upcoming')
@@ -2551,9 +2552,8 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
       return calendarSchedules.filter(
         (schedule) => {
           const matchesType =
-            filterType === 'all' ||
-            schedule.schedule_type ===
-              filterType
+            filterTypes.length === 0 ||
+            filterTypes.includes(schedule.schedule_type)
 
           if (!matchesType) {
             return false
@@ -2565,6 +2565,9 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
 
           const searchableText = [
             schedule.title,
+            schedule.calendar_title,
+            schedule.recurringKey,
+            schedule.recurring_key,
             schedule.place,
             schedule.address,
             schedule.details,
@@ -2583,7 +2586,7 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
       )
     }, [
       calendarSchedules,
-      filterType,
+      filterTypes,
       normalizedSearch,
     ])
 
@@ -4631,7 +4634,7 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
                   setInfoSection('home')
                 }}
               >
-                안내·요청
+                안내·요청{hasUnreadUpdates && <i className="new-update-dot" aria-label="새 업데이트" style={{ display: 'inline-block', width: 7, height: 7, marginLeft: 6, borderRadius: '50%', background: '#ef4444', verticalAlign: 'middle' }} />}
               </button>
             </nav>
           )}
@@ -4649,7 +4652,7 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
                 setInfoSection('home')
               }}
             >
-              안내·요청
+              안내·요청{hasUnreadUpdates && <i className="new-update-dot" aria-label="새 업데이트" style={{ display: 'inline-block', width: 7, height: 7, marginLeft: 6, borderRadius: '50%', background: '#ef4444', verticalAlign: 'middle' }} />}
             </button>
           )}
 
@@ -5436,35 +5439,36 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
                 )}
               </div>
 
-              <select
-                className="schedule-filter"
-                value={filterType}
-                onChange={(e) =>
-                  setFilterType(
-                    e.target.value
-                  )
-                }
-                aria-label="일정 유형 필터"
-              >
-                <option value="all">
-                  전체 유형
-                </option>
-
-                {TYPE_OPTIONS.map(
-                  (type) => (
-                    <option
-                      value={type}
-                      key={type}
-                    >
-                      {type}
-                    </option>
-                  )
+              <div className="schedule-type-filter-wrap" style={{ position: 'relative' }}>
+                <button
+                  type="button"
+                  className="schedule-filter"
+                  aria-label="일정 유형 필터"
+                  aria-expanded={showTypeFilter}
+                  onClick={() => setShowTypeFilter((value) => !value)}
+                >
+                  {filterTypes.length ? `유형 ${filterTypes.length}개 선택 ▾` : '전체 유형 ▾'}
+                </button>
+                {showTypeFilter && (
+                  <div className="schedule-type-filter-panel" style={{ position: 'absolute', right: 0, top: 'calc(100% + 6px)', zIndex: 30, minWidth: 190, padding: 12, border: '1px solid #444', borderRadius: 10, background: '#202020', boxShadow: '0 8px 24px rgba(0,0,0,.35)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
+                      <button type="button" onClick={() => setFilterTypes([])} style={{ background: 'none', border: 0, color: '#ddd', cursor: 'pointer', padding: 0 }}>전체 해제</button>
+                      <button type="button" onClick={() => setFilterTypes([...TYPE_OPTIONS])} style={{ background: 'none', border: 0, color: '#ddd', cursor: 'pointer', padding: 0 }}>전체 선택</button>
+                    </div>
+                    {TYPE_OPTIONS.map((type) => (
+                      <label key={type} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 2px', cursor: 'pointer' }}>
+                        <input type="checkbox" checked={filterTypes.includes(type)} onChange={(e) => setFilterTypes((prev) => e.target.checked ? [...prev, type] : prev.filter((item) => item !== type))} />
+                        <span>{type}</span>
+                      </label>
+                    ))}
+                    <button type="button" onClick={() => setShowTypeFilter(false)} style={{ width: '100%', marginTop: 8, padding: '7px', border: 0, borderRadius: 7, background: '#8e2337', color: '#fff', cursor: 'pointer' }}>완료</button>
+                  </div>
                 )}
-              </select>
+              </div>
             </div>
 
             {(searchText ||
-              filterType !== 'all') && (
+              filterTypes.length > 0) && (
               <div className="filter-result-info">
                 {filteredSchedules.length}개
                 일정
@@ -5474,13 +5478,30 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
                     · "{searchText}"
                   </>
                 )}
-                {filterType !==
-                  'all' && (
+                {filterTypes.length > 0 && (
                   <>
                     {' '}
-                    · {filterType}
+                    · {filterTypes.join(', ')}
                   </>
                 )}
+              </div>
+            )}
+
+            {normalizedSearch && filteredSchedules.length > 0 && (
+              <div className="search-results-list" style={{ margin: '8px 0 14px', padding: 10, border: '1px solid #383838', borderRadius: 10, background: '#181818' }}>
+                <div style={{ fontSize: 12, color: '#aaa', marginBottom: 6 }}>검색 결과 · {filteredSchedules.length}개 · 항목을 누르면 해당 일정으로 이동</div>
+                <div style={{ maxHeight: 220, overflowY: 'auto' }}>
+                  {[...filteredSchedules].sort((a, b) => (a.event_date || '').localeCompare(b.event_date || '') || (a.event_time || '99:99').localeCompare(b.event_time || '99:99')).map((schedule, index) => (
+                    <button key={`${schedule.id || schedule.recurringKey || schedule.recurring_key || schedule.title}-${schedule.event_date}-${index}`} type="button" onClick={() => {
+                      const d = new Date(`${schedule.event_date}T12:00:00`)
+                      if (!Number.isNaN(d.getTime())) setCalendarCursor(d)
+                      setCalendarView('month')
+                      handleEventClick(schedule, schedule.event_date)
+                    }} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, width: '100%', padding: '9px 4px', textAlign: 'left', background: 'transparent', color: '#f5f5f5', border: 0, borderBottom: '1px solid #2d2d2d', cursor: 'pointer' }}>
+                      <span style={{ minWidth: 0 }}><strong style={{ display: 'block', overflowWrap: 'anywhere' }}>{schedule.calendar_title || schedule.title}</strong><small style={{ color: '#aaa' }}>{schedule.event_date}{schedule.event_time ? ` · ${schedule.event_time.slice(0, 5)}` : ''} · {schedule.schedule_type}</small></span><span aria-hidden="true">›</span>
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
 
@@ -5892,7 +5913,7 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
                 0 ? (
                   <div className="agenda-empty">
                     {searchText ||
-                    filterType !== 'all'
+                    filterTypes.length > 0
                       ? '검색 조건에 맞는 일정이 없습니다.'
                       : '등록된 일정이 없습니다.'}
                   </div>
@@ -6037,31 +6058,32 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
                 </h2>
               </div>
 
-              <button
-                className="close-button"
-                onClick={
-                  closeScheduleOverlay
-                }
-              >
-                ×
-              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                {!selectedSchedule && isAdmin && (
+                  <button
+                    type="button"
+                    className="add-schedule-button"
+                    style={{ width: 'auto', whiteSpace: 'nowrap', padding: '8px 11px', fontSize: 13 }}
+                    onClick={() => {
+                      const dateToAdd = selectedDate
+                      closeScheduleOverlay()
+                      openNewScheduleForm(dateToAdd)
+                    }}
+                  >
+                    + 일정 추가
+                  </button>
+                )}
+                <button
+                  className="close-button"
+                  onClick={closeScheduleOverlay}
+                  aria-label="닫기"
+                >
+                  ×
+                </button>
+              </div>
             </div>
 
             <div className="schedule-detail">
-              {!selectedSchedule && isAdmin && (
-                <button
-                  type="button"
-                  className="add-schedule-button"
-                  style={{ width: '100%', marginBottom: 12 }}
-                  onClick={() => {
-                    const dateToAdd = selectedDate
-                    closeScheduleOverlay()
-                    openNewScheduleForm(dateToAdd)
-                  }}
-                >
-                  + 이 날짜에 일정 추가
-                </button>
-              )}
               {!selectedSchedule ? (
                 selectedSchedules.length ===
                 0 ? (
