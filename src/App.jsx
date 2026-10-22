@@ -2609,13 +2609,16 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
   }
 
   function getWeekTitle(date) {
-    // 월의 첫 번째 일요일을 1주차 기준으로 삼아 PC/모바일에서 같은 주차를 표시
-    const monthStart = new Date(date.getFullYear(), date.getMonth(), 1)
-    const firstSundayDay = 1 + ((7 - monthStart.getDay()) % 7)
-    const weekNumber = date.getDate() < firstSundayDay
-      ? 1
-      : Math.floor((date.getDate() - firstSundayDay) / 7) + 1
-    return `${date.getMonth() + 1}월 ${weekNumber}주`
+    // 일요일부터 토요일까지를 한 주로 보고, 주의 시작일(일요일)이 속한 달을 기준으로 주차를 계산
+    // 따라서 월초의 첫 번째 일요일 이전 날짜는 이전 달의 마지막 주차로 표시됨
+    const weekStart = new Date(date.getFullYear(), date.getMonth(), date.getDate())
+    weekStart.setDate(weekStart.getDate() - weekStart.getDay())
+
+    const weekMonthStart = new Date(weekStart.getFullYear(), weekStart.getMonth(), 1)
+    const firstSundayDay = 1 + ((7 - weekMonthStart.getDay()) % 7)
+    const weekNumber = Math.floor((weekStart.getDate() - firstSundayDay) / 7) + 1
+
+    return `${weekStart.getMonth() + 1}월 ${weekNumber}주`
   }
 
   function moveCalendar(
