@@ -3740,6 +3740,11 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
         }
 
         .guide-gallery-card { width: 100%; }
+        .guide-gallery-card .guide-image-list { width: 100%; max-width: 680px; margin: 0 auto; }
+        .guide-gallery-card .guide-image-item { border: 0; border-radius: 0; background: transparent; }
+        .guide-gallery-card .guide-image-link { cursor: default; }
+        @media (min-width: 768px) { .guide-gallery-card .guide-image-list { max-width: 620px; } }
+        @media (max-width: 767px) { .guide-gallery-card .guide-image-list { max-width: 100%; } }
         .guide-admin-panel { margin: 18px 0 22px; padding: 16px; border: 1px solid #454545; border-radius: 12px; background: #181818; }
         .guide-admin-panel > strong { display: block; margin-bottom: 5px; }
         .guide-admin-panel p { margin: 6px 0 12px; color: #aaa; line-height: 1.5; }
@@ -4844,13 +4849,11 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
                 <button type="button" className="info-back-button page-back-button" onClick={() => setInfoSection('home')}>
                   ← 안내·요청으로 돌아가기
                 </button>
-                <div className="info-detail-card guide-gallery-card">
-                  <h2>이용 가이드</h2>
-                  <p>이미지를 눌러 크게 볼 수 있습니다. 최신 이용 안내는 이 페이지에서 확인해주세요.</p>
+                <div className="guide-gallery-card">
                   {isAdmin && (
                     <div className="guide-admin-panel">
                       <strong>가이드 이미지 관리</strong>
-                      <p>이미지를 여러 장 선택해 등록하고, 화살표로 순서를 바꿀 수 있습니다. 한 장당 최대 10MB입니다.</p>
+                      <p>이미지를 여러 장 선택해 등록하고, 순서를 바꿀 수 있습니다. 한 장당 최대 10MB입니다.</p>
                       <label className="guide-upload-button">
                         {guideUploading ? '등록 중…' : '＋ 이미지 추가'}
                         <input type="file" accept="image/*" multiple disabled={guideUploading} onChange={uploadGuideImages} />
@@ -4858,13 +4861,13 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
                       {guideMessage && <p className="guide-status-message" role="status">{guideMessage}</p>}
                     </div>
                   )}
-                  {guideLoading ? <p>가이드 이미지를 불러오는 중…</p> : guideImages.length ? (
+                  {guideLoading ? <p>가이드를 불러오는 중…</p> : guideImages.length ? (
                     <div className="guide-image-list">
                       {guideImages.map((image, index) => (
                         <article className="guide-image-item" key={image.id}>
-                          <a href={image.image_url} target="_blank" rel="noreferrer" className="guide-image-link">
+                          <div className="guide-image-link">
                             <img src={image.image_url} alt={image.title || `이용 가이드 ${index + 1}`} loading="lazy" />
-                          </a>
+                          </div>
                           {isAdmin && (
                             <div className="guide-image-controls">
                               <span>{index + 1}. {image.title || '가이드 이미지'}</span>
@@ -4880,8 +4883,7 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
                     </div>
                   ) : (
                     <div className="guide-empty-state">
-                      <p>등록된 가이드 이미지가 아직 없습니다.</p>
-                      {isAdmin ? <p>위의 ‘이미지 추가’를 눌러 준비한 가이드 이미지를 등록해주세요.</p> : <p>가이드가 준비되면 이곳에서 확인할 수 있습니다.</p>}
+                      {isAdmin ? <p>‘이미지 추가’에서 이용 가이드 이미지를 등록해주세요.</p> : <p>등록된 이용 가이드가 없습니다.</p>}
                     </div>
                   )}
                 </div>
