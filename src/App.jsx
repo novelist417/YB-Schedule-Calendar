@@ -3552,6 +3552,25 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
           -webkit-line-clamp: 3;
         }
 
+
+
+        /* 모바일 주간 달력에서는 전체 일정명 대신 요약명을 표시 */
+        .timetable-event-summary-title {
+          display: none !important;
+        }
+        @media (max-width: 700px) {
+          .timetable-event-full-title {
+            display: none !important;
+          }
+          .timetable-event-summary-title {
+            display: -webkit-box !important;
+            overflow: hidden !important;
+            -webkit-box-orient: vertical !important;
+            -webkit-line-clamp: 2 !important;
+            overflow-wrap: anywhere !important;
+          }
+        }
+
         .timetable-anniversary {
           position: absolute;
           inset: 0;
@@ -6176,8 +6195,11 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
                                               )}`
                                             : ''}
                                         </span>
-                                        <span className="timetable-event-title">
+                                        <span className="timetable-event-title timetable-event-full-title">
                                           {schedule.title}
+                                        </span>
+                                        <span className="timetable-event-title timetable-event-summary-title">
+                                          {schedule.calendar_title || schedule.title}
                                         </span>
                                       </button>
                                     )
