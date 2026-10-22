@@ -165,6 +165,10 @@ function App() {
 
   const [page, setPage] = useState('calendar')
   const [infoSection, setInfoSection] = useState('home')
+  const [guideImages, setGuideImages] = useState([])
+  const [guideLoading, setGuideLoading] = useState(false)
+  const [guideMessage, setGuideMessage] = useState('')
+  const [guideUploading, setGuideUploading] = useState(false)
   const [calendarView, setCalendarView] = useState('month')
 
   const [calendarCursor, setCalendarCursor] = useState(
@@ -173,6 +177,104 @@ function App() {
   const [showMonthPicker, setShowMonthPicker] = useState(false)
   const [monthPickerYear, setMonthPickerYear] = useState(new Date().getFullYear())
   const [monthPickerMonth, setMonthPickerMonth] = useState(new Date().getMonth())
+
+  async function loadGuideImages() {
+    setGuideLoading(true)
+    const { data, error } = await supabase
+      .from('guide_images')
+      .select('id, title, image_url, storage_path, sort_order, created_at')
+      .order('sort_order', { ascending: true })
+      .order('created_at', { ascending: true })
+    if (error) {
+      console.error('이용 가이드 이미지 불러오기 실패:', error)
+      setGuideMessage('가이드 이미지를 불러오지 못했습니다. Supabase 설정을 확인해주세요.')
+      setGuideImages([])
+    } else {
+      setGuideImages(data || [])
+    }
+    setGuideLoading(false)
+  }
+
+  async function uploadGuideImages(event) {
+    const files = Array.from(event.target.files || [])
+    event.target.value = ''
+    if (!files.length) return
+    if (!isAdmin) {
+      setGuideMessage('관리자만 이미지를 등록할 수 있습니다.')
+      return
+    }
+    setGuideUploading(true)
+    setGuideMessage('')
+    try {
+      let nextOrder = guideImages.length
+      for (const file of files) {
+        if (!file.type.startsWith('image/')) throw new Error('이미지 파일만 등록할 수 있습니다.')
+        if (file.size > 10 * 1024 * 1024) throw new Error('이미지 한 장의 용량은 10MB 이하여야 합니다.')
+        const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
+        const storagePath = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${safeName}`
+        const { error: uploadError } = await supabase.storage.from('guide-images').upload(storagePath, file, { upsert: false, contentType: file.type })
+        if (uploadError) throw uploadError
+        const { data: publicData } = supabase.storage.from('guide-images').getPublicUrl(storagePath)
+        const { error: insertError } = await supabase.from('guide_images').insert({
+          title: file.name.replace(/\.[^.]+$/, ''),
+          image_url: publicData.publicUrl,
+          storage_path: storagePath,
+          sort_order: nextOrder,
+        })
+        if (insertError) {
+          await supabase.storage.from('guide-images').remove([storagePath])
+          throw insertError
+        }
+        nextOrder += 1
+      }
+      setGuideMessage(`${files.length}장 등록했습니다.`)
+      await loadGuideImages()
+    } catch (error) {
+      console.error('이용 가이드 이미지 등록 실패:', error)
+      setGuideMessage(error?.message || '이미지 등록에 실패했습니다. Supabase 권한을 확인해주세요.')
+    } finally {
+      setGuideUploading(false)
+    }
+  }
+
+  async function deleteGuideImage(image) {
+    if (!isAdmin || !window.confirm(`'${image.title || '이 이미지'}'를 삭제할까요?`)) return
+    setGuideMessage('')
+    const { error } = await supabase.from('guide_images').delete().eq('id', image.id)
+    if (error) {
+      setGuideMessage('이미지를 삭제하지 못했습니다. Supabase 권한을 확인해주세요.')
+      return
+    }
+    if (image.storage_path) {
+      const { error: storageError } = await supabase.storage.from('guide-images').remove([image.storage_path])
+      if (storageError) console.warn('이미지 파일 삭제 실패:', storageError)
+    }
+    await loadGuideImages()
+    setGuideMessage('이미지를 삭제했습니다.')
+  }
+
+  async function moveGuideImage(index, direction) {
+    if (!isAdmin) return
+    const targetIndex = index + direction
+    if (targetIndex < 0 || targetIndex >= guideImages.length) return
+    const reordered = [...guideImages]
+    ;[reordered[index], reordered[targetIndex]] = [reordered[targetIndex], reordered[index]]
+    setGuideImages(reordered)
+    const updates = reordered.map((item, sort_order) => ({ id: item.id, sort_order }))
+    for (const item of updates) {
+      const { error } = await supabase.from('guide_images').update({ sort_order: item.sort_order }).eq('id', item.id)
+      if (error) {
+        setGuideMessage('순서를 저장하지 못했습니다. Supabase 권한을 확인해주세요.')
+        await loadGuideImages()
+        return
+      }
+    }
+    setGuideMessage('이미지 순서를 저장했습니다.')
+  }
+
+  useEffect(() => {
+    if (page === 'info' && infoSection === 'guide') loadGuideImages()
+  }, [page, infoSection])
 
   const recurringSchedules = useMemo(() => {
     const year = calendarCursor.getFullYear()
@@ -326,16 +428,12 @@ function App() {
   useEffect(() => {
     loadSchedules()
     loadImportantNotice()
-  }, [])
-
-  // 로그인 계정이 바뀌면 해당 계정의 읽음 상태를 다시 확인합니다.
-  useEffect(() => {
     refreshUpdateNotification()
     const updateCheckInterval = window.setInterval(() => {
       refreshUpdateNotification()
     }, 60000)
     return () => window.clearInterval(updateCheckInterval)
-  }, [session?.user?.id])
+  }, [])
 
   useEffect(() => {
     if (session?.user) {
@@ -2027,41 +2125,8 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
     }
 
     const newestTime = rows[0]?.created_at || ''
-    const userId = session?.user?.id
-
-    // 로그인 사용자는 Supabase에 계정별 읽음 시각을 저장합니다.
-    if (userId) {
-      const { data: readStatus, error: readError } = await supabase
-        .from('update_read_status')
-        .select('last_seen_at')
-        .eq('user_id', userId)
-        .maybeSingle()
-
-      if (readError) {
-        console.warn('업데이트 읽음 상태 조회 실패:', readError)
-        return
-      }
-
-      // 해당 계정의 첫 방문에서는 기존 업데이트를 새 글로 표시하지 않습니다.
-      if (!readStatus) {
-        const baseline = newestTime || new Date().toISOString()
-        const { error: insertError } = await supabase
-          .from('update_read_status')
-          .upsert({ user_id: userId, last_seen_at: baseline }, { onConflict: 'user_id' })
-        if (insertError) {
-          console.warn('업데이트 읽음 상태 저장 실패:', insertError)
-          return
-        }
-        setHasUnreadUpdates(false)
-        return
-      }
-
-      setHasUnreadUpdates(Boolean(newestTime && newestTime > (readStatus.last_seen_at || '')))
-      return
-    }
-
-    // 비로그인 사용자는 기존처럼 이 브라우저의 localStorage를 사용합니다.
     if (!window.localStorage.getItem(UPDATE_BASELINE_KEY)) {
+      // 기능을 처음 적용했을 때 기존 글은 새 글로 알리지 않음
       window.localStorage.setItem(UPDATE_BASELINE_KEY, '1')
       if (newestTime) window.localStorage.setItem(UPDATE_SEEN_KEY, newestTime)
       setHasUnreadUpdates(false)
@@ -2072,19 +2137,9 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
     setHasUnreadUpdates(Boolean(newestTime && newestTime > seenAt))
   }
 
-  async function markUpdatesAsSeen(rows = updates) {
+  function markUpdatesAsSeen(rows = updates) {
     const newestTime = rows?.[0]?.created_at || ''
-    if (session?.user?.id) {
-      const { error } = await supabase
-        .from('update_read_status')
-        .upsert(
-          { user_id: session.user.id, last_seen_at: newestTime || new Date().toISOString() },
-          { onConflict: 'user_id' }
-        )
-      if (error) console.warn('업데이트 읽음 상태 저장 실패:', error)
-    } else {
-      if (newestTime) window.localStorage.setItem(UPDATE_SEEN_KEY, newestTime)
-    }
+    if (newestTime) window.localStorage.setItem(UPDATE_SEEN_KEY, newestTime)
     setHasUnreadUpdates(false)
   }
 
@@ -3684,6 +3739,25 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
           line-height: 1.5;
         }
 
+        .guide-gallery-card { width: 100%; }
+        .guide-admin-panel { margin: 18px 0 22px; padding: 16px; border: 1px solid #454545; border-radius: 12px; background: #181818; }
+        .guide-admin-panel > strong { display: block; margin-bottom: 5px; }
+        .guide-admin-panel p { margin: 6px 0 12px; color: #aaa; line-height: 1.5; }
+        .guide-upload-button { display: inline-flex; align-items: center; justify-content: center; min-height: 42px; padding: 0 16px; border-radius: 9px; background: #852c3c; color: #fff; font-weight: 600; cursor: pointer; }
+        .guide-upload-button input { display: none; }
+        .guide-status-message { margin-top: 10px !important; color: #f0a0b4 !important; }
+        .guide-image-list { display: flex; flex-direction: column; gap: 20px; margin-top: 18px; }
+        .guide-image-item { overflow: hidden; border: 1px solid #353535; border-radius: 12px; background: #101010; }
+        .guide-image-link { display: block; line-height: 0; }
+        .guide-image-link img { display: block; width: 100%; height: auto; object-fit: contain; }
+        .guide-image-controls { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; flex-wrap: wrap; }
+        .guide-image-controls span { color: #ccc; font-size: 13px; overflow-wrap: anywhere; }
+        .guide-image-controls div { display: flex; gap: 6px; }
+        .guide-image-controls button { border: 1px solid #4a4a4a; border-radius: 7px; padding: 7px 10px; background: #222; color: #eee; cursor: pointer; }
+        .guide-image-controls button:disabled { opacity: .35; cursor: default; }
+        .guide-image-controls .guide-delete-button { color: #ff9aaa; }
+        .guide-empty-state { margin-top: 18px; padding: 24px 16px; border: 1px dashed #484848; border-radius: 10px; text-align: center; }
+        .guide-empty-state p { margin: 6px 0; }
         .info-detail-card {
           margin-top: 16px;
           padding: 18px;
@@ -3692,16 +3766,8 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
           background: #1d1d1d;
         }
 
-        .info-detail-card h2 { margin: 0 0 16px; }
-        .info-detail-card h3 { margin: 18px 0 6px; font-size: 15px; font-weight: 700; }
-        .info-detail-card p { margin: 7px 0; color: #ccc; line-height: 1.65; }
-        .guide-detail-card { padding: 18px; }
-        .guide-intro { margin-bottom: 18px !important; }
-        .guide-image-list { display: grid; gap: 18px; }
-        .guide-image-item { margin: 0; overflow: hidden; border: 1px solid #333; border-radius: 10px; background: #090909; }
-        .guide-image-item img { display: block; width: 100%; height: auto; }
-        .guide-image-item figcaption { padding: 10px 12px; color: #ccc; font-size: 13px; border-top: 1px solid #333; }
-        .guide-text-details { margin-top: 22px; padding-top: 6px; border-top: 1px solid #333; }
+        .info-detail-card h2 { margin: 0 0 12px; }
+        .info-detail-card p { margin: 7px 0; color: #ccc; line-height: 1.6; }
 
         @media (max-width: 700px) {
           .info-menu-grid { grid-template-columns: 1fr; }
@@ -4690,7 +4756,7 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
                   setInfoSection('home')
                 }}
               >
-                안내·요청{hasUnreadUpdates && <i className="new-update-dot" aria-label="새 업데이트" style={{ display: 'inline-block', width: 7, height: 7, marginLeft: 6, borderRadius: '50%', background: '#e77fb5', verticalAlign: 'middle' }} />}
+                안내·요청{hasUnreadUpdates && <i className="new-update-dot" aria-label="새 업데이트" style={{ display: 'inline-block', width: 7, height: 7, marginLeft: 6, borderRadius: '50%', background: '#ef4444', verticalAlign: 'middle' }} />}
               </button>
             </nav>
           )}
@@ -4708,7 +4774,7 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
                 setInfoSection('home')
               }}
             >
-              안내·요청{hasUnreadUpdates && <i className="new-update-dot" aria-label="새 업데이트" style={{ display: 'inline-block', width: 7, height: 7, marginLeft: 6, borderRadius: '50%', background: '#e77fb5', verticalAlign: 'middle' }} />}
+              안내·요청{hasUnreadUpdates && <i className="new-update-dot" aria-label="새 업데이트" style={{ display: 'inline-block', width: 7, height: 7, marginLeft: 6, borderRadius: '50%', background: '#ef4444', verticalAlign: 'middle' }} />}
             </button>
           )}
 
@@ -4769,7 +4835,7 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
 
                 <button type="button" className="info-menu-card" onClick={() => setInfoSection('guide')}>
                   <strong>이용 가이드</strong>
-                  <span>일정 확인부터 참석 여부·메모 관리까지 안내합니다.</span>
+                  <span>앱 사용 방법을 이미지로 확인합니다.</span>
                 </button>
 
               </div>
@@ -4778,36 +4844,46 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
                 <button type="button" className="info-back-button page-back-button" onClick={() => setInfoSection('home')}>
                   ← 안내·요청으로 돌아가기
                 </button>
-                <div className="info-detail-card guide-detail-card">
+                <div className="info-detail-card guide-gallery-card">
                   <h2>이용 가이드</h2>
-                  <p className="guide-intro">이미지를 넘기듯 아래로 내려가며 주요 기능을 확인해 보세요.</p>
-                  <div className="guide-image-list">
-                    <figure className="guide-image-item">
-                      <img src="/guide/YB_Guide_01_Cover.png" alt="이용 가이드 목차: 원하는 방식으로 보기, 원하는 일정만 찾기, 일정 확인하고 기록하기, 빠진 일정 요청하기" loading="lazy" />
-                    </figure>
-                    <figure className="guide-image-item">
-                      <img src="/guide/YB_Guide_03_Search.png" alt="일정 검색과 일정 유형 필터 사용 방법" loading="lazy" />
-                      <figcaption>원하는 일정만 찾기</figcaption>
-                    </figure>
-                    <figure className="guide-image-item">
-                      <img src="/guide/YB_Guide_04_Record.png" alt="로그인 후 참석 여부와 개인 메모를 기록하는 방법" loading="lazy" />
-                      <figcaption>일정 확인하고 기록하기</figcaption>
-                    </figure>
-                    <figure className="guide-image-item">
-                      <img src="/guide/YB_Guide_05_Request.png" alt="안내·요청 메뉴에서 빠진 일정의 추가나 수정을 요청하는 방법" loading="lazy" />
-                      <figcaption>빠진 일정 요청하기</figcaption>
-                    </figure>
-                  </div>
-                  <div className="guide-text-details">
-                    <h3>일정 찾아보기</h3>
-                    <p>월간·주간·목록 보기 중 편한 방식으로 일정을 확인할 수 있습니다. 달력에서 날짜를 선택하면 해당 날짜의 일정을 볼 수 있습니다.</p>
-                    <h3>일정 상세 확인하기</h3>
-                    <p>일정을 누르면 상세 정보, 장소와 주소, 관련 링크를 확인할 수 있습니다(등록된 정보에 한함).</p>
-                    <h3>참석 여부와 개인 메모</h3>
-                    <p>로그인하면 일정별 참석 여부를 ‘참석’, ‘미정’, ‘불참’으로 설정할 수 있습니다. 개인 메모는 본인에게만 표시됩니다.</p>
-                    <h3>일정 추가·수정 요청과 업데이트</h3>
-                    <p>일정 추가나 수정이 필요하면 ‘요청사항’에 내용을 남겨주세요. ‘공지&업데이트’에서는 새 기능과 변경 사항, 중요 공지를 확인할 수 있습니다.</p>
-                  </div>
+                  <p>이미지를 눌러 크게 볼 수 있습니다. 최신 이용 안내는 이 페이지에서 확인해주세요.</p>
+                  {isAdmin && (
+                    <div className="guide-admin-panel">
+                      <strong>가이드 이미지 관리</strong>
+                      <p>이미지를 여러 장 선택해 등록하고, 화살표로 순서를 바꿀 수 있습니다. 한 장당 최대 10MB입니다.</p>
+                      <label className="guide-upload-button">
+                        {guideUploading ? '등록 중…' : '＋ 이미지 추가'}
+                        <input type="file" accept="image/*" multiple disabled={guideUploading} onChange={uploadGuideImages} />
+                      </label>
+                      {guideMessage && <p className="guide-status-message" role="status">{guideMessage}</p>}
+                    </div>
+                  )}
+                  {guideLoading ? <p>가이드 이미지를 불러오는 중…</p> : guideImages.length ? (
+                    <div className="guide-image-list">
+                      {guideImages.map((image, index) => (
+                        <article className="guide-image-item" key={image.id}>
+                          <a href={image.image_url} target="_blank" rel="noreferrer" className="guide-image-link">
+                            <img src={image.image_url} alt={image.title || `이용 가이드 ${index + 1}`} loading="lazy" />
+                          </a>
+                          {isAdmin && (
+                            <div className="guide-image-controls">
+                              <span>{index + 1}. {image.title || '가이드 이미지'}</span>
+                              <div>
+                                <button type="button" onClick={() => moveGuideImage(index, -1)} disabled={index === 0}>위로</button>
+                                <button type="button" onClick={() => moveGuideImage(index, 1)} disabled={index === guideImages.length - 1}>아래로</button>
+                                <button type="button" className="guide-delete-button" onClick={() => deleteGuideImage(image)}>삭제</button>
+                              </div>
+                            </div>
+                          )}
+                        </article>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="guide-empty-state">
+                      <p>등록된 가이드 이미지가 아직 없습니다.</p>
+                      {isAdmin ? <p>위의 ‘이미지 추가’를 눌러 준비한 가이드 이미지를 등록해주세요.</p> : <p>가이드가 준비되면 이곳에서 확인할 수 있습니다.</p>}
+                    </div>
+                  )}
                 </div>
               </>
             ) : null}
@@ -5575,7 +5651,7 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
                       setCalendarView('month')
                       handleEventClick(schedule, schedule.event_date)
                     }} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, width: '100%', padding: '9px 4px', textAlign: 'left', background: 'transparent', color: '#f5f5f5', border: 0, borderBottom: '1px solid #2d2d2d', cursor: 'pointer' }}>
-                      <span style={{ minWidth: 0 }}><strong style={{ display: 'block', overflowWrap: 'anywhere', fontSize: 14, fontWeight: 600, lineHeight: 1.45 }}>{schedule.calendar_title || schedule.title}</strong><small style={{ display: 'block', color: '#aaa', fontSize: 11, lineHeight: 1.5 }}>{schedule.event_date}{schedule.event_time ? ` · ${schedule.event_time.slice(0, 5)}` : ''} · {schedule.schedule_type}</small></span><span aria-hidden="true">›</span>
+                      <span style={{ minWidth: 0 }}><strong style={{ display: 'block', overflowWrap: 'anywhere' }}>{schedule.calendar_title || schedule.title}</strong><small style={{ color: '#aaa' }}>{schedule.event_date}{schedule.event_time ? ` · ${schedule.event_time.slice(0, 5)}` : ''} · {schedule.schedule_type}</small></span><span aria-hidden="true">›</span>
                     </button>
                   ))}
                 </div>
