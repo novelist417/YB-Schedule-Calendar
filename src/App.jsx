@@ -3773,9 +3773,9 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
           height: 8px;
           flex: 0 0 8px;
           border-radius: 50%;
-          background: #222 !important;
+          background: #8e2337 !important;
           border: 1px solid #fff;
-          box-shadow: 0 0 0 1px #222;
+          box-shadow: 0 0 0 1px #8e2337;
           vertical-align: middle;
         }
 
@@ -4808,7 +4808,7 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
                   setInfoSection('home')
                 }}
               >
-                안내·요청{hasUnreadUpdates && <i className="new-update-dot" aria-label="새 업데이트" style={{ display: 'inline-block', width: 8, height: 8, flex: '0 0 8px', marginLeft: 6, borderRadius: '50%', background: '#222', border: '1px solid #fff', boxShadow: '0 0 0 1px #222', verticalAlign: 'middle' }} />}
+                안내·요청{hasUnreadUpdates && <i className="new-update-dot" aria-label="새 업데이트" style={{ display: 'inline-block', width: 8, height: 8, flex: '0 0 8px', marginLeft: 6, borderRadius: '50%', background: '#8e2337', border: '1px solid #fff', boxShadow: '0 0 0 1px #8e2337', verticalAlign: 'middle' }} />}
               </button>
             </nav>
           )}
@@ -4826,7 +4826,7 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
                 setInfoSection('home')
               }}
             >
-              안내·요청{hasUnreadUpdates && <i className="new-update-dot" aria-label="새 업데이트" style={{ display: 'inline-block', width: 8, height: 8, flex: '0 0 8px', marginLeft: 6, borderRadius: '50%', background: '#222', border: '1px solid #fff', boxShadow: '0 0 0 1px #222', verticalAlign: 'middle' }} />}
+              안내·요청{hasUnreadUpdates && <i className="new-update-dot" aria-label="새 업데이트" style={{ display: 'inline-block', width: 8, height: 8, flex: '0 0 8px', marginLeft: 6, borderRadius: '50%', background: '#8e2337', border: '1px solid #fff', boxShadow: '0 0 0 1px #8e2337', verticalAlign: 'middle' }} />}
             </button>
           )}
 
@@ -4872,7 +4872,7 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
             {infoSection === 'home' ? (
               <div className="info-menu-grid">
                 <button type="button" className="info-menu-card" onClick={() => { setInfoSection('updates'); setPage('updates'); loadUpdates().then((rows) => markUpdatesAsSeen(rows)) }}>
-                  <strong className="info-update-menu-title">공지&업데이트{hasUnreadUpdates && <i className="new-update-dot" aria-label="새 업데이트" style={{ display: 'inline-block', width: 8, height: 8, flex: '0 0 8px', borderRadius: '50%', background: '#222', border: '1px solid #fff', boxShadow: '0 0 0 1px #222', verticalAlign: 'middle' }} />}</strong>
+                  <strong className="info-update-menu-title">공지&업데이트{hasUnreadUpdates && <i className="new-update-dot" aria-label="새 업데이트" style={{ display: 'inline-block', width: 8, height: 8, flex: '0 0 8px', borderRadius: '50%', background: '#8e2337', border: '1px solid #fff', boxShadow: '0 0 0 1px #8e2337', verticalAlign: 'middle' }} />}</strong>
                   <span>중요 공지와 변경·추가된 기능을 확인합니다.</span>
                 </button>
 
