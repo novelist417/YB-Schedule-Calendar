@@ -3333,6 +3333,27 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
           color: #fff !important;
         }
 
+        /* 모바일 검색 결과 목록 글씨 크기 조정 */
+        @media (max-width: 700px) {
+          .search-results-list > div:first-child {
+            font-size: 11px !important;
+          }
+          .search-results-list > div:last-child > button {
+            padding: 7px 3px !important;
+            gap: 8px !important;
+          }
+          .search-results-list > div:last-child > button strong {
+            font-size: 12px !important;
+            line-height: 1.35 !important;
+          }
+          .search-results-list > div:last-child > button small {
+            display: block;
+            margin-top: 2px;
+            font-size: 10px !important;
+            line-height: 1.35 !important;
+          }
+        }
+
         .timetable-day-head {
           position: relative !important;
           padding: 0 3px 7px !important;
@@ -3408,8 +3429,11 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
         .timetable-day-event-layer {
           position: relative;
           min-width: 0;
+          width: 100%;
           height: 100%;
           padding: 0 4px;
+          box-sizing: border-box;
+          overflow: hidden;
         }
 
         .timetable-event {
@@ -3417,6 +3441,8 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
           left: 4px;
           right: 4px;
           margin: 0;
+          min-width: 0;
+          max-width: 100%;
           min-height: 24px;
           padding: 5px 6px 5px 8px;
           overflow: hidden;
