@@ -3695,6 +3695,13 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
         .info-detail-card h2 { margin: 0 0 16px; }
         .info-detail-card h3 { margin: 18px 0 6px; font-size: 15px; font-weight: 700; }
         .info-detail-card p { margin: 7px 0; color: #ccc; line-height: 1.65; }
+        .guide-detail-card { padding: 18px; }
+        .guide-intro { margin-bottom: 18px !important; }
+        .guide-image-list { display: grid; gap: 18px; }
+        .guide-image-item { margin: 0; overflow: hidden; border: 1px solid #333; border-radius: 10px; background: #090909; }
+        .guide-image-item img { display: block; width: 100%; height: auto; }
+        .guide-image-item figcaption { padding: 10px 12px; color: #ccc; font-size: 13px; border-top: 1px solid #333; }
+        .guide-text-details { margin-top: 22px; padding-top: 6px; border-top: 1px solid #333; }
 
         @media (max-width: 700px) {
           .info-menu-grid { grid-template-columns: 1fr; }
@@ -4771,18 +4778,36 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
                 <button type="button" className="info-back-button page-back-button" onClick={() => setInfoSection('home')}>
                   ← 안내·요청으로 돌아가기
                 </button>
-                <div className="info-detail-card">
+                <div className="info-detail-card guide-detail-card">
                   <h2>이용 가이드</h2>
-                  <h3>일정 찾아보기</h3>
-                  <p>월간·주간·목록 보기 중 편한 방식으로 일정을 확인할 수 있습니다. 달력에서 날짜를 선택하면 해당 날짜의 일정을 볼 수 있습니다.</p>
-                  <p>검색창에 일정명이나 관련 단어를 입력한 뒤 ‘일정 목록 보기’를 누르면 검색 결과를 확인할 수 있습니다. 일정 유형 필터를 함께 사용해 원하는 일정만 골라볼 수도 있습니다.</p>
-                  <h3>일정 상세 확인하기</h3>
-                  <p>일정을 누르면 상세 정보를 확인할 수 있습니다. 장소와 주소가 등록된 경우 장소 정보를 확인할 수 있고, 관련 링크가 있다면 해당 링크로 이동할 수 있습니다.</p>
-                  <h3>참석 여부와 개인 메모</h3>
-                  <p>로그인하면 일정별 참석 여부를 ‘참석’, ‘미정’, ‘불참’으로 설정할 수 있습니다. 개인 메모도 작성할 수 있으며, 메모는 본인에게만 표시됩니다.</p>
-                  <h3>일정 추가·수정 요청과 업데이트</h3>
-                  <p>일정 추가나 수정이 필요하면 ‘요청사항’에서 내용을 남겨주세요. 공지&업데이트에서는 새 기능과 변경 사항, 중요 공지를 확인할 수 있습니다.</p>
-                  <p>일부 기능은 로그인이 필요합니다. 이용 중 문제가 있거나 안내가 더 필요하면 요청사항을 통해 알려주세요.</p>
+                  <p className="guide-intro">이미지를 넘기듯 아래로 내려가며 주요 기능을 확인해 보세요.</p>
+                  <div className="guide-image-list">
+                    <figure className="guide-image-item">
+                      <img src="/guide/YB_Guide_01_Cover.png" alt="이용 가이드 목차: 원하는 방식으로 보기, 원하는 일정만 찾기, 일정 확인하고 기록하기, 빠진 일정 요청하기" loading="lazy" />
+                    </figure>
+                    <figure className="guide-image-item">
+                      <img src="/guide/YB_Guide_03_Search.png" alt="일정 검색과 일정 유형 필터 사용 방법" loading="lazy" />
+                      <figcaption>원하는 일정만 찾기</figcaption>
+                    </figure>
+                    <figure className="guide-image-item">
+                      <img src="/guide/YB_Guide_04_Record.png" alt="로그인 후 참석 여부와 개인 메모를 기록하는 방법" loading="lazy" />
+                      <figcaption>일정 확인하고 기록하기</figcaption>
+                    </figure>
+                    <figure className="guide-image-item">
+                      <img src="/guide/YB_Guide_05_Request.png" alt="안내·요청 메뉴에서 빠진 일정의 추가나 수정을 요청하는 방법" loading="lazy" />
+                      <figcaption>빠진 일정 요청하기</figcaption>
+                    </figure>
+                  </div>
+                  <div className="guide-text-details">
+                    <h3>일정 찾아보기</h3>
+                    <p>월간·주간·목록 보기 중 편한 방식으로 일정을 확인할 수 있습니다. 달력에서 날짜를 선택하면 해당 날짜의 일정을 볼 수 있습니다.</p>
+                    <h3>일정 상세 확인하기</h3>
+                    <p>일정을 누르면 상세 정보, 장소와 주소, 관련 링크를 확인할 수 있습니다(등록된 정보에 한함).</p>
+                    <h3>참석 여부와 개인 메모</h3>
+                    <p>로그인하면 일정별 참석 여부를 ‘참석’, ‘미정’, ‘불참’으로 설정할 수 있습니다. 개인 메모는 본인에게만 표시됩니다.</p>
+                    <h3>일정 추가·수정 요청과 업데이트</h3>
+                    <p>일정 추가나 수정이 필요하면 ‘요청사항’에 내용을 남겨주세요. ‘공지&업데이트’에서는 새 기능과 변경 사항, 중요 공지를 확인할 수 있습니다.</p>
+                  </div>
                 </div>
               </>
             ) : null}
