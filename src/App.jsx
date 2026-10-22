@@ -436,6 +436,11 @@ function App() {
   }, [])
 
   useEffect(() => {
+    // 계정이 바뀌면 해당 계정의 읽음 상태를 다시 확인한다.
+    refreshUpdateNotification(null, session?.user?.id || null)
+  }, [session?.user?.id])
+
+  useEffect(() => {
     if (session?.user) {
       loadMyRequests()
     } else {
@@ -2109,7 +2114,7 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
   const UPDATE_SEEN_KEY = 'yb-updates-last-seen-at-v1'
   const UPDATE_BASELINE_KEY = 'yb-updates-baseline-set-v1'
 
-  async function refreshUpdateNotification(knownUpdates = null) {
+  async function refreshUpdateNotification(knownUpdates = null, userIdOverride = undefined) {
     let rows = knownUpdates
     if (!rows) {
       const { data, error } = await supabase
@@ -2125,8 +2130,31 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
     }
 
     const newestTime = rows[0]?.created_at || ''
+    const userId = userIdOverride === undefined ? session?.user?.id : userIdOverride
+
+    // 로그인 사용자는 계정별 Supabase 기록으로 읽음 여부를 판단한다.
+    if (userId) {
+      const { data: readStatus, error } = await supabase
+        .from('update_read_status')
+        .select('last_seen_at')
+        .eq('user_id', userId)
+        .maybeSingle()
+
+      if (error) {
+        console.warn('계정별 업데이트 읽음 상태 조회 실패:', error)
+        // 조회에 실패했을 때는 알림을 숨기지 않고, 새 업데이트가 있으면 표시한다.
+        setHasUnreadUpdates(Boolean(newestTime))
+        return
+      }
+
+      // 해당 계정의 기록이 없으면 아직 읽지 않은 것으로 처리한다.
+      const seenAt = readStatus?.last_seen_at || '1970-01-01T00:00:00.000Z'
+      setHasUnreadUpdates(Boolean(newestTime && newestTime > seenAt))
+      return
+    }
+
+    // 비로그인 방문자는 기존처럼 이 브라우저의 localStorage를 사용한다.
     if (!window.localStorage.getItem(UPDATE_BASELINE_KEY)) {
-      // 기능을 처음 적용했을 때 기존 글은 새 글로 알리지 않음
       window.localStorage.setItem(UPDATE_BASELINE_KEY, '1')
       if (newestTime) window.localStorage.setItem(UPDATE_SEEN_KEY, newestTime)
       setHasUnreadUpdates(false)
@@ -2137,9 +2165,26 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
     setHasUnreadUpdates(Boolean(newestTime && newestTime > seenAt))
   }
 
-  function markUpdatesAsSeen(rows = updates) {
-    const newestTime = rows?.[0]?.created_at || ''
-    if (newestTime) window.localStorage.setItem(UPDATE_SEEN_KEY, newestTime)
+  async function markUpdatesAsSeen(rows = updates) {
+    const newestTime = rows?.[0]?.created_at || new Date().toISOString()
+    const userId = session?.user?.id
+
+    if (userId) {
+      const { error } = await supabase
+        .from('update_read_status')
+        .upsert(
+          { user_id: userId, last_seen_at: newestTime },
+          { onConflict: 'user_id' }
+        )
+
+      if (error) {
+        console.warn('계정별 업데이트 읽음 상태 저장 실패:', error)
+        return
+      }
+    } else {
+      if (newestTime) window.localStorage.setItem(UPDATE_SEEN_KEY, newestTime)
+    }
+
     setHasUnreadUpdates(false)
   }
 
