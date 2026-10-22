@@ -326,12 +326,16 @@ function App() {
   useEffect(() => {
     loadSchedules()
     loadImportantNotice()
+  }, [])
+
+  // 로그인 계정이 바뀌면 해당 계정의 읽음 상태를 다시 확인합니다.
+  useEffect(() => {
     refreshUpdateNotification()
     const updateCheckInterval = window.setInterval(() => {
       refreshUpdateNotification()
     }, 60000)
     return () => window.clearInterval(updateCheckInterval)
-  }, [])
+  }, [session?.user?.id])
 
   useEffect(() => {
     if (session?.user) {
@@ -2023,8 +2027,41 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
     }
 
     const newestTime = rows[0]?.created_at || ''
+    const userId = session?.user?.id
+
+    // 로그인 사용자는 Supabase에 계정별 읽음 시각을 저장합니다.
+    if (userId) {
+      const { data: readStatus, error: readError } = await supabase
+        .from('update_read_status')
+        .select('last_seen_at')
+        .eq('user_id', userId)
+        .maybeSingle()
+
+      if (readError) {
+        console.warn('업데이트 읽음 상태 조회 실패:', readError)
+        return
+      }
+
+      // 해당 계정의 첫 방문에서는 기존 업데이트를 새 글로 표시하지 않습니다.
+      if (!readStatus) {
+        const baseline = newestTime || new Date().toISOString()
+        const { error: insertError } = await supabase
+          .from('update_read_status')
+          .upsert({ user_id: userId, last_seen_at: baseline }, { onConflict: 'user_id' })
+        if (insertError) {
+          console.warn('업데이트 읽음 상태 저장 실패:', insertError)
+          return
+        }
+        setHasUnreadUpdates(false)
+        return
+      }
+
+      setHasUnreadUpdates(Boolean(newestTime && newestTime > (readStatus.last_seen_at || '')))
+      return
+    }
+
+    // 비로그인 사용자는 기존처럼 이 브라우저의 localStorage를 사용합니다.
     if (!window.localStorage.getItem(UPDATE_BASELINE_KEY)) {
-      // 기능을 처음 적용했을 때 기존 글은 새 글로 알리지 않음
       window.localStorage.setItem(UPDATE_BASELINE_KEY, '1')
       if (newestTime) window.localStorage.setItem(UPDATE_SEEN_KEY, newestTime)
       setHasUnreadUpdates(false)
@@ -2035,9 +2072,19 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
     setHasUnreadUpdates(Boolean(newestTime && newestTime > seenAt))
   }
 
-  function markUpdatesAsSeen(rows = updates) {
+  async function markUpdatesAsSeen(rows = updates) {
     const newestTime = rows?.[0]?.created_at || ''
-    if (newestTime) window.localStorage.setItem(UPDATE_SEEN_KEY, newestTime)
+    if (session?.user?.id) {
+      const { error } = await supabase
+        .from('update_read_status')
+        .upsert(
+          { user_id: session.user.id, last_seen_at: newestTime || new Date().toISOString() },
+          { onConflict: 'user_id' }
+        )
+      if (error) console.warn('업데이트 읽음 상태 저장 실패:', error)
+    } else {
+      if (newestTime) window.localStorage.setItem(UPDATE_SEEN_KEY, newestTime)
+    }
     setHasUnreadUpdates(false)
   }
 
@@ -3645,8 +3692,9 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
           background: #1d1d1d;
         }
 
-        .info-detail-card h2 { margin: 0 0 12px; }
-        .info-detail-card p { margin: 7px 0; color: #ccc; line-height: 1.6; }
+        .info-detail-card h2 { margin: 0 0 16px; }
+        .info-detail-card h3 { margin: 18px 0 6px; font-size: 15px; font-weight: 700; }
+        .info-detail-card p { margin: 7px 0; color: #ccc; line-height: 1.65; }
 
         @media (max-width: 700px) {
           .info-menu-grid { grid-template-columns: 1fr; }
@@ -4635,7 +4683,7 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
                   setInfoSection('home')
                 }}
               >
-                안내·요청{hasUnreadUpdates && <i className="new-update-dot" aria-label="새 업데이트" style={{ display: 'inline-block', width: 7, height: 7, marginLeft: 6, borderRadius: '50%', background: '#ef4444', verticalAlign: 'middle' }} />}
+                안내·요청{hasUnreadUpdates && <i className="new-update-dot" aria-label="새 업데이트" style={{ display: 'inline-block', width: 7, height: 7, marginLeft: 6, borderRadius: '50%', background: '#e77fb5', verticalAlign: 'middle' }} />}
               </button>
             </nav>
           )}
@@ -4653,7 +4701,7 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
                 setInfoSection('home')
               }}
             >
-              안내·요청{hasUnreadUpdates && <i className="new-update-dot" aria-label="새 업데이트" style={{ display: 'inline-block', width: 7, height: 7, marginLeft: 6, borderRadius: '50%', background: '#ef4444', verticalAlign: 'middle' }} />}
+              안내·요청{hasUnreadUpdates && <i className="new-update-dot" aria-label="새 업데이트" style={{ display: 'inline-block', width: 7, height: 7, marginLeft: 6, borderRadius: '50%', background: '#e77fb5', verticalAlign: 'middle' }} />}
             </button>
           )}
 
@@ -4712,9 +4760,9 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
                   <span>{session ? '일정 추가·수정 등의 요청을 남깁니다.' : '로그인 후 요청사항을 남길 수 있습니다.'}</span>
                 </button>
 
-                <button type="button" className="info-menu-card" disabled>
+                <button type="button" className="info-menu-card" onClick={() => setInfoSection('guide')}>
                   <strong>이용 가이드</strong>
-                  <span>준비중</span>
+                  <span>일정 확인부터 참석 여부·메모 관리까지 안내합니다.</span>
                 </button>
 
               </div>
@@ -4725,10 +4773,16 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
                 </button>
                 <div className="info-detail-card">
                   <h2>이용 가이드</h2>
-                  <p>달력에서 날짜를 선택하면 해당 날짜의 일정을 확인할 수 있습니다.</p>
-                  <p>월간·주간·목록 보기에서 원하는 방식으로 일정을 확인할 수 있습니다.</p>
-                  <p>일정 상세에서 장소, 관련 링크 등의 정보를 확인하고, 로그인하면 개인 메모와 참석 여부를 관리할 수 있습니다.</p>
-                  <p>일정 추가·수정이 필요한 경우 요청사항을 통해 의견을 남겨주세요.</p>
+                  <h3>일정 찾아보기</h3>
+                  <p>월간·주간·목록 보기 중 편한 방식으로 일정을 확인할 수 있습니다. 달력에서 날짜를 선택하면 해당 날짜의 일정을 볼 수 있습니다.</p>
+                  <p>검색창에 일정명이나 관련 단어를 입력한 뒤 ‘일정 목록 보기’를 누르면 검색 결과를 확인할 수 있습니다. 일정 유형 필터를 함께 사용해 원하는 일정만 골라볼 수도 있습니다.</p>
+                  <h3>일정 상세 확인하기</h3>
+                  <p>일정을 누르면 상세 정보를 확인할 수 있습니다. 장소와 주소가 등록된 경우 장소 정보를 확인할 수 있고, 관련 링크가 있다면 해당 링크로 이동할 수 있습니다.</p>
+                  <h3>참석 여부와 개인 메모</h3>
+                  <p>로그인하면 일정별 참석 여부를 ‘참석’, ‘미정’, ‘불참’으로 설정할 수 있습니다. 개인 메모도 작성할 수 있으며, 메모는 본인에게만 표시됩니다.</p>
+                  <h3>일정 추가·수정 요청과 업데이트</h3>
+                  <p>일정 추가나 수정이 필요하면 ‘요청사항’에서 내용을 남겨주세요. 공지&업데이트에서는 새 기능과 변경 사항, 중요 공지를 확인할 수 있습니다.</p>
+                  <p>일부 기능은 로그인이 필요합니다. 이용 중 문제가 있거나 안내가 더 필요하면 요청사항을 통해 알려주세요.</p>
                 </div>
               </>
             ) : null}
@@ -5496,7 +5550,7 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
                       setCalendarView('month')
                       handleEventClick(schedule, schedule.event_date)
                     }} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, width: '100%', padding: '9px 4px', textAlign: 'left', background: 'transparent', color: '#f5f5f5', border: 0, borderBottom: '1px solid #2d2d2d', cursor: 'pointer' }}>
-                      <span style={{ minWidth: 0 }}><strong style={{ display: 'block', overflowWrap: 'anywhere' }}>{schedule.calendar_title || schedule.title}</strong><small style={{ color: '#aaa' }}>{schedule.event_date}{schedule.event_time ? ` · ${schedule.event_time.slice(0, 5)}` : ''} · {schedule.schedule_type}</small></span><span aria-hidden="true">›</span>
+                      <span style={{ minWidth: 0 }}><strong style={{ display: 'block', overflowWrap: 'anywhere', fontSize: 14, fontWeight: 600, lineHeight: 1.45 }}>{schedule.calendar_title || schedule.title}</strong><small style={{ display: 'block', color: '#aaa', fontSize: 11, lineHeight: 1.5 }}>{schedule.event_date}{schedule.event_time ? ` · ${schedule.event_time.slice(0, 5)}` : ''} · {schedule.schedule_type}</small></span><span aria-hidden="true">›</span>
                     </button>
                   ))}
                 </div>
