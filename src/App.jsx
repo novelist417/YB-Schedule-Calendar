@@ -3774,7 +3774,6 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
           flex: 0 0 8px;
           border-radius: 50%;
           background: #8e2337 !important;
-          border: 1px solid #fff;
           box-shadow: 0 0 0 1px #8e2337;
           vertical-align: middle;
         }
