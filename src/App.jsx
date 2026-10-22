@@ -2614,7 +2614,7 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
     const firstSundayDay = 1 + ((7 - monthStart.getDay()) % 7)
     const weekNumber = date.getDate() < firstSundayDay
       ? 1
-      : Math.floor((date.getDate() - firstSundayDay) / 7) + 2
+      : Math.floor((date.getDate() - firstSundayDay) / 7) + 1
     return `${date.getMonth() + 1}월 ${weekNumber}주`
   }
 
@@ -3336,6 +3336,83 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
           background: #211619 !important;
           border-color: #7b202d !important;
           color: #fff !important;
+        }
+
+        /* 검색 결과 목록: PC와 모바일에서 기존 UI에 맞는 작은 글씨 사용 */
+        .search-results-list > div:first-child {
+          font-size: 11px !important;
+        }
+        .search-results-list > div:last-child > button {
+          min-width: 0 !important;
+          padding: 7px 3px !important;
+          gap: 8px !important;
+          box-sizing: border-box !important;
+        }
+        .search-results-list > div:last-child > button span {
+          min-width: 0 !important;
+        }
+        .search-results-list > div:last-child > button strong {
+          font-size: 12px !important;
+          line-height: 1.35 !important;
+        }
+        .search-results-list > div:last-child > button small {
+          display: block;
+          margin-top: 2px;
+          font-size: 10px !important;
+          line-height: 1.35 !important;
+        }
+
+        /* 주간 달력: PC에서도 날짜별 이벤트 레이어가 각 날짜 칸 안에 머물도록 고정 */
+        .timetable-scroll,
+        .timetable,
+        .timetable-body {
+          min-width: 0 !important;
+          max-width: 100% !important;
+          box-sizing: border-box !important;
+        }
+        .timetable-header,
+        .timetable-row {
+          display: grid !important;
+          grid-template-columns: 70px repeat(7, minmax(0, 1fr)) !important;
+          width: 100% !important;
+          min-width: 0 !important;
+          box-sizing: border-box !important;
+        }
+        .timetable-events-layer {
+          left: 0 !important;
+          right: 0 !important;
+          width: 100% !important;
+          grid-template-columns: 70px repeat(7, minmax(0, 1fr)) !important;
+          min-width: 0 !important;
+          box-sizing: border-box !important;
+          overflow: hidden !important;
+        }
+        .timetable-day-event-layer {
+          min-width: 0 !important;
+          width: 100% !important;
+          max-width: 100% !important;
+          padding: 0 3px !important;
+          overflow: hidden !important;
+          box-sizing: border-box !important;
+        }
+        .timetable-event {
+          left: 3px !important;
+          right: 3px !important;
+          width: auto !important;
+          max-width: calc(100% - 6px) !important;
+          min-width: 0 !important;
+          box-sizing: border-box !important;
+        }
+        .timetable-row > .time-label,
+        .timetable-header > .time-column-head {
+          min-width: 0 !important;
+          width: auto !important;
+          box-sizing: border-box !important;
+        }
+        .timetable-row > .timetable-cell {
+          min-width: 0 !important;
+          width: auto !important;
+          box-sizing: border-box !important;
         }
 
         .timetable-day-head {
@@ -4492,10 +4569,16 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
             font-size: 10px;
           }
 
+          .timetable-header,
+          .timetable-row {
+            grid-template-columns: 58px repeat(7, minmax(0, 1fr)) !important;
+          }
+
           .timetable-events-layer {
-            left: 0;
-            right: 0;
-            grid-template-columns: 58px repeat(7, minmax(0, 1fr));
+            left: 0 !important;
+            right: 0 !important;
+            width: 100% !important;
+            grid-template-columns: 58px repeat(7, minmax(0, 1fr)) !important;
           }
 
           .timetable-row {
