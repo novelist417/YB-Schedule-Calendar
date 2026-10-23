@@ -3819,8 +3819,8 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
             gap: 1px !important;
             margin-top: -4px !important;
             margin-left: -6px !important;
-            margin-right: -6px !important;
-            width: calc(100% + 12px) !important;
+            margin-right: 0 !important;
+            width: calc(100% + 6px) !important;
             padding-left: 0 !important;
             padding-right: 0 !important;
             box-sizing: border-box !important;
