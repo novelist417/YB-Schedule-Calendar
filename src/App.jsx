@@ -3818,15 +3818,16 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
             flex-direction: column !important;
             gap: 1px !important;
             margin-top: -4px !important;
-            margin-left: -6px !important;
+            margin-left: 0 !important;
             margin-right: 0 !important;
-            width: calc(100% + 6px) !important;
+            width: 100% !important;
+            max-width: 100% !important;
             padding-left: 0 !important;
             padding-right: 0 !important;
             box-sizing: border-box !important;
             transform: translateY(-3px) !important;
             max-height: 38px !important;
-            overflow: visible !important;
+            overflow: hidden !important;
           }
 
           .calendar-day .event {
@@ -3845,10 +3846,13 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
           }
 
           .calendar-day .event-title-row {
+            position: relative !important;
             left: 0 !important;
             width: 100% !important;
             flex: 0 0 100% !important;
+            min-width: 0 !important;
             max-width: 100% !important;
+            box-sizing: border-box !important;
           }
 
           .calendar-day .event-title {
