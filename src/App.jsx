@@ -3824,6 +3824,8 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
             min-width: 0 !important;
             max-width: 100% !important;
             width: 100% !important;
+            /* 모바일에서는 날짜 칸의 왼쪽 내부 여백을 없애 강조색 줄을 왼쪽으로 붙임 */
+            padding-left: 0 !important;
             box-sizing: border-box !important;
             overflow: hidden !important;
           }
