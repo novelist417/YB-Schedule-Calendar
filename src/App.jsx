@@ -3168,16 +3168,6 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
           overflow: visible !important;
         }
 
-        .calendar-day .event-title-row::before {
-          content: "" !important;
-          position: absolute !important;
-          left: -5px !important;
-          top: 0 !important;
-          bottom: 0 !important;
-          width: 3px !important;
-          border-radius: 2px 0 0 2px !important;
-          background: var(--event-color, #777) !important;
-        }
 
         .calendar-day .event-title-row > .event-title {
           box-sizing: border-box !important;
