@@ -325,6 +325,7 @@ function App() {
   // 업데이트 현황
   const [updates, setUpdates] = useState([])
   const [expandedUpdateId, setExpandedUpdateId] = useState(null)
+  const [lightboxImageUrl, setLightboxImageUrl] = useState('')
   const [updateForm, setUpdateForm] = useState({
     title: '',
     content: '',
@@ -3957,7 +3958,12 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
         .update-post-trailing { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
         .update-post-chevron { color: #aaa; font-size: 20px; line-height: 1; }
         .update-post-detail { padding: 0 15px 15px; border-top: 1px solid #303030; }
-        .update-post-detail .update-card-image { display: block; max-width: 100%; height: auto; margin-top: 14px; }
+        .update-post-detail .update-card-image { display: block; width: auto; max-width: 100%; max-height: none; height: auto; margin: 14px auto 0; cursor: zoom-in; border-radius: 8px; }
+        .update-image-lightbox { position: fixed; inset: 0; z-index: 10050; display: flex; align-items: center; justify-content: center; padding: 24px; box-sizing: border-box; background: rgba(0,0,0,.9); cursor: zoom-out; }
+        .update-image-lightbox img { display: block; max-width: 96vw; max-height: 92dvh; width: auto; height: auto; object-fit: contain; border-radius: 4px; }
+        .update-image-lightbox-close { position: absolute; top: 14px; right: 18px; width: 42px; height: 42px; border: 1px solid #555; border-radius: 50%; background: #222; color: #fff; font-size: 28px; line-height: 1; cursor: pointer; }
+        @media (min-width: 701px) { .update-post-detail .update-card-image { max-width: min(100%, 1000px); } }
+        @media (max-width: 700px) { .update-image-lightbox { padding: 12px; } .update-image-lightbox img { max-width: 98vw; max-height: 88dvh; } }
         .update-post-detail .update-card-content { margin: 14px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
         .update-post-detail .update-card-actions { margin-top: 14px; }
         .update-post-row.is-expanded { border-color: #5b3038; }
@@ -5107,6 +5113,33 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
               )}
             </div>
 
+        {lightboxImageUrl && (
+          <div
+            className="update-image-lightbox"
+            role="button"
+            tabIndex={0}
+            aria-label="이미지 확대 닫기"
+            onClick={() => setLightboxImageUrl('')}
+            onKeyDown={(event) => {
+              if (event.key === 'Escape' || event.key === 'Enter' || event.key === ' ') {
+                setLightboxImageUrl('')
+              }
+            }}
+          >
+            <button
+              type="button"
+              className="update-image-lightbox-close"
+              aria-label="이미지 확대 닫기"
+              onClick={() => setLightboxImageUrl('')}
+            >×</button>
+            <img
+              src={lightboxImageUrl}
+              alt="확대된 업데이트 이미지"
+              onClick={(event) => event.stopPropagation()}
+            />
+          </div>
+        )}
+
             {isAdmin && showUpdateForm && (
               <div
                 className="update-editor-overlay"
@@ -5201,7 +5234,7 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
                       </button>
                       {isExpanded && (
                         <div className="update-post-detail">
-                          {update.image_url && <img className="update-card-image" src={update.image_url} alt="공지 이미지" />}
+                          {update.image_url && <img className="update-card-image" src={update.image_url} alt="공지 이미지 (눌러서 확대)" onClick={() => setLightboxImageUrl(update.image_url)} />}
                           <p className="update-card-content">{update.content}</p>
                           {isAdmin && (
                             <div className="update-card-actions">
@@ -6015,6 +6048,10 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
                                 schedule.event_date
                               )
                             }
+                            style={{
+                              borderLeft: `3px solid ${TYPE_COLORS[schedule.schedule_type] || '#999'}`,
+                              backgroundColor: `color-mix(in srgb, ${TYPE_COLORS[schedule.schedule_type] || '#999'} 24%, #181818)`,
+                            }}
                           >
                             <span
                               className="week-event-dot"
@@ -6219,6 +6256,7 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
                                           height: `${height}%`,
                                           borderLeftColor:
                                             typeColor,
+                                          backgroundColor: `color-mix(in srgb, ${typeColor} 34%, #181818)`,
                                           '--event-color':
                                             typeColor,
                                         }}
