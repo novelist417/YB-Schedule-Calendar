@@ -3254,14 +3254,14 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
           top: 50% !important;
           transform: translateY(-50%) !important;
           z-index: 3 !important;
-          width: 9px !important;
-          height: 9px !important;
+          width: 11px !important;
+          height: 11px !important;
           display: inline-flex !important;
           align-items: center !important;
           justify-content: center !important;
           border-radius: 50% !important;
           color: #fff !important;
-          font-size: 6px !important;
+          font-size: 7px !important;
           font-weight: 900 !important;
           line-height: 1 !important;
           box-shadow: 0 1px 2px rgba(0,0,0,.4) !important;
@@ -3830,10 +3830,17 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
             margin: 0 !important;
           }
 
-          /* 모바일에서만 일정 블록을 왼쪽으로 당기는 동시에 오른쪽으로도 늘려 빈 공간 없이 사용 */
+          /* 모바일에서는 일정의 바깥 래퍼와 색상 블록을 함께 확장해 좌우 공간을 최대한 사용 */
+          .calendar-day .event {
+            width: calc(100% + 18px) !important;
+            flex: 0 0 calc(100% + 18px) !important;
+            max-width: none !important;
+          }
+
           .calendar-day .event-title-row {
             left: -6px !important;
-            width: calc(100% + 18px) !important;
+            width: calc(100% + 12px) !important;
+            flex: 0 0 calc(100% + 12px) !important;
             max-width: none !important;
           }
 
