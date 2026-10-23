@@ -324,6 +324,7 @@ function App() {
 
   // 업데이트 현황
   const [updates, setUpdates] = useState([])
+  const [expandedUpdateId, setExpandedUpdateId] = useState(null)
   const [updateForm, setUpdateForm] = useState({
     title: '',
     content: '',
@@ -3365,6 +3366,16 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
           line-height: 1.35 !important;
         }
 
+        /* 일정 유형 필터 팝업: 캘린더 상단 및 주간 달력에 가려지지 않도록 표시 영역 확보 */
+        .calendar-tools { position: relative !important; z-index: 80 !important; overflow: visible !important; }
+        .schedule-type-filter-wrap { position: relative !important; z-index: 90 !important; overflow: visible !important; }
+        .schedule-type-filter-panel { z-index: 9999 !important; }
+        .calendar-card, .week-timetable-card, .timetable-scroll { overflow: visible; }
+        @media (max-width: 700px) {
+          .calendar-tools { z-index: 80 !important; }
+          .schedule-type-filter-panel { max-width: calc(100vw - 24px) !important; box-sizing: border-box !important; }
+        }
+
         /* 주간 달력: PC에서도 날짜별 이벤트 레이어가 각 날짜 칸 안에 머물도록 고정 */
         .timetable-scroll,
         .timetable,
@@ -3937,6 +3948,25 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
         /* 업데이트 현황 전용 UI */
         .update-page .list-page-header {
           margin-bottom: 22px;
+        }
+
+        .update-post-row { padding: 0 !important; overflow: hidden; }
+        .update-post-toggle { display: flex; align-items: center; justify-content: space-between; gap: 14px; width: 100%; padding: 14px 15px; border: 0; background: transparent; color: #f5f5f5; text-align: left; cursor: pointer; }
+        .update-post-heading { display: flex; align-items: center; gap: 9px; min-width: 0; flex-wrap: wrap; }
+        .update-post-title { font-size: 14px; font-weight: 700; line-height: 1.45; overflow-wrap: anywhere; }
+        .update-post-trailing { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+        .update-post-chevron { color: #aaa; font-size: 20px; line-height: 1; }
+        .update-post-detail { padding: 0 15px 15px; border-top: 1px solid #303030; }
+        .update-post-detail .update-card-image { display: block; max-width: 100%; height: auto; margin-top: 14px; }
+        .update-post-detail .update-card-content { margin: 14px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+        .update-post-detail .update-card-actions { margin-top: 14px; }
+        .update-post-row.is-expanded { border-color: #5b3038; }
+        @media (max-width: 700px) {
+          .update-post-toggle { align-items: flex-start; padding: 12px; gap: 8px; }
+          .update-post-title { font-size: 13px; }
+          .update-post-trailing { gap: 6px; }
+          .update-post-trailing .update-card-date { font-size: 10px; }
+          .update-post-detail { padding: 0 12px 12px; }
         }
 
         .update-editor-overlay {
@@ -5155,25 +5185,35 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
               <div className="empty-list">아직 등록된 업데이트가 없습니다.</div>
             ) : (
               <div className="update-list">
-                {updates.map((update) => (
-                  <article key={update.id} className="update-card">
-                    <div className="update-card-meta">
-                      {update.is_important && <span className="update-important-badge">중요 업데이트</span>}
-                      <span className="update-card-date">{formatRequestDate(update.created_at)}</span>
-                    </div>
-                    <h3 className="update-card-title">{update.title}</h3>
-                    {update.image_url && (
-                      <img className="update-card-image" src={update.image_url} alt="공지 이미지" />
-                    )}
-                    <p className="update-card-content">{update.content}</p>
-                    {isAdmin && (
-                      <div className="update-card-actions">
-                        <button type="button" onClick={() => openEditUpdateForm(update)}>수정</button>
-                        <button type="button" className="update-delete-button" onClick={() => handleDeleteUpdate(update)}>삭제</button>
-                      </div>
-                    )}
-                  </article>
-                ))}
+                {[...updates].sort((a, b) => Number(Boolean(b.is_important)) - Number(Boolean(a.is_important)) || new Date(b.created_at || 0) - new Date(a.created_at || 0)).map((update) => {
+                  const isExpanded = expandedUpdateId === update.id
+                  return (
+                    <article key={update.id} className={'update-card update-post-row' + (isExpanded ? ' is-expanded' : '')}>
+                      <button type="button" className="update-post-toggle" aria-expanded={isExpanded} onClick={() => setExpandedUpdateId(isExpanded ? null : update.id)}>
+                        <span className="update-post-heading">
+                          {update.is_important && <span className="update-important-badge">중요 공지</span>}
+                          <span className="update-post-title">{update.title}</span>
+                        </span>
+                        <span className="update-post-trailing">
+                          <span className="update-card-date">{formatRequestDate(update.created_at)}</span>
+                          <span className="update-post-chevron">{isExpanded ? '⌃' : '›'}</span>
+                        </span>
+                      </button>
+                      {isExpanded && (
+                        <div className="update-post-detail">
+                          {update.image_url && <img className="update-card-image" src={update.image_url} alt="공지 이미지" />}
+                          <p className="update-card-content">{update.content}</p>
+                          {isAdmin && (
+                            <div className="update-card-actions">
+                              <button type="button" onClick={() => openEditUpdateForm(update)}>수정</button>
+                              <button type="button" className="update-delete-button" onClick={() => handleDeleteUpdate(update)}>삭제</button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </article>
+                  )
+                })}
               </div>
             )}
           </section>
