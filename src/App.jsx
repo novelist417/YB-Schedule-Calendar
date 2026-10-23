@@ -3888,13 +3888,15 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
           }
 
           .calendar-day .event-title-row:has(.attendance-icon) .event-title {
-            padding-left: 11px !important;
+            /* 참석 아이콘 옆의 불필요한 간격을 줄여 일정명 표시 공간 확보 */
+            padding-left: 8px !important;
+            padding-right: 1px !important;
           }
 
           .calendar-day .attendance-icon {
-            left: 2px !important;
-            width: 8px !important;
-            height: 8px !important;
+            left: 1px !important;
+            width: 7px !important;
+            height: 7px !important;
             font-size: 5px !important;
           }
 
