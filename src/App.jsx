@@ -3835,10 +3835,11 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
             flex-direction: column !important;
             gap: 1px !important;
             margin-top: -4px !important;
-            margin-left: 0 !important;
-            margin-right: 0 !important;
-            width: 100% !important;
-            max-width: 100% !important;
+            /* 일정 목록 자체를 왼쪽으로 넓혀 날짜 칸의 좌우 안쪽 여백 제거 */
+            margin-left: -6px !important;
+            margin-right: -6px !important;
+            width: calc(100% + 12px) !important;
+            max-width: none !important;
             padding-left: 0 !important;
             padding-right: 0 !important;
             box-sizing: border-box !important;
@@ -3854,15 +3855,15 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
             margin: 0 !important;
           }
 
-          /* 모바일: 강조색 줄을 보존하면서 일정 박스 전체를 왼쪽 여백만큼 이동 */
+          /* 목록 컨테이너만 좌우로 확장했으므로 각 일정은 컨테이너 너비를 그대로 사용 */
           .calendar-day .event {
             position: relative !important;
-            left: -4px !important;
+            left: 0 !important;
             box-sizing: border-box !important;
-            width: calc(100% + 4px) !important;
-            flex: 0 0 calc(100% + 4px) !important;
+            width: 100% !important;
+            flex: 0 0 100% !important;
             min-width: 0 !important;
-            max-width: calc(100% + 4px) !important;
+            max-width: 100% !important;
             margin: 0 !important;
             padding: 0 !important;
             overflow: visible !important;
