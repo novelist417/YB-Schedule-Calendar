@@ -3813,6 +3813,21 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
         }
 
         @media (max-width: 700px) {
+          /* 월간 달력 모바일: 날짜 칸 너비를 기준으로 일정 배경을 클리핑 */
+          .calendar-grid {
+            grid-template-columns: repeat(7, minmax(0, 1fr)) !important;
+            width: 100% !important;
+            min-width: 0 !important;
+          }
+
+          .calendar-day {
+            min-width: 0 !important;
+            max-width: 100% !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
+            overflow: hidden !important;
+          }
+
           .calendar-day .events {
             display: flex !important;
             flex-direction: column !important;
@@ -3855,7 +3870,7 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
             position: relative !important;
             left: 0 !important;
             width: 100% !important;
-            flex: 0 0 100% !important;
+            flex: 0 1 100% !important;
             min-width: 0 !important;
             max-width: 100% !important;
             margin-left: 0 !important;
