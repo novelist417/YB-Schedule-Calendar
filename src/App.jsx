@@ -3830,18 +3830,19 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
             margin: 0 !important;
           }
 
-          /* 모바일에서는 일정의 바깥 래퍼와 색상 블록을 함께 확장해 좌우 공간을 최대한 사용 */
+          /* 모바일에서는 날짜 칸 안에서만 가로 공간을 최대한 사용하고 옆 날짜로 넘치지 않게 함 */
           .calendar-day .event {
-            width: calc(100% + 18px) !important;
-            flex: 0 0 calc(100% + 18px) !important;
-            max-width: none !important;
+            box-sizing: border-box !important;
+            width: 100% !important;
+            flex: 0 0 100% !important;
+            max-width: 100% !important;
           }
 
           .calendar-day .event-title-row {
-            left: -6px !important;
-            width: calc(100% + 12px) !important;
-            flex: 0 0 calc(100% + 12px) !important;
-            max-width: none !important;
+            left: -3px !important;
+            width: calc(100% + 3px) !important;
+            flex: 0 0 calc(100% + 3px) !important;
+            max-width: calc(100% + 3px) !important;
           }
 
           .calendar-day .event-title {
