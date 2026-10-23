@@ -3830,6 +3830,12 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
             margin: 0 !important;
           }
 
+          /* 모바일에서만 강조색과 배경을 포함한 일정 블록 전체를 왼쪽으로 당김 */
+          .calendar-day .event-title-row {
+            left: -6px !important;
+            width: calc(100% + 6px) !important;
+          }
+
           .calendar-day .event-title {
             font-size: 11px !important;
             line-height: 1.05 !important;
