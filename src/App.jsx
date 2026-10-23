@@ -3870,11 +3870,13 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
 
           .calendar-day .event-title-row {
             position: relative !important;
-            left: 0 !important;
-            width: 100% !important;
-            flex: 0 1 100% !important;
+            /* 모바일에서 강조색/배경 블록을 왼쪽으로 4px 확장하되,
+               오른쪽 끝은 날짜 칸 경계 안에 그대로 유지 */
+            left: -4px !important;
+            width: calc(100% + 4px) !important;
+            flex: 0 1 calc(100% + 4px) !important;
             min-width: 0 !important;
-            max-width: 100% !important;
+            max-width: calc(100% + 4px) !important;
             margin-left: 0 !important;
             margin-right: 0 !important;
             padding-right: 0 !important;
