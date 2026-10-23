@@ -3158,8 +3158,9 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
 
         .calendar-day .event-title-row {
           position: relative !important;
+          left: -3px !important;
           flex: 1 1 auto !important;
-          width: 100% !important;
+          width: calc(100% + 3px) !important;
           min-width: 0 !important;
           box-sizing: border-box !important;
           background: var(--event-bg, color-mix(in srgb, var(--event-color, #777) 24%, #202020)) !important;
@@ -3198,7 +3199,7 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
         }
 
         .calendar-day .event-title {
-          padding: 2px 3px 2px 10px !important;
+          padding: 2px 3px 2px 14px !important;
           border-radius: 0 !important;
           background: transparent !important;
           border-left: 0 !important;
@@ -3837,10 +3838,11 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
           }
 
           .calendar-day .event-title-row:has(.attendance-icon) .event-title {
-            padding-left: 8px !important;
+            padding-left: 13px !important;
           }
 
           .calendar-day .attendance-icon {
+            left: 2px !important;
             width: 8px !important;
             height: 8px !important;
             font-size: 5px !important;
