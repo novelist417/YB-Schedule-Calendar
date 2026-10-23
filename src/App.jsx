@@ -327,6 +327,7 @@ function App() {
   const [expandedUpdateId, setExpandedUpdateId] = useState(null)
   const [lightboxImageUrl, setLightboxImageUrl] = useState('')
   const [lightboxImageZoomed, setLightboxImageZoomed] = useState(false)
+  const [lightboxImageScale, setLightboxImageScale] = useState(1)
   const [updateForm, setUpdateForm] = useState({
     title: '',
     content: '',
@@ -3542,8 +3543,8 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
         }
 
         .timetable-event {
-          background: var(--event-color, #999) !important;
-          border-left-color: var(--event-color, #999) !important;
+          background: color-mix(in srgb, var(--event-color, #999) 24%, #202020) !important;
+          border-left: 4px solid var(--event-color, #999) !important;
         }
 
         .timetable-event:hover {
@@ -3965,16 +3966,16 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
         .update-post-chevron { color: #aaa; font-size: 20px; line-height: 1; }
         .update-post-detail { padding: 0 15px 15px; border-top: 1px solid #303030; }
         .update-post-detail .update-card-image { display: block; width: auto; max-width: 100%; max-height: none; height: auto; margin: 14px auto 0; cursor: zoom-in; border-radius: 8px; }
-        .update-image-lightbox { position: fixed; inset: 0; z-index: 10050; display: flex; align-items: center; justify-content: center; padding: 24px; box-sizing: border-box; background: rgba(0,0,0,.9); cursor: zoom-out; }
+        .update-image-lightbox { position: fixed; inset: 0; z-index: 10050; display: flex; align-items: center; justify-content: center; padding: 24px; box-sizing: border-box; background: rgba(0,0,0,.9); cursor: zoom-out; overflow: auto; }
         .update-image-lightbox img { display: block; max-width: 96vw; max-height: 92dvh; width: auto; height: auto; object-fit: contain; border-radius: 4px; }
         .update-image-lightbox-close { position: absolute; top: 14px; right: 18px; width: 42px; height: 42px; border: 1px solid #555; border-radius: 50%; background: #222; color: #fff; font-size: 28px; line-height: 1; cursor: pointer; }
         .update-image-zoom-controls { display: none; }
         @media (min-width: 701px) {
           /* PC: 본문 미리보기는 적당한 크기, 클릭 시 열리는 뷰어는 더 크게 */
-          .update-post-detail .update-card-image { width: auto; max-width: min(100%, 680px); max-height: 72vh; object-fit: contain; }
+          .update-post-detail .update-card-image { width: auto; max-width: min(100%, 1020px); max-height: 90vh; object-fit: contain; }
           .update-image-lightbox { padding: 20px; overflow: auto; }
-          .update-image-lightbox img { width: auto; height: auto; max-width: 88vw; max-height: 84dvh; cursor: zoom-in; transition: max-width .15s ease, max-height .15s ease; }
-          .update-image-lightbox img.is-zoomed { max-width: 98vw; max-height: 96dvh; cursor: zoom-out; }
+          .update-image-lightbox img { width: auto; height: auto; max-width: 88vw; max-height: 84dvh; cursor: zoom-in; transform: scale(var(--image-zoom, 1)); transform-origin: center center; transition: transform .08s linear; }
+          .update-image-lightbox img.is-zoomed { max-width: 88vw; max-height: 84dvh; cursor: zoom-in; }
           .update-image-zoom-controls { position: absolute; bottom: 18px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; z-index: 2; }
           .update-image-zoom-controls button { min-width: 42px; height: 40px; border: 1px solid #666; border-radius: 20px; background: #222; color: #fff; font-size: 20px; cursor: pointer; }
         }
@@ -5134,11 +5135,12 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
             role="button"
             tabIndex={0}
             aria-label="이미지 확대 닫기"
-            onClick={() => { setLightboxImageUrl(''); setLightboxImageZoomed(false) }}
+            onClick={() => { setLightboxImageUrl(''); setLightboxImageZoomed(false); setLightboxImageScale(1) }}
             onKeyDown={(event) => {
               if (event.key === 'Escape' || event.key === 'Enter' || event.key === ' ') {
                 setLightboxImageUrl('')
                 setLightboxImageZoomed(false)
+                setLightboxImageScale(1)
               }
             }}
           >
@@ -5146,20 +5148,27 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
               type="button"
               className="update-image-lightbox-close"
               aria-label="이미지 확대 닫기"
-              onClick={() => { setLightboxImageUrl(''); setLightboxImageZoomed(false) }}
+              onClick={() => { setLightboxImageUrl(''); setLightboxImageZoomed(false); setLightboxImageScale(1) }}
             >×</button>
             <img
               className={lightboxImageZoomed ? 'is-zoomed' : ''}
               src={lightboxImageUrl}
-              alt="확대된 업데이트 이미지. 클릭하거나 확대 버튼으로 크기를 조절할 수 있습니다."
-              onClick={(event) => {
-                event.stopPropagation()
-                setLightboxImageZoomed((value) => !value)
+              alt="확대된 업데이트 이미지. 마우스 휠로 확대·축소할 수 있습니다."
+              style={{ '--image-zoom': lightboxImageScale }}
+              onWheel={(event) => {
+                if (window.matchMedia('(min-width: 701px)').matches) {
+                  event.preventDefault()
+                  event.stopPropagation()
+                  setLightboxImageScale((scale) => Math.max(0.5, Math.min(5, scale + (event.deltaY < 0 ? 0.12 : -0.12))))
+                  setLightboxImageZoomed(true)
+                }
               }}
+              onClick={(event) => event.stopPropagation()}
             />
             <div className="update-image-zoom-controls" onClick={(event) => event.stopPropagation()}>
-              <button type="button" aria-label="이미지 확대" onClick={() => setLightboxImageZoomed(true)}>＋</button>
-              <button type="button" aria-label="이미지 축소" onClick={() => setLightboxImageZoomed(false)}>−</button>
+              <button type="button" aria-label="이미지 확대" onClick={() => { setLightboxImageScale((scale) => Math.min(5, scale + 0.25)); setLightboxImageZoomed(true) }}>＋</button>
+              <button type="button" aria-label="이미지 축소" onClick={() => { setLightboxImageScale((scale) => Math.max(0.5, scale - 0.25)); setLightboxImageZoomed(true) }}>−</button>
+              <button type="button" aria-label="이미지 크기 초기화" onClick={() => { setLightboxImageScale(1); setLightboxImageZoomed(false) }}>↺</button>
             </div>
           </div>
         )}
@@ -6277,7 +6286,7 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
                                           top: `${top}%`,
                                           height: `${height}%`,
                                           borderLeft: `4px solid ${typeColor}`,
-                                          background: typeColor,
+                                          background: `color-mix(in srgb, ${typeColor} 24%, #202020)`,
                                           '--event-color': typeColor,
                                         }}
                                       >
