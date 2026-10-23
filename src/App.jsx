@@ -3854,32 +3854,26 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
             margin: 0 !important;
           }
 
-          /* 모바일에서는 날짜 칸 안에서만 가로 공간을 최대한 사용하고 옆 날짜로 넘치지 않게 함 */
+          /* 모바일: 날짜 칸 자체가 경계를 자르고, 일정 박스는 왼쪽 여백만 줄여 확장 */
           .calendar-day .event {
             box-sizing: border-box !important;
             width: 100% !important;
             flex: 0 0 100% !important;
             min-width: 0 !important;
             max-width: 100% !important;
-            margin-left: 0 !important;
-            margin-right: 0 !important;
-            padding-left: 0 !important;
-            padding-right: 0 !important;
-            overflow: hidden !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            overflow: visible !important;
           }
 
           .calendar-day .event-title-row {
             position: relative !important;
-            /* 모바일에서 강조색/배경 블록을 왼쪽으로 4px 확장하되,
-               오른쪽 끝은 날짜 칸 경계 안에 그대로 유지 */
             left: -4px !important;
             width: calc(100% + 4px) !important;
-            flex: 0 1 calc(100% + 4px) !important;
+            flex: 0 0 calc(100% + 4px) !important;
             min-width: 0 !important;
             max-width: calc(100% + 4px) !important;
-            margin-left: 0 !important;
-            margin-right: 0 !important;
-            padding-right: 0 !important;
+            margin: 0 !important;
             box-sizing: border-box !important;
             overflow: hidden !important;
           }
