@@ -3160,9 +3160,9 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
           width: 100% !important;
           min-width: 0 !important;
           box-sizing: border-box !important;
-          background: color-mix(in srgb, var(--event-color, #777) 24%, #202020) !important;
+          background: var(--event-bg, color-mix(in srgb, var(--event-color, #777) 24%, #202020)) !important;
           border-radius: 5px !important;
-          border-left: 0 !important;
+          border-left: 3px solid var(--event-color, #777) !important;
           overflow: visible !important;
         }
 
@@ -3962,7 +3962,12 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
         .update-image-lightbox { position: fixed; inset: 0; z-index: 10050; display: flex; align-items: center; justify-content: center; padding: 24px; box-sizing: border-box; background: rgba(0,0,0,.9); cursor: zoom-out; }
         .update-image-lightbox img { display: block; max-width: 96vw; max-height: 92dvh; width: auto; height: auto; object-fit: contain; border-radius: 4px; }
         .update-image-lightbox-close { position: absolute; top: 14px; right: 18px; width: 42px; height: 42px; border: 1px solid #555; border-radius: 50%; background: #222; color: #fff; font-size: 28px; line-height: 1; cursor: pointer; }
-        @media (min-width: 701px) { .update-post-detail .update-card-image { max-width: min(100%, 1000px); } }
+        @media (min-width: 701px) {
+          /* PC: 목록 안에서는 적당한 미리보기 크기로, 클릭하면 화면에 맞춰 크게 표시 */
+          .update-post-detail .update-card-image { width: auto; max-width: min(100%, 480px); max-height: 300px; object-fit: contain; }
+          .update-image-lightbox { padding: 20px; }
+          .update-image-lightbox img { width: auto; height: auto; max-width: 96vw; max-height: 94dvh; }
+        }
         @media (max-width: 700px) { .update-image-lightbox { padding: 12px; } .update-image-lightbox img { max-width: 98vw; max-height: 88dvh; } }
         .update-post-detail .update-card-content { margin: 14px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
         .update-post-detail .update-card-actions { margin-top: 14px; }
@@ -5985,10 +5990,8 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
                                       <div
                                         className="event-title-row"
                                         style={{
-                                          '--event-color':
-                                            TYPE_COLORS[
-                                              schedule.schedule_type
-                                            ] || '#999',
+                                          '--event-color': TYPE_COLORS[schedule.schedule_type] || '#999',
+                                          '--event-bg': `color-mix(in srgb, ${TYPE_COLORS[schedule.schedule_type] || '#999'} 24%, #202020)`,
                                         }}
                                       >
                                         {!schedule.isRecurringVirtual && !schedule.isRecurringInstance && attendanceStatuses[schedule.id] && (
