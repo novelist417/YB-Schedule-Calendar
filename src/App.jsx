@@ -326,6 +326,7 @@ function App() {
   const [updates, setUpdates] = useState([])
   const [expandedUpdateId, setExpandedUpdateId] = useState(null)
   const [lightboxImageUrl, setLightboxImageUrl] = useState('')
+  const [lightboxImageZoomed, setLightboxImageZoomed] = useState(false)
   const [updateForm, setUpdateForm] = useState({
     title: '',
     content: '',
@@ -3540,6 +3541,11 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
           box-sizing: border-box;
         }
 
+        .timetable-event {
+          background: var(--event-color, #999) !important;
+          border-left-color: var(--event-color, #999) !important;
+        }
+
         .timetable-event:hover {
           filter: brightness(0.97);
         }
@@ -3962,11 +3968,15 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
         .update-image-lightbox { position: fixed; inset: 0; z-index: 10050; display: flex; align-items: center; justify-content: center; padding: 24px; box-sizing: border-box; background: rgba(0,0,0,.9); cursor: zoom-out; }
         .update-image-lightbox img { display: block; max-width: 96vw; max-height: 92dvh; width: auto; height: auto; object-fit: contain; border-radius: 4px; }
         .update-image-lightbox-close { position: absolute; top: 14px; right: 18px; width: 42px; height: 42px; border: 1px solid #555; border-radius: 50%; background: #222; color: #fff; font-size: 28px; line-height: 1; cursor: pointer; }
+        .update-image-zoom-controls { display: none; }
         @media (min-width: 701px) {
-          /* PC: 목록 안에서는 적당한 미리보기 크기로, 클릭하면 화면에 맞춰 크게 표시 */
-          .update-post-detail .update-card-image { width: auto; max-width: min(100%, 480px); max-height: 300px; object-fit: contain; }
-          .update-image-lightbox { padding: 20px; }
-          .update-image-lightbox img { width: auto; height: auto; max-width: 96vw; max-height: 94dvh; }
+          /* PC: 본문 미리보기는 적당한 크기, 클릭 시 열리는 뷰어는 더 크게 */
+          .update-post-detail .update-card-image { width: auto; max-width: min(100%, 680px); max-height: 72vh; object-fit: contain; }
+          .update-image-lightbox { padding: 20px; overflow: auto; }
+          .update-image-lightbox img { width: auto; height: auto; max-width: 88vw; max-height: 84dvh; cursor: zoom-in; transition: max-width .15s ease, max-height .15s ease; }
+          .update-image-lightbox img.is-zoomed { max-width: 98vw; max-height: 96dvh; cursor: zoom-out; }
+          .update-image-zoom-controls { position: absolute; bottom: 18px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; z-index: 2; }
+          .update-image-zoom-controls button { min-width: 42px; height: 40px; border: 1px solid #666; border-radius: 20px; background: #222; color: #fff; font-size: 20px; cursor: pointer; }
         }
         @media (max-width: 700px) { .update-image-lightbox { padding: 12px; } .update-image-lightbox img { max-width: 98vw; max-height: 88dvh; } }
         .update-post-detail .update-card-content { margin: 14px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
@@ -5124,10 +5134,11 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
             role="button"
             tabIndex={0}
             aria-label="이미지 확대 닫기"
-            onClick={() => setLightboxImageUrl('')}
+            onClick={() => { setLightboxImageUrl(''); setLightboxImageZoomed(false) }}
             onKeyDown={(event) => {
               if (event.key === 'Escape' || event.key === 'Enter' || event.key === ' ') {
                 setLightboxImageUrl('')
+                setLightboxImageZoomed(false)
               }
             }}
           >
@@ -5135,13 +5146,21 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
               type="button"
               className="update-image-lightbox-close"
               aria-label="이미지 확대 닫기"
-              onClick={() => setLightboxImageUrl('')}
+              onClick={() => { setLightboxImageUrl(''); setLightboxImageZoomed(false) }}
             >×</button>
             <img
+              className={lightboxImageZoomed ? 'is-zoomed' : ''}
               src={lightboxImageUrl}
-              alt="확대된 업데이트 이미지"
-              onClick={(event) => event.stopPropagation()}
+              alt="확대된 업데이트 이미지. 클릭하거나 확대 버튼으로 크기를 조절할 수 있습니다."
+              onClick={(event) => {
+                event.stopPropagation()
+                setLightboxImageZoomed((value) => !value)
+              }}
             />
+            <div className="update-image-zoom-controls" onClick={(event) => event.stopPropagation()}>
+              <button type="button" aria-label="이미지 확대" onClick={() => setLightboxImageZoomed(true)}>＋</button>
+              <button type="button" aria-label="이미지 축소" onClick={() => setLightboxImageZoomed(false)}>−</button>
+            </div>
           </div>
         )}
 
@@ -5239,7 +5258,7 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
                       </button>
                       {isExpanded && (
                         <div className="update-post-detail">
-                          {update.image_url && <img className="update-card-image" src={update.image_url} alt="공지 이미지 (눌러서 확대)" onClick={() => setLightboxImageUrl(update.image_url)} />}
+                          {update.image_url && <img className="update-card-image" src={update.image_url} alt="공지 이미지 (눌러서 확대)" onClick={() => { setLightboxImageZoomed(false); setLightboxImageUrl(update.image_url) }} />}
                           <p className="update-card-content">{update.content}</p>
                           {isAdmin && (
                             <div className="update-card-actions">
@@ -6257,11 +6276,9 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
                                         style={{
                                           top: `${top}%`,
                                           height: `${height}%`,
-                                          borderLeftColor:
-                                            typeColor,
-                                          backgroundColor: `color-mix(in srgb, ${typeColor} 34%, #181818)`,
-                                          '--event-color':
-                                            typeColor,
+                                          borderLeft: `4px solid ${typeColor}`,
+                                          background: typeColor,
+                                          '--event-color': typeColor,
                                         }}
                                       >
                                         <span className="timetable-event-time">
