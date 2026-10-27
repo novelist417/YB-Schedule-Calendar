@@ -5,7 +5,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-collector-secret",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
@@ -60,6 +60,16 @@ Deno.serve(async (req) => {
   if (req.method !== "POST") {
     return new Response(JSON.stringify({ error: "POST 요청만 지원합니다." }), {
       status: 405, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  // Require a separate server-side secret in addition to Supabase's function-level
+  // JWT verification. Never place this secret in client-side code or the repository.
+  const collectorSecret = Deno.env.get("COLLECT_EVENT_INFO_SECRET");
+  const suppliedSecret = req.headers.get("x-collector-secret");
+  if (!collectorSecret || !suppliedSecret || suppliedSecret !== collectorSecret) {
+    return new Response(JSON.stringify({ error: "인증에 실패했습니다." }), {
+      status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 
