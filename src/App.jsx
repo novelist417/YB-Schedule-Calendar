@@ -169,6 +169,15 @@ function App() {
   const [guideLoading, setGuideLoading] = useState(false)
   const [guideMessage, setGuideMessage] = useState('')
   const [guideUploading, setGuideUploading] = useState(false)
+
+  // 일정별 공식 정보 및 관리자 수집 후보 검토
+  const [eventInfoItems, setEventInfoItems] = useState([])
+  const [eventInfoLoading, setEventInfoLoading] = useState(false)
+  const [eventReviewRuns, setEventReviewRuns] = useState([])
+  const [eventReviewDecisions, setEventReviewDecisions] = useState([])
+  const [eventReviewLoading, setEventReviewLoading] = useState(false)
+  const [eventReviewMessage, setEventReviewMessage] = useState('')
+  const [eventReviewDrafts, setEventReviewDrafts] = useState({})
   const [calendarView, setCalendarView] = useState('month')
 
   const [calendarCursor, setCalendarCursor] = useState(
@@ -461,6 +470,14 @@ function App() {
   }, [isAdmin])
 
   useEffect(() => {
+    loadEventInfoItems(selectedSchedule?.id)
+  }, [selectedSchedule?.id])
+
+  useEffect(() => {
+    if (page === 'event-review' && isAdmin) loadEventReviewQueue()
+  }, [page, isAdmin])
+
+  useEffect(() => {
     if (
       page !== 'calendar' ||
       calendarView !== 'week'
@@ -515,6 +532,104 @@ function App() {
     }
 
     setProfile(data)
+  }
+
+  async function loadEventInfoItems(scheduleId) {
+    if (!scheduleId) {
+      setEventInfoItems([])
+      return
+    }
+    setEventInfoLoading(true)
+    const { data, error } = await supabase
+      .from('event_info_items')
+      .select('id, category, title, content, source_url, collected_at')
+      .eq('schedule_id', scheduleId)
+      .eq('review_status', 'approved')
+      .order('collected_at', { ascending: false })
+    if (error) {
+      console.error('일정 정보 불러오기 실패:', error)
+      setEventInfoItems([])
+    } else {
+      setEventInfoItems(data || [])
+    }
+    setEventInfoLoading(false)
+  }
+
+  async function loadEventReviewQueue() {
+    if (!isAdmin) return
+    setEventReviewLoading(true)
+    setEventReviewMessage('')
+    const { data: runs, error: runsError } = await supabase
+      .from('event_collection_runs')
+      .select('id, started_at, status, candidate_previews')
+      .not('candidate_previews', 'is', null)
+      .order('started_at', { ascending: false })
+      .limit(30)
+    if (runsError) {
+      console.error('수집 후보 불러오기 실패:', runsError)
+      setEventReviewMessage('수집 후보를 불러오지 못했습니다. SQL 적용 여부와 관리자 권한을 확인해주세요.')
+      setEventReviewRuns([])
+      setEventReviewLoading(false)
+      return
+    }
+    const validRuns = (runs || []).filter((run) => Array.isArray(run.candidate_previews) && run.candidate_previews.length)
+    setEventReviewRuns(validRuns)
+    const runIds = validRuns.map((run) => run.id)
+    if (runIds.length) {
+      const { data: decisions, error: decisionsError } = await supabase
+        .from('event_info_review_decisions')
+        .select('run_id, candidate_key, review_status')
+        .in('run_id', runIds)
+      if (decisionsError) {
+        console.error('검토 상태 불러오기 실패:', decisionsError)
+        setEventReviewMessage('검토 상태를 불러오지 못했습니다. SQL 적용 여부를 확인해주세요.')
+        setEventReviewDecisions([])
+      } else {
+        setEventReviewDecisions(decisions || [])
+      }
+    } else {
+      setEventReviewDecisions([])
+    }
+    setEventReviewLoading(false)
+  }
+
+  function updateEventReviewDraft(candidate, field, value) {
+    const key = candidate.candidate_key
+    setEventReviewDrafts((previous) => ({
+      ...previous,
+      [key]: { ...(previous[key] || candidate), [field]: value },
+    }))
+  }
+
+  async function reviewEventInfoCandidate(run, candidate, action) {
+    if (!isAdmin) return
+    const draft = eventReviewDrafts[candidate.candidate_key] || candidate
+    if (action === 'approve' && (!String(draft.title || '').trim() || !String(draft.content || '').trim())) {
+      setEventReviewMessage('제목과 내용을 입력해주세요.')
+      return
+    }
+    const actionLabel = action === 'approve' ? '승인' : '제외'
+    if (!window.confirm(`이 수집 후보를 ${actionLabel} 처리할까요?`)) return
+    setEventReviewMessage('처리 중…')
+    const { data, error } = await supabase.rpc('admin_review_event_info_candidate', {
+      p_run_id: run.id,
+      p_candidate_key: candidate.candidate_key,
+      p_action: action,
+      p_schedule_id: candidate.schedule_id,
+      p_source_id: candidate.source_id,
+      p_category: draft.category || candidate.category,
+      p_title: String(draft.title || '').trim(),
+      p_content: String(draft.content || '').trim(),
+      p_source_url: candidate.source_url,
+    })
+    if (error) {
+      console.error('수집 후보 검토 실패:', error)
+      setEventReviewMessage(`처리하지 못했습니다: ${error.message}`)
+      return
+    }
+    setEventReviewMessage(action === 'approve' ? '승인했습니다. 해당 일정 상세 화면에 정보가 표시됩니다.' : '후보를 제외했습니다.')
+    await loadEventReviewQueue()
+    if (selectedSchedule?.id === candidate.schedule_id) await loadEventInfoItems(candidate.schedule_id)
   }
 
   async function loadRecurringTitleOverrides() {
@@ -5010,7 +5125,7 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
 
               <button
                 className={
-                  page === 'info' || page === 'updates' || page === 'requests'
+                  page === 'info' || page === 'updates' || page === 'requests' || page === 'event-review'
                     ? 'nav-button active'
                     : 'nav-button'
                 }
@@ -5027,7 +5142,7 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
           {!session && (
             <button
               className={
-                page === 'info' || page === 'updates'
+                page === 'info' || page === 'updates' || page === 'event-review'
                   ? 'nav-button active'
                   : 'nav-button'
               }
@@ -5082,6 +5197,12 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
 
             {infoSection === 'home' ? (
               <div className="info-menu-grid">
+                {isAdmin && (
+                  <button type="button" className="info-menu-card" onClick={() => { setPage('event-review'); loadEventReviewQueue() }}>
+                    <strong>일정 정보 검토</strong>
+                    <span>자동 수집된 정보를 확인하고 수정·승인합니다.</span>
+                  </button>
+                )}
                 <button type="button" className="info-menu-card" onClick={() => { setInfoSection('updates'); setPage('updates'); loadUpdates().then((rows) => markUpdatesAsSeen(rows)) }}>
                   <strong className="info-update-menu-title">공지&업데이트{hasUnreadUpdates && <i className="new-update-dot" aria-label="새 업데이트" />}</strong>
                   <span>중요 공지와 변경·추가된 기능을 확인합니다.</span>
@@ -5322,6 +5443,65 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
                         </div>
                       )}
                     </article>
+                  )
+                })}
+              </div>
+            )}
+          </section>
+        ) : page === 'event-review' && isAdmin ? (
+          <section className="schedule-list-page request-page">
+            <button type="button" className="info-back-button page-back-button" onClick={() => { setPage('info'); setInfoSection('home') }}>
+              ← 안내·요청으로 돌아가기
+            </button>
+            <div className="list-page-header">
+              <div>
+                <p className="page-eyebrow">ADMIN</p>
+                <h1>일정 정보 검토</h1>
+                <p className="page-description">자동 수집 후보를 확인하고 필요한 내용만 수정·승인합니다. 승인된 정보만 일정 상세 화면에 공개됩니다.</p>
+              </div>
+              <button type="button" className="add-schedule-button" onClick={loadEventReviewQueue} disabled={eventReviewLoading}>새로고침</button>
+            </div>
+            {eventReviewMessage && <p role="status" style={{ color: 'var(--muted-text, #999)', fontSize: 13, margin: '0 0 14px' }}>{eventReviewMessage}</p>}
+            {eventReviewLoading ? <div className="empty-list">수집 후보를 불러오는 중…</div> : eventReviewRuns.length === 0 ? <div className="empty-list">검토할 수집 후보가 없습니다. 먼저 일정 정보 수집 테스트를 실행해주세요.</div> : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+                {eventReviewRuns.map((run) => {
+                  const reviewedKeys = new Set(eventReviewDecisions.filter((item) => item.run_id === run.id).map((item) => item.candidate_key))
+                  const candidates = (run.candidate_previews || []).filter((item) => !reviewedKeys.has(item.candidate_key))
+                  if (!candidates.length) return null
+                  return (
+                    <section key={run.id} style={{ border: '1px solid var(--border-color, #333)', borderRadius: 12, padding: 14 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
+                        <strong>수집 실행 · {run.started_at ? new Date(run.started_at).toLocaleString('ko-KR') : run.id}</strong>
+                        <span style={{ color: 'var(--muted-text, #999)', fontSize: 12 }}>{run.status} · 미검토 {candidates.length}건</span>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                        {candidates.map((candidate) => {
+                          const draft = eventReviewDrafts[candidate.candidate_key] || candidate
+                          const schedule = schedules.find((item) => item.id === candidate.schedule_id)
+                          return (
+                            <article key={candidate.candidate_key} style={{ borderTop: '1px solid var(--border-color, #333)', paddingTop: 12 }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+                                <strong style={{ fontSize: 13 }}>{schedule?.title || '일정 정보'} · {candidate.source_name || '출처 미상'}</strong>
+                                <span style={{ fontSize: 11, color: candidate.decision === 'duplicate' ? '#C58A48' : 'var(--muted-text, #999)' }}>{candidate.decision === 'duplicate' ? `중복 후보 · ${candidate.duplicate_reason || ''}` : candidate.category}</span>
+                              </div>
+                              <div style={{ display: 'grid', gap: 8 }}>
+                                <select value={draft.category || '기타'} onChange={(e) => updateEventReviewDraft(candidate, 'category', e.target.value)} style={{ width: '100%', padding: 9, borderRadius: 7, border: '1px solid var(--border-color, #444)', background: 'var(--input-bg, #111)', color: 'inherit' }}>
+                                  {['예매', '주차', '교통', '셔틀', '입장', '취소/변경', '기타'].map((category) => <option key={category} value={category}>{category}</option>)}
+                                </select>
+                                <input value={draft.title || ''} onChange={(e) => updateEventReviewDraft(candidate, 'title', e.target.value)} placeholder="정보 제목" style={{ width: '100%', boxSizing: 'border-box', padding: 9, borderRadius: 7, border: '1px solid var(--border-color, #444)', background: 'var(--input-bg, #111)', color: 'inherit' }} />
+                                <textarea value={draft.content || ''} onChange={(e) => updateEventReviewDraft(candidate, 'content', e.target.value)} rows={3} placeholder="정보 내용" style={{ width: '100%', boxSizing: 'border-box', padding: 9, borderRadius: 7, border: '1px solid var(--border-color, #444)', background: 'var(--input-bg, #111)', color: 'inherit', resize: 'vertical', fontFamily: 'inherit' }} />
+                                {candidate.source_url && <a href={candidate.source_url} target="_blank" rel="noreferrer" className="reference-link" style={{ fontSize: 12 }}>원문 확인</a>}
+                                {candidate.matched_existing && <p style={{ margin: 0, fontSize: 12, color: 'var(--muted-text, #999)' }}>기존 유사 항목: {candidate.matched_existing.title}</p>}
+                                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 7 }}>
+                                  <button type="button" className="delete-button" onClick={() => reviewEventInfoCandidate(run, candidate, 'reject')}>제외</button>
+                                  <button type="button" className="save-schedule-button" onClick={() => reviewEventInfoCandidate(run, candidate, 'approve')} disabled={candidate.decision === 'duplicate'}>승인</button>
+                                </div>
+                              </div>
+                            </article>
+                          )
+                        })}
+                      </div>
+                    </section>
                   )
                 })}
               </div>
@@ -6717,6 +6897,28 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
                     </div>
                   )}
 
+
+                  <section style={{ marginTop: 18, paddingTop: 14, borderTop: '1px solid var(--border-color, #303030)' }}>
+                    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, marginBottom: 10 }}>
+                      <strong style={{ fontSize: 15 }}>일정 정보</strong>
+                      <span style={{ fontSize: 11, color: 'var(--muted-text, #929292)' }}>확인된 예매·교통·주차·입장 안내</span>
+                    </div>
+                    {eventInfoLoading ? <p style={{ fontSize: 12, color: 'var(--muted-text, #999)' }}>정보를 불러오는 중…</p> : eventInfoItems.length ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                        {eventInfoItems.map((item) => (
+                          <article key={item.id} style={{ border: '1px solid var(--border-color, #333)', borderRadius: 9, padding: 11 }}>
+                            <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6 }}>
+                              <span style={{ fontSize: 11, color: 'var(--muted-text, #999)' }}>{item.category}</span>
+                              <strong style={{ fontSize: 13 }}>{item.title}</strong>
+                            </div>
+                            <p style={{ margin: 0, fontSize: 13, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{item.content}</p>
+                            {item.source_url && <a href={item.source_url} target="_blank" rel="noreferrer" className="reference-link" style={{ display: 'inline-block', marginTop: 7, fontSize: 12 }}>출처 확인</a>}
+                          </article>
+                        ))}
+                      </div>
+                    ) : <p style={{ margin: 0, fontSize: 12, color: 'var(--muted-text, #999)' }}>아직 등록된 일정 정보가 없습니다.</p>}
+                    {isAdmin && <button type="button" onClick={() => { setPage('event-review'); loadEventReviewQueue() }} style={{ marginTop: 9, border: 0, background: 'transparent', color: 'var(--muted-text, #999)', padding: '4px 0', fontSize: 12, cursor: 'pointer' }}>관리자 정보 검토 열기</button>}
+                  </section>
 
                   {!selectedSchedule.isRecurringVirtual && !selectedSchedule.isRecurringInstance && (
                     <section className="personal-notes-section" style={{ marginTop: 18, paddingTop: 14, borderTop: '1px solid var(--border-color, #303030)' }}>
