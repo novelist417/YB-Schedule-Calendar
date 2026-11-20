@@ -174,6 +174,7 @@ function App() {
   const [eventInfoItems, setEventInfoItems] = useState([])
   const [eventInfoLoading, setEventInfoLoading] = useState(false)
   const [eventReviewRuns, setEventReviewRuns] = useState([])
+  const [eventReviewItems, setEventReviewItems] = useState([])
   const [eventReviewDecisions, setEventReviewDecisions] = useState([])
   const [eventReviewLoading, setEventReviewLoading] = useState(false)
   const [eventReviewMessage, setEventReviewMessage] = useState('')
@@ -559,6 +560,19 @@ function App() {
     if (!isAdmin) return
     setEventReviewLoading(true)
     setEventReviewMessage('')
+    const { data: pendingItems, error: pendingItemsError } = await supabase
+      .from('event_info_items')
+      .select('id, schedule_id, source_id, category, title, content, source_url, collected_at, review_status')
+      .eq('review_status', 'pending')
+      .order('collected_at', { ascending: false })
+      .limit(200)
+    if (pendingItemsError) {
+      console.error('기존 대기 정보 불러오기 실패:', pendingItemsError)
+      setEventReviewItems([])
+      setEventReviewMessage('기존 대기 항목을 불러오지 못했습니다. 검토용 SQL 적용 여부를 확인해주세요.')
+    } else {
+      setEventReviewItems(pendingItems || [])
+    }
     const { data: runs, error: runsError } = await supabase
       .from('event_collection_runs')
       .select('id, started_at, status, candidate_previews')
@@ -630,6 +644,34 @@ function App() {
     setEventReviewMessage(action === 'approve' ? '승인했습니다. 해당 일정 상세 화면에 정보가 표시됩니다.' : '후보를 제외했습니다.')
     await loadEventReviewQueue()
     if (selectedSchedule?.id === candidate.schedule_id) await loadEventInfoItems(candidate.schedule_id)
+  }
+
+  async function reviewExistingEventInfoItem(item, action) {
+    if (!isAdmin) return
+    const draft = eventReviewDrafts[`existing-${item.id}`] || item
+    if (action === 'approve' && (!String(draft.title || '').trim() || !String(draft.content || '').trim())) {
+      setEventReviewMessage('제목과 내용을 입력해주세요.')
+      return
+    }
+    const actionLabel = action === 'approve' ? '승인' : '제외'
+    if (!window.confirm(`이 기존 항목을 ${actionLabel} 처리할까요?`)) return
+    setEventReviewMessage('처리 중…')
+    const { error } = await supabase.rpc('admin_review_existing_event_info_item', {
+      p_item_id: item.id,
+      p_action: action,
+      p_category: String(draft.category || item.category || '기타').trim(),
+      p_title: String(draft.title || '').trim(),
+      p_content: String(draft.content || '').trim(),
+      p_source_url: draft.source_url || item.source_url || null,
+    })
+    if (error) {
+      console.error('기존 일정 정보 검토 실패:', error)
+      setEventReviewMessage(`처리하지 못했습니다: ${error.message}`)
+      return
+    }
+    setEventReviewMessage(action === 'approve' ? '기존 항목을 승인했습니다.' : '기존 항목을 제외했습니다.')
+    await loadEventReviewQueue()
+    if (selectedSchedule?.id === item.schedule_id) await loadEventInfoItems(item.schedule_id)
   }
 
   async function loadRecurringTitleOverrides() {
@@ -5462,8 +5504,43 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
               <button type="button" className="add-schedule-button" onClick={loadEventReviewQueue} disabled={eventReviewLoading}>새로고침</button>
             </div>
             {eventReviewMessage && <p role="status" style={{ color: 'var(--muted-text, #999)', fontSize: 13, margin: '0 0 14px' }}>{eventReviewMessage}</p>}
-            {eventReviewLoading ? <div className="empty-list">수집 후보를 불러오는 중…</div> : eventReviewRuns.length === 0 ? <div className="empty-list">검토할 수집 후보가 없습니다. 먼저 일정 정보 수집 테스트를 실행해주세요.</div> : (
+            {eventReviewLoading ? <div className="empty-list">검토 항목을 불러오는 중…</div> : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+                <section style={{ border: '1px solid var(--border-color, #333)', borderRadius: 12, padding: 14 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
+                    <strong>기존 대기 항목</strong>
+                    <span style={{ color: 'var(--muted-text, #999)', fontSize: 12 }}>미검토 {eventReviewItems.length}건</span>
+                  </div>
+                  {eventReviewItems.length === 0 ? <p className="empty-list" style={{ margin: 0 }}>기존 대기 항목이 없습니다.</p> : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                      {eventReviewItems.map((item) => {
+                        const draftKey = `existing-${item.id}`
+                        const draft = eventReviewDrafts[draftKey] || item
+                        const schedule = schedules.find((entry) => entry.id === item.schedule_id)
+                        return (
+                          <article key={item.id} style={{ borderTop: '1px solid var(--border-color, #333)', paddingTop: 12 }}>
+                            <strong style={{ display: 'block', fontSize: 13, marginBottom: 8 }}>{schedule?.title || '일정 정보'} · {item.collected_at ? new Date(item.collected_at).toLocaleString('ko-KR') : '수집일 미상'}</strong>
+                            <div style={{ display: 'grid', gap: 8 }}>
+                              <select value={draft.category || '기타'} onChange={(e) => setEventReviewDrafts((prev) => ({ ...prev, [draftKey]: { ...(prev[draftKey] || item), category: e.target.value } }))} style={{ width: '100%', padding: 9, borderRadius: 7, border: '1px solid var(--border-color, #444)', background: 'var(--input-bg, #111)', color: 'inherit' }}>
+                                {['예매', '주차', '교통', '셔틀', '입장', '취소/변경', '기타'].map((category) => <option key={category} value={category}>{category}</option>)}
+                              </select>
+                              <input value={draft.title || ''} onChange={(e) => setEventReviewDrafts((prev) => ({ ...prev, [draftKey]: { ...(prev[draftKey] || item), title: e.target.value } }))} placeholder="정보 제목" style={{ width: '100%', boxSizing: 'border-box', padding: 9, borderRadius: 7, border: '1px solid var(--border-color, #444)', background: 'var(--input-bg, #111)', color: 'inherit' }} />
+                              <textarea value={draft.content || ''} onChange={(e) => setEventReviewDrafts((prev) => ({ ...prev, [draftKey]: { ...(prev[draftKey] || item), content: e.target.value } }))} rows={3} placeholder="정보 내용" style={{ width: '100%', boxSizing: 'border-box', padding: 9, borderRadius: 7, border: '1px solid var(--border-color, #444)', background: 'var(--input-bg, #111)', color: 'inherit', resize: 'vertical', fontFamily: 'inherit' }} />
+                              {item.source_url && <a href={item.source_url} target="_blank" rel="noreferrer" className="reference-link" style={{ fontSize: 12 }}>원문 확인</a>}
+                              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 7 }}>
+                                <button type="button" className="delete-button" onClick={() => reviewExistingEventInfoItem(item, 'reject')}>제외</button>
+                                <button type="button" className="save-schedule-button" onClick={() => reviewExistingEventInfoItem(item, 'approve')}>승인</button>
+                              </div>
+                            </div>
+                          </article>
+                        )
+                      })}
+                    </div>
+                  )}
+                </section>
+                <section style={{ border: '1px solid var(--border-color, #333)', borderRadius: 12, padding: 14 }}>
+                  <strong style={{ display: 'block', marginBottom: 12 }}>새 수집 후보</strong>
+                  {eventReviewRuns.length === 0 ? <p className="empty-list" style={{ margin: 0 }}>새 수집 후보가 없습니다. 먼저 일정 정보 수집 테스트를 실행해주세요.</p> : null}
                 {eventReviewRuns.map((run) => {
                   const reviewedKeys = new Set(eventReviewDecisions.filter((item) => item.run_id === run.id).map((item) => item.candidate_key))
                   const candidates = (run.candidate_previews || []).filter((item) => !reviewedKeys.has(item.candidate_key))
@@ -5504,6 +5581,7 @@ Supabase의 recurring_schedule_overrides 테이블과 권한 설정을 확인해
                     </section>
                   )
                 })}
+                </section>
               </div>
             )}
           </section>
